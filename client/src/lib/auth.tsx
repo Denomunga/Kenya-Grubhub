@@ -7,112 +7,262 @@ export type Role = "admin" | "staff" | "user";
 export interface User {
   id: string;
   username: string;
+  email: string;
   role: Role;
   name: string;
   avatar?: string;
-  jobTitle?: string; // Added to distinguish "Manager" from other staff
+  jobTitle?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<boolean>;
-  register: (username: string, password: string, name: string) => Promise<boolean>;
-  updateUserRole: (userId: string, newRole: Role, jobTitle?: string) => void;
-  logout: () => void;
+  register: (username: string, email: string, password: string, name: string) => Promise<boolean>;
+  updateUserRole: (userId: string, newRole: Role, jobTitle?: string) => Promise<boolean>;
+  updateProfile: (data: { name?: string; email?: string; avatar?: string }) => Promise<boolean>;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isStaff: boolean;
-  isManager: boolean; // Helper for the specific requirement
-  allUsers: User[]; // Added for Admin to manage users
+  isManager: boolean;
+  allUsers: User[];
+  refreshAllUsers: () => Promise<void>;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users
-const INITIAL_USERS: User[] = [
-  { id: "1", username: "admin", role: "admin", name: "Admin User" },
-  { id: "2", username: "manager", role: "staff", name: "Manager Jane", jobTitle: "Manager" },
-  { id: "3", username: "user", role: "user", name: "John Doe" },
-  { id: "4", username: "staff", role: "staff", name: "Staff Member", jobTitle: "Waiter" },
-];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [allUsers, setAllUsers] = useState<User[]>(INITIAL_USERS);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  // Check local storage on load
+  // Check if user is logged in on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem("kenyan_bistro_user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      // Refresh user data from allUsers to ensure roles are up to date
-      const freshUser = allUsers.find(u => u.id === parsedUser.id) || parsedUser;
-      setUser(freshUser);
-    }
-  }, []); // We don't depend on allUsers here to avoid loop, but in real app we would fetch fresh data
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkAuth();
+  }, []);
 
-  const login = async (username: string, password: string) => {
-    // Simple mock login logic
-    const foundUser = allUsers.find(u => u.username === username);
-    
-    if (foundUser && password === username) { // Mock password check: password same as username for demo
-      setUser(foundUser);
-      localStorage.setItem("kenyan_bistro_user", JSON.stringify(foundUser));
-      
-      const roleMsg = foundUser.role === "admin" ? "Admin Access Granted" : 
-                      foundUser.role === "staff" ? "Staff Access Granted" : "Welcome Back!";
-      
-      toast({ title: roleMsg, description: `Logged in as ${foundUser.name}` });
-      return true;
+  // Fetch all users for admin
+  const refreshAllUsers = async () => {
+    if (user?.role !== "admin") return;
+    try {
+      const response = await fetch("/api/users", {
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAllUsers(data.users);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
     }
-
-    toast({ title: "Login Failed", description: "Invalid credentials", variant: "destructive" });
-    return false;
   };
 
-  const register = async (username: string, password: string, name: string) => {
-    const existing = allUsers.find(u => u.username === username);
-    if (existing) {
-      toast({ title: "Registration Failed", description: "Username already taken", variant: "destructive" });
+  // Refresh users when admin user logs in
+  useEffect(() => {
+    if (user?.role === "admin") {
+      refreshAllUsers();
+    }
+  }, [user?.role]);
+
+  const login = async (username: string, password: string) => {
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({ 
+          title: "Login Failed", 
+          description: data.message || "Invalid credentials", 
+          variant: "destructive" 
+        });
+        return false;
+      }
+
+      setUser(data.user);
+      
+      const roleMsg = data.user.role === "admin" ? "Admin Access Granted" : 
+                      data.user.role === "staff" ? "Staff Access Granted" : "Welcome Back!";
+      
+      toast({ title: roleMsg, description: `Logged in as ${data.user.name}` });
+      
+      // Role-based redirect
+      if (data.user.role === "admin" || data.user.role === "staff") {
+        setLocation("/dashboard");
+      } else {
+        setLocation("/");
+      }
+      
+      return true;
+    } catch (error) {
+      toast({ 
+        title: "Login Failed", 
+        description: "Network error. Please try again.", 
+        variant: "destructive" 
+      });
+      return false;
+    }
+  };
+
+  const register = async (username: string, email: string, password: string, name: string) => {
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username, email, password, name }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({ 
+          title: "Registration Failed", 
+          description: data.message || "Could not create account", 
+          variant: "destructive" 
+        });
+        return false;
+      }
+
+      setUser(data.user);
+      toast({ title: "Welcome!", description: "Account created successfully." });
+      
+      // Users go to home page after registration
+      setLocation("/");
+      return true;
+    } catch (error) {
+      toast({ 
+        title: "Registration Failed", 
+        description: "Network error. Please try again.", 
+        variant: "destructive" 
+      });
+      return false;
+    }
+  };
+
+  const updateUserRole = async (userId: string, newRole: Role, jobTitle?: string) => {
+    if (user?.role !== "admin") {
+      toast({ 
+        title: "Access Denied", 
+        description: "Only admins can update roles", 
+        variant: "destructive" 
+      });
       return false;
     }
 
-    const newUser: User = {
-      id: Date.now().toString(),
-      username,
-      name,
-      role: "user", // Default role
-    };
+    try {
+      const response = await fetch(`/api/users/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ role: newRole, jobTitle }),
+      });
 
-    setAllUsers([...allUsers, newUser]);
-    setUser(newUser);
-    localStorage.setItem("kenyan_bistro_user", JSON.stringify(newUser));
-    toast({ title: "Welcome!", description: "Account created successfully." });
-    return true;
-  };
+      if (!response.ok) {
+        const data = await response.json();
+        toast({ 
+          title: "Update Failed", 
+          description: data.message || "Could not update role", 
+          variant: "destructive" 
+        });
+        return false;
+      }
 
-  const updateUserRole = (userId: string, newRole: Role, jobTitle?: string) => {
-    setAllUsers(prev => prev.map(u => 
-      u.id === userId ? { ...u, role: newRole, jobTitle } : u
-    ));
-    
-    // If updating self
-    if (user?.id === userId) {
-      const updated = { ...user, role: newRole, jobTitle };
-      setUser(updated);
-      localStorage.setItem("kenyan_bistro_user", JSON.stringify(updated));
+      toast({ title: "User Updated", description: "Role changes saved." });
+      
+      // Refresh all users
+      await refreshAllUsers();
+      
+      // If updating self, refresh current user
+      if (userId === user.id) {
+        const data = await response.json();
+        setUser(data.user);
+      }
+
+      return true;
+    } catch (error) {
+      toast({ 
+        title: "Update Failed", 
+        description: "Network error. Please try again.", 
+        variant: "destructive" 
+      });
+      return false;
     }
-    
-    toast({ title: "User Updated", description: "Role changes saved." });
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("kenyan_bistro_user");
-    toast({ title: "Logged out", description: "See you soon!" });
-    setLocation("/");
+  const updateProfile = async (data: { name?: string; email?: string; avatar?: string }) => {
+    try {
+      const response = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast({ 
+          title: "Update Failed", 
+          description: errorData.message || "Could not update profile", 
+          variant: "destructive" 
+        });
+        return false;
+      }
+
+      const responseData = await response.json();
+      setUser(responseData.user);
+      toast({ title: "Profile Updated", description: "Your changes have been saved." });
+      return true;
+    } catch (error) {
+      toast({ 
+        title: "Update Failed", 
+        description: "Network error. Please try again.", 
+        variant: "destructive" 
+      });
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      setUser(null);
+      setAllUsers([]);
+      toast({ title: "Logged out", description: "See you soon!" });
+      setLocation("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({ title: "Logged out", description: "See you soon!" });
+      setUser(null);
+      setLocation("/");
+    }
   };
 
   return (
@@ -122,12 +272,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         updateUserRole,
+        updateProfile,
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.role === "admin",
         isStaff: user?.role === "staff" || user?.role === "admin",
         isManager: user?.role === "admin" || (user?.role === "staff" && user?.jobTitle === "Manager"),
         allUsers,
+        refreshAllUsers,
+        loading,
       }}
     >
       {children}

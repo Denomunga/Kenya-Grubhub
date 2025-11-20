@@ -25,6 +25,7 @@ const loginSchema = z.object({
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name is required"),
+  email: z.string().email("Valid email is required"),
   username: z.string().min(2, "Username must be at least 2 characters"),
   password: z.string().min(4, "Password must be at least 4 characters"),
 });
@@ -40,28 +41,29 @@ export default function Login() {
 
   const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: "", username: "", password: "" },
+    defaultValues: { name: "", email: "", username: "", password: "" },
   });
 
-  // If already logged in, redirect
+  // If already logged in, redirect based on role
+  const { user } = useAuth();
   React.useEffect(() => {
-    if (isAuthenticated) {
-      setLocation("/dashboard");
+    if (isAuthenticated && user) {
+      if (user.role === "admin" || user.role === "staff") {
+        setLocation("/dashboard");
+      } else {
+        setLocation("/");
+      }
     }
-  }, [isAuthenticated, setLocation]);
+  }, [isAuthenticated, user, setLocation]);
 
   async function onLogin(values: z.infer<typeof loginSchema>) {
-    const success = await login(values.username, values.password);
-    if (success) {
-      setLocation("/dashboard");
-    }
+    // Login function now handles redirect based on role
+    await login(values.username, values.password);
   }
 
   async function onRegister(values: z.infer<typeof registerSchema>) {
-    const success = await register(values.username, values.password, values.name);
-    if (success) {
-      setLocation("/dashboard");
-    }
+    const success = await register(values.username, values.email, values.password, values.name);
+    // No redirect needed here as register function handles it
   }
 
   return (
@@ -136,7 +138,20 @@ export default function Login() {
                       <FormItem>
                         <FormLabel>Full Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="John Doe" {...field} />
+                          <Input placeholder="John Doe" {...field} data-testid="input-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={registerForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="john@example.com" {...field} data-testid="input-email" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
