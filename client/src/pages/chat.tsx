@@ -45,7 +45,8 @@ export default function Chat() {
     if (user && currentThreadId) {
        markThreadAsRead(currentThreadId, user.role);
     }
-  }, [currentThreadId, currentMessages.length, user, markThreadAsRead]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentThreadId, currentMessages.length, user?.role]);
 
   useEffect(() => {
     if (scrollRef.current) {
