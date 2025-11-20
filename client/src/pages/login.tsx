@@ -44,6 +44,7 @@ export default function Login() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const success = await login(values.username, values.password);
     if (success) {
+      // If manager logged in, they might want to go to chat directly, but dashboard is safe default
       setLocation("/dashboard");
     }
   }
@@ -92,11 +93,23 @@ export default function Login() {
               <Button type="submit" className="w-full text-lg h-12">
                 Login
               </Button>
-              <div className="text-center text-xs text-muted-foreground mt-4">
-                <p>Demo Credentials:</p>
-                <p>Admin: admin / admin</p>
-                <p>Staff: staff / staff</p>
-                <p>User: user / user</p>
+              <div className="text-center text-xs text-muted-foreground mt-4 grid grid-cols-2 gap-2">
+                <div className="text-left">
+                  <p className="font-bold">Admin:</p>
+                  <p>admin / admin</p>
+                </div>
+                <div className="text-left">
+                  <p className="font-bold">Manager:</p>
+                  <p>manager / manager</p>
+                </div>
+                <div className="text-left">
+                  <p className="font-bold">Staff:</p>
+                  <p>staff / staff</p>
+                </div>
+                <div className="text-left">
+                  <p className="font-bold">User:</p>
+                  <p>user / user</p>
+                </div>
               </div>
             </form>
           </Form>

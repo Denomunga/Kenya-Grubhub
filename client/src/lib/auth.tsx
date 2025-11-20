@@ -10,6 +10,7 @@ export interface User {
   role: Role;
   name: string;
   avatar?: string;
+  jobTitle?: string; // Added to distinguish "Manager" from other staff
 }
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isStaff: boolean;
+  isManager: boolean; // Helper for the specific requirement
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,7 +28,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Mock users
 const MOCK_USERS: Record<string, User> = {
   admin: { id: "1", username: "admin", role: "admin", name: "Admin User" },
-  staff: { id: "2", username: "staff", role: "staff", name: "Staff Member" },
+  manager: { id: "2", username: "manager", role: "staff", name: "Manager Jane", jobTitle: "Manager" },
+  staff: { id: "4", username: "staff", role: "staff", name: "Staff Member", jobTitle: "Waiter" },
   user: { id: "3", username: "user", role: "user", name: "John Doe" },
 };
 
@@ -53,6 +56,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true;
     }
     
+    if (username === "manager" && password === "manager") {
+      const userData = MOCK_USERS.manager;
+      setUser(userData);
+      localStorage.setItem("kenyan_bistro_user", JSON.stringify(userData));
+      toast({ title: "Welcome, Manager!", description: "Ready to manage?" });
+      return true;
+    }
+
     if (username === "staff" && password === "staff") {
       const userData = MOCK_USERS.staff;
       setUser(userData);
@@ -98,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isAdmin: user?.role === "admin",
         isStaff: user?.role === "staff" || user?.role === "admin",
+        isManager: user?.role === "admin" || (user?.role === "staff" && user?.jobTitle === "Manager"),
       }}
     >
       {children}

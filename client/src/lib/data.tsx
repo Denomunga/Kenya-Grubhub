@@ -46,6 +46,27 @@ export interface Staff {
   avatar?: string;
 }
 
+// Chat Interfaces
+export interface ChatMessage {
+  id: string;
+  threadId: string; // Usually userId
+  senderId: string;
+  senderName: string;
+  senderRole: "admin" | "staff" | "user";
+  text: string;
+  timestamp: string;
+  isRead: boolean;
+  encrypted: boolean; // UI flag for E2EE simulation
+}
+
+export interface ChatThread {
+  id: string; // userId
+  userName: string;
+  lastMessage: ChatMessage | null;
+  unreadCount: number;
+  typing: boolean; // Is the OTHER party typing?
+}
+
 interface DataContextType {
   menu: MenuItem[];
   addMenuItem: (item: MenuItem) => void;
@@ -64,6 +85,13 @@ interface DataContextType {
   staff: Staff[];
   addStaff: (staff: Staff) => void;
   removeStaff: (id: string) => void;
+
+  // Chat Methods
+  messages: ChatMessage[];
+  sendMessage: (threadId: string, sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => void;
+  markThreadAsRead: (threadId: string) => void;
+  setTypingStatus: (threadId: string, isTyping: boolean) => void;
+  getThreads: () => ChatThread[];
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -134,12 +162,42 @@ const INITIAL_STAFF: Staff[] = [
   { id: "2", name: "Achieng", role: "Manager" },
 ];
 
+// Mock initial chat data
+const INITIAL_MESSAGES: ChatMessage[] = [
+  {
+    id: "msg-1",
+    threadId: "3", // User John Doe
+    senderId: "3",
+    senderName: "John Doe",
+    senderRole: "user",
+    text: "Hello, do you have any vegan options for the Nyama Choma?",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+    isRead: false,
+    encrypted: true,
+  },
+  {
+    id: "msg-2",
+    threadId: "3",
+    senderId: "2",
+    senderName: "Manager Jane",
+    senderRole: "staff",
+    text: "Hi John! While Nyama Choma is meat-based, we can prepare a grilled vegetable platter with the same spices. Would you like that?",
+    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    isRead: true,
+    encrypted: true,
+  }
+];
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState<MenuItem[]>(INITIAL_MENU);
   const [news, setNews] = useState<NewsItem[]>(INITIAL_NEWS);
   const [reviews, setReviews] = useState<Review[]>(INITIAL_REVIEWS);
   const [orders, setOrders] = useState<Order[]>([]);
   const [staff, setStaff] = useState<Staff[]>(INITIAL_STAFF);
+  
+  // Chat State
+  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [typingStatus, setTypingStatusState] = useState<Record<string, boolean>>({});
 
   const addMenuItem = (item: MenuItem) => setMenu([...menu, item]);
   const deleteMenuItem = (id: string) => setMenu(menu.filter(i => i.id !== id));
@@ -168,13 +226,77 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const addStaff = (newStaff: Staff) => setStaff([...staff, newStaff]);
   const removeStaff = (id: string) => setStaff(staff.filter(s => s.id !== id));
 
+  // Chat Methods
+  const sendMessage = (threadId: string, sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => {
+    const newMessage: ChatMessage = {
+      id: Date.now().toString(),
+      threadId,
+      senderId: sender.id,
+      senderName: sender.name,
+      senderRole: sender.role,
+      text,
+      timestamp: new Date().toISOString(),
+      isRead: false,
+      encrypted: true,
+    };
+    setMessages(prev => [...prev, newMessage]);
+  };
+
+  const markThreadAsRead = (threadId: string) => {
+    setMessages(prev => prev.map(m => m.threadId === threadId ? { ...m, isRead: true } : m));
+  };
+
+  const setTypingStatus = (threadId: string, isTyping: boolean) => {
+    setTypingStatusState(prev => ({ ...prev, [threadId]: isTyping }));
+  };
+
+  const getThreads = (): ChatThread[] => {
+    // Group messages by threadId
+    const threadsMap = new Map<string, ChatMessage[]>();
+    messages.forEach(m => {
+      if (!threadsMap.has(m.threadId)) threadsMap.set(m.threadId, []);
+      threadsMap.get(m.threadId)?.push(m);
+    });
+
+    const threads: ChatThread[] = [];
+    threadsMap.forEach((msgs, threadId) => {
+      // Sort by time
+      msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      const lastMsg = msgs[msgs.length - 1];
+      
+      // Find user name from messages if possible (simplification)
+      const userMsg = msgs.find(m => m.senderRole === "user");
+      const userName = userMsg ? userMsg.senderName : "Unknown User";
+
+      threads.push({
+        id: threadId,
+        userName,
+        lastMessage: lastMsg,
+        unreadCount: msgs.filter(m => !m.isRead && m.senderRole === "user").length,
+        typing: typingStatus[threadId] || false,
+      });
+    });
+
+    // Add a fake thread if empty for demo
+    if (threads.length === 0) {
+       // No fake threads needed if we rely on INITIAL_MESSAGES
+    }
+
+    return threads.sort((a, b) => {
+      const timeA = a.lastMessage ? new Date(a.lastMessage.timestamp).getTime() : 0;
+      const timeB = b.lastMessage ? new Date(b.lastMessage.timestamp).getTime() : 0;
+      return timeB - timeA;
+    });
+  };
+
   return (
     <DataContext.Provider value={{
       menu, addMenuItem, deleteMenuItem,
       news, addNews,
       reviews, addReview,
       orders, placeOrder, updateOrderStatus,
-      staff, addStaff, removeStaff
+      staff, addStaff, removeStaff,
+      messages, sendMessage, markThreadAsRead, setTypingStatus, getThreads
     }}>
       {children}
     </DataContext.Provider>
