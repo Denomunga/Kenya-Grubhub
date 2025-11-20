@@ -1,6 +1,6 @@
 import React from "react";
-import { useAuth } from "@/lib/auth";
-import { useData, MenuItem, Staff } from "@/lib/data";
+import { useAuth, Role } from "@/lib/auth";
+import { useData } from "@/lib/data";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,16 +24,15 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash, DollarSign, Users, ShoppingBag, BarChart } from "lucide-react";
+import { Plus, Trash, DollarSign, Users, ShoppingBag, BarChart, Shield } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
-  const { user, isAdmin, isStaff } = useAuth();
+  const { user, isAdmin, isStaff, allUsers, updateUserRole } = useAuth();
   const [, setLocation] = useLocation();
   const { 
     menu, addMenuItem, deleteMenuItem, 
-    staff, addStaff, removeStaff,
     orders, updateOrderStatus 
   } = useData();
   const { toast } = useToast();
@@ -63,7 +62,7 @@ export default function Dashboard() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="menu">Menu Management</TabsTrigger>
-          {isAdmin && <TabsTrigger value="staff">Staff Management</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="users">User Management</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview">
@@ -102,11 +101,11 @@ export default function Dashboard() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Staff Members</CardTitle>
+                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{staff.length}</div>
+                <div className="text-2xl font-bold">{allUsers.length}</div>
               </CardContent>
             </Card>
           </div>
@@ -225,46 +224,48 @@ export default function Dashboard() {
         </TabsContent>
 
         {isAdmin && (
-          <TabsContent value="staff">
+          <TabsContent value="users">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Staff Management</CardTitle>
-                  <CardDescription>Manage your team members.</CardDescription>
-                </div>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button><Plus className="mr-2 h-4 w-4" /> Add Staff</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add Staff Member</DialogTitle>
-                    </DialogHeader>
-                    <AddStaffForm onSubmit={(data) => {
-                      addStaff({ ...data, id: Date.now().toString() });
-                      toast({ title: "Staff Added", description: `${data.name} joined the team.` });
-                    }} />
-                  </DialogContent>
-                </Dialog>
+              <CardHeader>
+                <CardTitle>User & Staff Management</CardTitle>
+                <CardDescription>Manage roles and permissions for all users.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Username</TableHead>
+                      <TableHead>Current Role</TableHead>
+                      <TableHead>Change Role</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {staff.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell className="font-medium">{s.name}</TableCell>
-                        <TableCell>{s.role}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => removeStaff(s.id)}>
-                            <Trash className="h-4 w-4 text-destructive" />
-                          </Button>
+                    {allUsers.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell className="font-medium">
+                          {u.name}
+                          {u.jobTitle && <span className="text-xs text-muted-foreground block">{u.jobTitle}</span>}
+                        </TableCell>
+                        <TableCell>@{u.username}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{u.role}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Select 
+                            defaultValue={u.role} 
+                            onValueChange={(val: Role) => updateUserRole(u.id, val)}
+                            disabled={u.username === "admin"} // Prevent locking out admin
+                          >
+                            <SelectTrigger className="w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="staff">Staff</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -305,23 +306,6 @@ function AddMenuForm({ onSubmit }: { onSubmit: (data: any) => void }) {
         </select>
       </div>
       <Button type="submit" className="w-full">Save Item</Button>
-    </form>
-  );
-}
-
-function AddStaffForm({ onSubmit }: { onSubmit: (data: any) => void }) {
-  const { register, handleSubmit } = useForm();
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="space-y-2">
-        <Label>Name</Label>
-        <Input {...register("name")} required />
-      </div>
-      <div className="space-y-2">
-        <Label>Role</Label>
-        <Input {...register("role")} required placeholder="e.g. Chef, Waiter" />
-      </div>
-      <Button type="submit" className="w-full">Add Staff</Button>
     </form>
   );
 }

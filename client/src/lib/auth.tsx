@@ -16,25 +16,29 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<boolean>;
+  register: (username: string, password: string, name: string) => Promise<boolean>;
+  updateUserRole: (userId: string, newRole: Role, jobTitle?: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isStaff: boolean;
   isManager: boolean; // Helper for the specific requirement
+  allUsers: User[]; // Added for Admin to manage users
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Mock users
-const MOCK_USERS: Record<string, User> = {
-  admin: { id: "1", username: "admin", role: "admin", name: "Admin User" },
-  manager: { id: "2", username: "manager", role: "staff", name: "Manager Jane", jobTitle: "Manager" },
-  staff: { id: "4", username: "staff", role: "staff", name: "Staff Member", jobTitle: "Waiter" },
-  user: { id: "3", username: "user", role: "user", name: "John Doe" },
-};
+const INITIAL_USERS: User[] = [
+  { id: "1", username: "admin", role: "admin", name: "Admin User" },
+  { id: "2", username: "manager", role: "staff", name: "Manager Jane", jobTitle: "Manager" },
+  { id: "3", username: "user", role: "user", name: "John Doe" },
+  { id: "4", username: "staff", role: "staff", name: "Staff Member", jobTitle: "Waiter" },
+];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>(INITIAL_USERS);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -42,55 +46,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedUser = localStorage.getItem("kenyan_bistro_user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      // Refresh user data from allUsers to ensure roles are up to date
+      const freshUser = allUsers.find(u => u.id === parsedUser.id) || parsedUser;
+      setUser(freshUser);
     }
-  }, []);
+  }, []); // We don't depend on allUsers here to avoid loop, but in real app we would fetch fresh data
 
   const login = async (username: string, password: string) => {
     // Simple mock login logic
-    if (username === "admin" && password === "admin") {
-      const userData = MOCK_USERS.admin;
-      setUser(userData);
-      localStorage.setItem("kenyan_bistro_user", JSON.stringify(userData));
-      toast({ title: "Welcome back, Admin!", description: "You have full access." });
-      return true;
-    }
+    const foundUser = allUsers.find(u => u.username === username);
     
-    if (username === "manager" && password === "manager") {
-      const userData = MOCK_USERS.manager;
-      setUser(userData);
-      localStorage.setItem("kenyan_bistro_user", JSON.stringify(userData));
-      toast({ title: "Welcome, Manager!", description: "Ready to manage?" });
-      return true;
-    }
-
-    if (username === "staff" && password === "staff") {
-      const userData = MOCK_USERS.staff;
-      setUser(userData);
-      localStorage.setItem("kenyan_bistro_user", JSON.stringify(userData));
-      toast({ title: "Welcome, Staff!", description: "Ready to work?" });
-      return true;
-    }
-
-    if (username === "user" && password === "user") {
-      const userData = MOCK_USERS.user;
-      setUser(userData);
-      localStorage.setItem("kenyan_bistro_user", JSON.stringify(userData));
-      toast({ title: "Welcome back!", description: "Hungry?" });
-      return true;
-    }
-
-    // For demo purposes, any other login is a regular user
-    if (username && password) {
-      const newUser: User = { id: Date.now().toString(), username, role: "user", name: username };
-      setUser(newUser);
-      localStorage.setItem("kenyan_bistro_user", JSON.stringify(newUser));
-      toast({ title: "Welcome!", description: "Account created for demo." });
+    if (foundUser && password === username) { // Mock password check: password same as username for demo
+      setUser(foundUser);
+      localStorage.setItem("kenyan_bistro_user", JSON.stringify(foundUser));
+      
+      const roleMsg = foundUser.role === "admin" ? "Admin Access Granted" : 
+                      foundUser.role === "staff" ? "Staff Access Granted" : "Welcome Back!";
+      
+      toast({ title: roleMsg, description: `Logged in as ${foundUser.name}` });
       return true;
     }
 
     toast({ title: "Login Failed", description: "Invalid credentials", variant: "destructive" });
     return false;
+  };
+
+  const register = async (username: string, password: string, name: string) => {
+    const existing = allUsers.find(u => u.username === username);
+    if (existing) {
+      toast({ title: "Registration Failed", description: "Username already taken", variant: "destructive" });
+      return false;
+    }
+
+    const newUser: User = {
+      id: Date.now().toString(),
+      username,
+      name,
+      role: "user", // Default role
+    };
+
+    setAllUsers([...allUsers, newUser]);
+    setUser(newUser);
+    localStorage.setItem("kenyan_bistro_user", JSON.stringify(newUser));
+    toast({ title: "Welcome!", description: "Account created successfully." });
+    return true;
+  };
+
+  const updateUserRole = (userId: string, newRole: Role, jobTitle?: string) => {
+    setAllUsers(prev => prev.map(u => 
+      u.id === userId ? { ...u, role: newRole, jobTitle } : u
+    ));
+    
+    // If updating self
+    if (user?.id === userId) {
+      const updated = { ...user, role: newRole, jobTitle };
+      setUser(updated);
+      localStorage.setItem("kenyan_bistro_user", JSON.stringify(updated));
+    }
+    
+    toast({ title: "User Updated", description: "Role changes saved." });
   };
 
   const logout = () => {
@@ -105,11 +120,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         login,
+        register,
+        updateUserRole,
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.role === "admin",
         isStaff: user?.role === "staff" || user?.role === "admin",
         isManager: user?.role === "admin" || (user?.role === "staff" && user?.jobTitle === "Manager"),
+        allUsers,
       }}
     >
       {children}

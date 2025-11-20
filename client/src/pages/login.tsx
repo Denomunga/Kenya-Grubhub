@@ -15,23 +15,32 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UtensilsCrossed } from "lucide-react";
 
-const formSchema = z.object({
+const loginSchema = z.object({
   username: z.string().min(2, "Username must be at least 2 characters"),
   password: z.string().min(2, "Password must be at least 2 characters"),
 });
 
+const registerSchema = z.object({
+  name: z.string().min(2, "Name is required"),
+  username: z.string().min(2, "Username must be at least 2 characters"),
+  password: z.string().min(4, "Password must be at least 4 characters"),
+});
+
 export default function Login() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, register, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
+  const loginForm = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { username: "", password: "" },
+  });
+
+  const registerForm = useForm<z.infer<typeof registerSchema>>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: "", username: "", password: "" },
   });
 
   // If already logged in, redirect
@@ -41,10 +50,16 @@ export default function Login() {
     }
   }, [isAuthenticated, setLocation]);
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onLogin(values: z.infer<typeof loginSchema>) {
     const success = await login(values.username, values.password);
     if (success) {
-      // If manager logged in, they might want to go to chat directly, but dashboard is safe default
+      setLocation("/dashboard");
+    }
+  }
+
+  async function onRegister(values: z.infer<typeof registerSchema>) {
+    const success = await register(values.username, values.password, values.name);
+    if (success) {
       setLocation("/dashboard");
     }
   }
@@ -56,63 +71,108 @@ export default function Login() {
           <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit mb-2">
             <UtensilsCrossed className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-heading">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl font-heading">Kenyan Bistro</CardTitle>
           <CardDescription>
-            Enter your credentials to access your account
+            Login or Create an account to continue
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input placeholder="admin" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full text-lg h-12">
-                Login
-              </Button>
-              <div className="text-center text-xs text-muted-foreground mt-4 grid grid-cols-2 gap-2">
-                <div className="text-left">
-                  <p className="font-bold">Admin:</p>
-                  <p>admin / admin</p>
-                </div>
-                <div className="text-left">
-                  <p className="font-bold">Manager:</p>
-                  <p>manager / manager</p>
-                </div>
-                <div className="text-left">
-                  <p className="font-bold">Staff:</p>
-                  <p>staff / staff</p>
-                </div>
-                <div className="text-left">
-                  <p className="font-bold">User:</p>
-                  <p>user / user</p>
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="login">
+              <Form {...loginForm}>
+                <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
+                  <FormField
+                    control={loginForm.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. admin" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={loginForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full h-11">Login</Button>
+                </form>
+              </Form>
+              <div className="text-center text-xs text-muted-foreground mt-4 bg-muted p-3 rounded-lg">
+                <p className="font-bold mb-1">Demo Credentials:</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-left pl-4">
+                  <span>Admin:</span> <span className="font-mono">admin / admin</span>
+                  <span>Manager:</span> <span className="font-mono">manager / manager</span>
+                  <span>Staff:</span> <span className="font-mono">staff / staff</span>
+                  <span>User:</span> <span className="font-mono">user / user</span>
                 </div>
               </div>
-            </form>
-          </Form>
+            </TabsContent>
+            
+            <TabsContent value="register">
+              <Form {...registerForm}>
+                <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
+                  <FormField
+                    control={registerForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={registerForm.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username</FormLabel>
+                        <FormControl>
+                          <Input placeholder="johndoe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={registerForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Choose a password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full h-11">Create Account</Button>
+                </form>
+              </Form>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>

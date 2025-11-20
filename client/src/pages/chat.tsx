@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
-import { useData, ChatMessage, ChatThread } from "@/lib/data";
+import { useData, ChatMessage } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Send, User as UserIcon, Lock, ShieldCheck, AlertCircle, 
-  Check, CheckCheck, Clock, Eye, Search
+  Send, Lock, ShieldCheck, Eye, Search, Check, CheckCheck 
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 
@@ -27,8 +26,6 @@ export default function Chat() {
   const threads = getThreads();
 
   // Determine the current thread ID based on role
-  // If user: threadId is their own ID.
-  // If admin/staff: threadId is the selected thread from the list.
   const currentThreadId = (isAdmin || isManager) ? activeThreadId : user?.id;
 
   // Effect to auto-select first thread for admin if none selected
@@ -45,14 +42,10 @@ export default function Chat() {
 
   // Mark as read when viewing
   useEffect(() => {
-    if ((isAdmin || isManager) && currentThreadId) {
-      // Only mark messages from USER as read when admin views them
-      const hasUnread = currentMessages.some(m => !m.isRead && m.senderRole === "user");
-      if (hasUnread) {
-        markThreadAsRead(currentThreadId);
-      }
+    if (user && currentThreadId) {
+       markThreadAsRead(currentThreadId, user.role);
     }
-  }, [currentThreadId, currentMessages, isAdmin, isManager, markThreadAsRead]);
+  }, [currentThreadId, currentMessages.length, user, markThreadAsRead]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -184,7 +177,7 @@ export default function Chat() {
                   </div>
                   {isAdmin && (
                     <Badge variant="outline" className="text-xs">
-                      <Eye className="h-3 w-3 mr-1" /> Monitoring
+                      <Eye className="h-3 w-3 mr-1" /> Monitoring Mode
                     </Badge>
                   )}
                 </CardHeader>
@@ -201,12 +194,16 @@ export default function Chat() {
                         </div>
                         
                         {currentMessages.map((msg) => {
-                          const isMe = msg.senderRole !== "user"; // In admin view, "me" is staff/admin
+                          // Admin/Manager sees user messages on LEFT, staff/admin messages on RIGHT
+                          // BUT if I am the sender, it should be on RIGHT
+                          const isMe = msg.senderId === user?.id;
+                          
                           return (
                             <ChatBubble 
                               key={msg.id} 
                               message={msg} 
-                              isMe={isMe} 
+                              isMe={isMe}
+                              showSenderName={true}
                             />
                           );
                         })}
@@ -280,12 +277,13 @@ export default function Chat() {
                 </div>
 
                 {currentMessages.map((msg) => {
-                  const isMe = msg.senderRole === "user";
+                  const isMe = msg.senderId === user?.id;
                   return (
                     <ChatBubble 
                       key={msg.id} 
                       message={msg} 
-                      isMe={isMe} 
+                      isMe={isMe}
+                      showSenderName={!isMe}
                     />
                   );
                 })}
@@ -317,7 +315,7 @@ export default function Chat() {
 }
 
 // Helper Component for Chat Bubbles
-function ChatBubble({ message, isMe }: { message: ChatMessage, isMe: boolean }) {
+function ChatBubble({ message, isMe, showSenderName = false }: { message: ChatMessage, isMe: boolean, showSenderName?: boolean }) {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -325,9 +323,11 @@ function ChatBubble({ message, isMe }: { message: ChatMessage, isMe: boolean }) 
       className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
     >
       <div className={`flex flex-col max-w-[80%] ${isMe ? "items-end" : "items-start"}`}>
-        {!isMe && (
-          <span className="text-[10px] text-muted-foreground ml-1 mb-1">
-            {message.senderName} ({message.senderRole})
+        {showSenderName && (
+          <span className="text-[10px] text-muted-foreground ml-1 mb-1 font-medium flex items-center gap-1">
+            {message.senderRole === "admin" && <Badge variant="outline" className="text-[8px] h-3 px-1 bg-primary/5">ADMIN</Badge>}
+            {message.senderRole === "staff" && <Badge variant="outline" className="text-[8px] h-3 px-1 bg-green-500/10 text-green-700">STAFF</Badge>}
+            {message.senderName}
           </span>
         )}
         

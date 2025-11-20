@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import nyamaImage from "@assets/generated_images/nyama_choma_with_kachumbari.png";
 import ugaliImage from "@assets/generated_images/ugali_and_sukuma_wiki.png";
 import chapatiImage from "@assets/generated_images/chapati_and_madondo.png";
@@ -89,7 +89,7 @@ interface DataContextType {
   // Chat Methods
   messages: ChatMessage[];
   sendMessage: (threadId: string, sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => void;
-  markThreadAsRead: (threadId: string) => void;
+  markThreadAsRead: (threadId: string, readerRole: "admin" | "staff" | "user") => void;
   setTypingStatus: (threadId: string, isTyping: boolean) => void;
   getThreads: () => ChatThread[];
 }
@@ -199,6 +199,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [typingStatus, setTypingStatusState] = useState<Record<string, boolean>>({});
 
+  // Load from local storage to persist across refreshes (mock DB)
+  useEffect(() => {
+    const storedMsgs = localStorage.getItem("kenyan_bistro_messages");
+    if (storedMsgs) {
+      setMessages(JSON.parse(storedMsgs));
+    }
+  }, []);
+
+  // Save to local storage on change
+  useEffect(() => {
+    localStorage.setItem("kenyan_bistro_messages", JSON.stringify(messages));
+  }, [messages]);
+
   const addMenuItem = (item: MenuItem) => setMenu([...menu, item]);
   const deleteMenuItem = (id: string) => setMenu(menu.filter(i => i.id !== id));
 
@@ -242,8 +255,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setMessages(prev => [...prev, newMessage]);
   };
 
-  const markThreadAsRead = (threadId: string) => {
-    setMessages(prev => prev.map(m => m.threadId === threadId ? { ...m, isRead: true } : m));
+  const markThreadAsRead = (threadId: string, readerRole: "admin" | "staff" | "user") => {
+    setMessages(prev => prev.map(m => {
+      if (m.threadId !== threadId) return m;
+      
+      // If Admin/Staff is reading, mark USER messages as read
+      if (readerRole === "admin" || readerRole === "staff") {
+        return m.senderRole === "user" ? { ...m, isRead: true } : m;
+      }
+      
+      // If User is reading, mark ADMIN/STAFF messages as read
+      if (readerRole === "user") {
+        return (m.senderRole === "admin" || m.senderRole === "staff") ? { ...m, isRead: true } : m;
+      }
+
+      return m;
+    }));
   };
 
   const setTypingStatus = (threadId: string, isTyping: boolean) => {
@@ -276,11 +303,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         typing: typingStatus[threadId] || false,
       });
     });
-
-    // Add a fake thread if empty for demo
-    if (threads.length === 0) {
-       // No fake threads needed if we rely on INITIAL_MESSAGES
-    }
 
     return threads.sort((a, b) => {
       const timeA = a.lastMessage ? new Date(a.lastMessage.timestamp).getTime() : 0;
