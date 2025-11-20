@@ -1,18 +1,75 @@
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useData } from "@/lib/data";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { User, Clock, Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { User, Clock, Package, Edit, Mail, Hash } from "lucide-react";
+
+const profileSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Valid email is required"),
+  avatar: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+});
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const { orders } = useData();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  if (!user) return null;
+  const form = useForm<z.infer<typeof profileSchema>>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: user?.name || "",
+      email: user?.email || "",
+      avatar: user?.avatar || "",
+    },
+  });
+
+  React.useEffect(() => {
+    if (user) {
+      form.reset({
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || "",
+      });
+    }
+  }, [user, form]);
+
+  async function onSubmit(values: z.infer<typeof profileSchema>) {
+    const success = await updateProfile({
+      name: values.name,
+      email: values.email,
+      avatar: values.avatar || undefined,
+    });
+    if (success) {
+      setEditDialogOpen(false);
+    }
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <p className="text-muted-foreground">Please log in to view your profile.</p>
+      </div>
+    );
+  }
 
   // Filter orders for this user (mock logic)
   const myOrders = orders.filter(o => o.user === "CurrentUser" || o.user === user.username);
@@ -32,21 +89,88 @@ export default function Profile() {
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <CardTitle>{user.name}</CardTitle>
-              <CardDescription>@{user.username}</CardDescription>
-              <Badge className="mx-auto mt-2 w-fit" variant="secondary">{user.role}</Badge>
+              <CardTitle data-testid="text-profile-name">{user.name}</CardTitle>
+              <CardDescription data-testid="text-profile-username">@{user.username}</CardDescription>
+              <Badge className="mx-auto mt-2 w-fit" variant="secondary" data-testid="badge-role">
+                {user.role}
+                {user.jobTitle && ` - ${user.jobTitle}`}
+              </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <User className="h-4 w-4" />
-                <span>Member since 2024</span>
+                <Mail className="h-4 w-4" />
+                <span data-testid="text-profile-email">{user.email}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <Hash className="h-4 w-4" />
+                <span data-testid="text-profile-id">{user.id}</span>
               </div>
               <Separator />
-              <div className="space-y-2">
-                <h4 className="font-bold text-sm">Preferences</h4>
-                <p className="text-sm text-muted-foreground">Newsletter Subscribed</p>
-                <p className="text-sm text-muted-foreground">SMS Notifications On</p>
-              </div>
+              <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full" variant="outline" data-testid="button-edit-profile">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit Profile</DialogTitle>
+                    <DialogDescription>
+                      Update your profile information below
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="John Doe" {...field} data-testid="input-edit-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="john@example.com" {...field} data-testid="input-edit-email" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="avatar"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Avatar URL (optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="https://example.com/avatar.jpg" {...field} data-testid="input-edit-avatar" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex gap-2">
+                        <Button type="submit" className="flex-1" data-testid="button-save-profile">Save Changes</Button>
+                        <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)} data-testid="button-cancel-edit">
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         </div>
@@ -68,7 +192,7 @@ export default function Profile() {
                 ) : (
                   <div className="space-y-6">
                     {myOrders.map((order) => (
-                      <div key={order.id} className="border rounded-lg p-4">
+                      <div key={order.id} className="border rounded-lg p-4" data-testid={`order-card-${order.id}`}>
                         <div className="flex justify-between items-start mb-4">
                           <div>
                             <div className="flex items-center gap-2 mb-1">

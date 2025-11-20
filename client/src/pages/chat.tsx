@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
-import { useData, ChatMessage } from "@/lib/data";
+import { useChat, ChatMessage } from "@/lib/chatApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,7 +16,7 @@ import { useLocation } from "wouter";
 
 export default function Chat() {
   const { user, isAuthenticated, isManager, isAdmin } = useAuth();
-  const { messages, sendMessage, getThreads, markThreadAsRead } = useData();
+  const { messages, sendMessage, getThreads, markThreadAsRead, refreshMessages, refreshThreads } = useChat();
   const [inputValue, setInputValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [, setLocation] = useLocation();
@@ -28,12 +28,20 @@ export default function Chat() {
   // Determine the current thread ID based on role
   const currentThreadId = (isAdmin || isManager) ? activeThreadId : user?.id;
 
-  // Effect to auto-select first thread for admin if none selected
+  // Effect to auto-select first thread for admin if none selected and load messages
   useEffect(() => {
     if ((isAdmin || isManager) && !activeThreadId && threads.length > 0) {
       setActiveThreadId(threads[0].id);
+      refreshMessages(threads[0].id);
     }
-  }, [isAdmin, isManager, threads, activeThreadId]);
+  }, [isAdmin, isManager, threads.length, activeThreadId]);
+
+  // Refresh messages when thread changes
+  useEffect(() => {
+    if (activeThreadId && (isAdmin || isManager)) {
+      refreshMessages(activeThreadId);
+    }
+  }, [activeThreadId, isAdmin, isManager]);
 
   // Filter messages for the active view
   const currentMessages = messages
@@ -54,10 +62,10 @@ export default function Chat() {
     }
   }, [currentMessages]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputValue.trim() || !user || !currentThreadId) return;
 
-    sendMessage(currentThreadId, {
+    await sendMessage(currentThreadId, {
       id: user.id,
       name: user.name,
       role: user.role
