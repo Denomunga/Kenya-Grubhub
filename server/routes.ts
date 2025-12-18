@@ -46,8 +46,30 @@ declare global {
 export async function registerRoutes(app: Express): Promise<Server> {
   // CORS configuration - MUST come before session middleware
   app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true, // This is CRITICAL for sending cookies
+    origin: function(origin, callback) {
+      const allowedOrigins = process.env.NODE_ENV === 'production' 
+        ? [
+            process.env.CORS_ORIGIN || 
+            process.env.FRONTEND_URL || 
+            'https://kenya-grubhub-gx7x.vercel.app',
+            /^https:\/\/kenya-grubhub-gx7x.*\.vercel\.app$/
+          ]
+        : ['http://localhost:5173', 'http://localhost:3000'];
+      
+      if (!origin) return callback(null, true);
+      
+      for (const allowed of allowedOrigins) {
+        if (typeof allowed === 'string' && origin === allowed) {
+          return callback(null, true);
+        }
+        if (allowed instanceof RegExp && allowed.test(origin)) {
+          return callback(null, true);
+        }
+      }
+      
+      callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
   }));
@@ -71,10 +93,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }),
       cookie: {
-        secure: true, // Required for production/HTTPS
+        secure: process.env.NODE_ENV === 'production', // Only require HTTPS in production
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-        sameSite: "none", // Required for cross-origin requests
+        sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax", // Use lax for local development
       },
     })
   );
