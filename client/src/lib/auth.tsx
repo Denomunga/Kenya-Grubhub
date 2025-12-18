@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -293,7 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const requestPasswordChange = async () => {
     try {
-      const resp = await fetch('/api/auth/password-change-request', {
+      const resp = await apiFetch('/api/auth/password-change-request', {
         method: 'POST',
         credentials: 'include',
       });
@@ -313,7 +313,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const requestPhoneChange = async (newPhone: string) => {
     try {
-      const resp = await fetch('/api/auth/phone-change-request', {
+      const resp = await apiFetch('/api/auth/phone-change-request', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -335,7 +335,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const confirmPhoneChange = async (token: string) => {
     try {
-      const resp = await fetch('/api/auth/phone-confirm', {
+      const resp = await apiFetch('/api/auth/phone-confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
@@ -348,7 +348,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast({ title: 'Phone updated', description: 'Your phone number was updated.' });
       // Refresh user information
       try {
-        const r = await fetch('/api/auth/me', { credentials: 'include' });
+        const r = await apiFetch('/api/auth/me');
         if (r.ok) {
           const d = await r.json();
           setUser(d.user);
@@ -367,7 +367,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const confirmPasswordReset = async (token: string, newPassword: string) => {
     try {
-      const resp = await fetch('/api/auth/password-reset', {
+      const resp = await apiFetch('/api/auth/password-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, newPassword }),
