@@ -707,10 +707,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     fileFilter: (_req, file, cb) => {
       // accept common image mime types
       const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+      console.log("File filter - Mimetype:", file.mimetype, "Original name:", file.originalname);
       if (!allowed.includes(file.mimetype)) {
+        console.log("File type rejected:", file.mimetype);
         cb(new Error("Unsupported file type"));
         return;
       }
+      console.log("File type accepted");
       cb(null, true);
     }
   });
@@ -726,6 +729,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/uploads", requireAuth, upload.single("image"), async (req: Request, res: Response) => {
     console.log("Upload endpoint hit!");
+    console.log("User:", req.user?.username, "Role:", req.user?.role);
+    console.log("File:", req.file ? req.file.originalname : "No file");
+    console.log("Body:", req.body);
     try {
       // Only allow admin or staff to upload assets
       if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
