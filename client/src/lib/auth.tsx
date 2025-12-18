@@ -103,9 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshAllUsers = async () => {
     if (user?.role !== "admin") return;
     try {
-      const response = await fetch("/api/users", {
-        credentials: "include",
-      });
+      const response = await apiFetch("/api/users");
       if (response.ok) {
         const data = await response.json();
         setAllUsers(data.users);

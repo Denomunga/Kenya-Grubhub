@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { io } from "socket.io-client";
+import { apiFetch } from "./api";
 import nyamaImage from "@assets/generated_images/nyama_choma_with_kachumbari.png";
 import ugaliImage from "@assets/generated_images/ugali_and_sukuma_wiki.png";
 import chapatiImage from "@assets/generated_images/chapati_and_madondo.png";
@@ -242,7 +243,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // Try to fetch server-side menu/news if available and override local mock data
     (async () => {
       try {
-        const resMenu = await fetch('/api/menu');
+        const resMenu = await apiFetch('/api/menu');
         if (resMenu.ok) {
           const d = await resMenu.json();
           if (Array.isArray(d.menu)) setMenu(d.menu.map((m: any) => ({
@@ -261,7 +262,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const resNews = await fetch('/api/news');
+        const resNews = await apiFetch('/api/news');
         if (resNews.ok) {
           const d = await resNews.json();
           if (Array.isArray(d.news)) setNews(d.news);
@@ -326,7 +327,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     // Try to persist server-side so other clients can see the product
     try {
-      const resp = await fetch('/api/menu', {
+      const resp = await apiFetch('/api/menu', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -439,7 +440,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setNews(prev => [item, ...prev]);
 
     try {
-      const resp = await fetch('/api/news', {
+      const resp = await apiFetch('/api/news', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
