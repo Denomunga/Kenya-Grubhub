@@ -128,10 +128,11 @@ async function startServer() {
     process.exit(1);
   }
   
-// 404 handler for API routes
+  // 404 handler for API routes (must be after all routes are registered)
   app.use("/api/*", (req: Request, res: Response) => {
-  res.status(404).json({ message: `API endpoint ${req.method} ${req.originalUrl} not found` });
-});
+    res.status(404).json({ message: `API endpoint ${req.method} ${req.originalUrl} not found` });
+  });
+  
   const port = parseInt(process.env.PORT || "5000", 10);
 
   if (!(app as any).__serverStarted) {
