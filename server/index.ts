@@ -48,6 +48,15 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: "10mb" }));
+// Don't parse JSON for multipart/form-data requests
+app.use((req, res, next) => {
+  if (req.is('multipart/form-data')) {
+    // Skip JSON parsing for file uploads
+    next();
+  } else {
+    express.json({ limit: "10mb" })(req, res, next);
+  }
+});
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 
 // API request logger
