@@ -59,11 +59,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }),
       cookie: {
-        secure: process.env.NODE_ENV === "production",
+        secure: false, // Allow cookies in local development
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-        sameSite: "none", // Important for cross-origin requests
-        domain: process.env.NODE_ENV === "production" ? undefined : undefined, // Let browser handle domain
+        sameSite: "lax", // Use lax for local development
       },
     })
   );
