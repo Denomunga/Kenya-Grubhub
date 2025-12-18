@@ -56,6 +56,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         touchAfter: 24 * 3600, // Only update session once per day
         crypto: {
           secret: process.env.SESSION_CRYPTO_SECRET || process.env.SESSION_SECRET || "crypto-secret-change-in-production"
+        },
+        // Add connection debugging
+        mongoOptions: {
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
         }
       }),
       cookie: {
@@ -67,6 +72,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
     })
   );
+
+  // Add session store debugging
+  app.use((req, res, next) => {
+    console.log('Session store type:', req.sessionStore?.constructor?.name);
+    console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
+    next();
+  });
 
   // Auth middleware - Fix the types here
   const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
