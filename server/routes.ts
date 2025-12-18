@@ -56,6 +56,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         touchAfter: 24 * 3600, // Only update session once per day
         crypto: {
           secret: process.env.SESSION_CRYPTO_SECRET || process.env.SESSION_SECRET || "crypto-secret-change-in-production"
+        },
+        // Add serialization configuration
+        serialize: (session) => {
+          return JSON.stringify(session);
+        },
+        unserialize: (sessionStr) => {
+          try {
+            return JSON.parse(sessionStr);
+          } catch (error) {
+            console.error('Session unserialization error:', error);
+            return {};
+          }
         }
       }),
       cookie: {
