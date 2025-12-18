@@ -65,6 +65,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth middleware - Fix the types here
   const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
+    console.log('Session check - req.session:', req.session);
+    console.log('Session ID:', req.sessionID);
+    console.log('User ID in session:', req.session?.userId);
     if (!req.session.userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
