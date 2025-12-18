@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useLocation, Link } from "wouter";
 import { useData } from "@/lib/data";
+import { apiFetch } from "@/lib/api";
 import HeroSection from "@/components/home/HeroSection";
 import CategoryFilter from "@/components/home/CategoryFilter";
 import FeaturedDishes from "@/components/home/FeaturedDishes";
@@ -81,7 +82,7 @@ export default function Home() {
     const fetchNews = async () => {
       try {
         // Replace with your actual news fetching logic
-        const response = await fetch('/api/news');
+        const response = await apiFetch('/api/news');
         const data = await response.json();
 
         // Normalize response so `news` is always an array
@@ -132,7 +133,7 @@ export default function Home() {
     setSubscriptionStatus('idle');
 
     try {
-      const response = await fetch('/api/newsletter/subscribe', {
+      const response = await apiFetch('/api/newsletter/subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -194,7 +195,7 @@ export default function Home() {
       // Track the view
       try {
         if (/^[0-9a-fA-F]{24}$/.test(id)) {
-          const response = await fetch(`/api/news/${id}/view`, { 
+          const response = await apiFetch(`/api/news/${id}/view`, { 
             method: 'POST', 
             credentials: 'include',
             headers: {

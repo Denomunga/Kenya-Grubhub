@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { apiFetch } from "./api";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
@@ -52,9 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch("/api/auth/me", {
-          credentials: "include",
-        });
+        const response = await apiFetch("/api/auth/me");
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
@@ -76,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const id = setInterval(async () => {
       try {
-        const resp = await fetch('/api/auth/me', { credentials: 'include' });
+        const resp = await apiFetch('/api/auth/me');
         if (!resp.ok) {
           // if session became invalid, log out and show a message
           if (user) {
