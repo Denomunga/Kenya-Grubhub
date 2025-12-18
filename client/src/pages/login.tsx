@@ -103,6 +103,7 @@ export default function Login() {
     if (!isPasswordValid) {
       return;
     }
+    console.log('Register form values:', values);
     await register(values.username, values.email, values.password, values.name, values.phone);
     // No redirect needed here as register function handles it
   }
