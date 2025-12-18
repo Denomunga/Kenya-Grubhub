@@ -16,24 +16,36 @@ const app = express();
 // Security: Express middleware setup
 // allow requests from the frontend dev server during development
 const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'https://kenya-grubhub-gx7x.vercel.app']
+  ? [
+      process.env.CORS_ORIGIN || 
+      process.env.FRONTEND_URL || 
+      'https://kenya-grubhub-gx7x.vercel.app',
+      /^https:\/\/kenya-grubhub-gx7x.*\.vercel\.app$/  // Wildcard pattern
+    ]
   : ['http://localhost:5173', 'http://localhost:3000'];
 
-console.log('🔧 CORS Configuration:', {
-  NODE_ENV: process.env.NODE_ENV,
-  CORS_ORIGIN: process.env.CORS_ORIGIN,
-  FRONTEND_URL: process.env.FRONTEND_URL,
-  allowedOrigins
-});
-
+// Important: For wildcards, cors() needs a different approach
 app.use(cors({ 
-  origin: allowedOrigins, 
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    if (Array.isArray(allowedOrigins)) {
+      for (const allowed of allowedOrigins) {
+        if (typeof allowed === 'string' && origin === allowed) {
+          return callback(null, true);
+        }
+        if (allowed instanceof RegExp && allowed.test(origin)) {
+          return callback(null, true);
+        }
+      }
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 
 // API request logger
 app.use((req: Request, res: Response, next: NextFunction) => {
