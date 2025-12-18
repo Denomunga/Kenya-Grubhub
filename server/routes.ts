@@ -101,10 +101,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
         sameSite: 'none', // MUST be 'none' for cross-origin requests in production
-        domain: process.env.NODE_ENV === 'production' ? undefined : undefined,
         path: '/',
+        // Don't set domain explicitly - let browser handle it
       },
       name: 'kenya-grubhub-session', // Explicit session name
+      proxy: true, // Trust proxy for secure cookies behind load balancer
     })
   );
 
@@ -120,6 +121,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('User ID in session:', req.session?.userId);
     console.log('===================');
     
+    // Add response header debugging
+    const originalSetHeader = res.setHeader;
+    res.setHeader = function(name: string, value: any) {
+      if (name.toLowerCase() === 'set-cookie') {
+        console.log('Set-Cookie header:', value);
+      }
+      return originalSetHeader.call(this, name, value);
+    };
+    
     // Add session save debugging
     if (req.session && req.sessionID) {
       const originalSave = req.session.save;
@@ -130,6 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error('Session save error:', err);
           } else {
             console.log('Session saved successfully:', req.sessionID);
+            console.log('Session data after save:', { userId: req.session?.userId });
           }
           if (callback) callback(err);
         });
