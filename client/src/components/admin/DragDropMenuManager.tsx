@@ -165,6 +165,7 @@ const DragDropMenuManager: React.FC = () => {
           const response = await fetch('/api/uploads', {
             method: 'POST',
             body: formData,
+            credentials: 'include',
           });
           
           if (response.ok) {
@@ -244,6 +245,7 @@ const DragDropMenuManager: React.FC = () => {
           const response = await fetch('/api/uploads', {
             method: 'POST',
             body: formData,
+            credentials: 'include',
           });
           
           if (response.ok) {

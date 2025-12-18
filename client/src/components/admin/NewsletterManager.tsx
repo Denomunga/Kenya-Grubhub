@@ -61,7 +61,9 @@ const NewsletterManager: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/admin/newsletter/stats');
+      const response = await fetch('/api/admin/newsletter/stats', {
+        credentials: 'include',
+      });
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -73,7 +75,9 @@ const NewsletterManager: React.FC = () => {
 
   const fetchSubscribers = async () => {
     try {
-      const response = await fetch('/api/admin/newsletter/subscribers?limit=20');
+      const response = await fetch('/api/admin/newsletter/subscribers?limit=20', {
+        credentials: 'include',
+      });
       const data = await response.json();
       if (data.success) {
         setSubscribers(data.data.subscribers);
@@ -103,6 +107,7 @@ const NewsletterManager: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           type: campaignType,
           subject,

@@ -469,7 +469,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       // Avoid fetching invalid ids (which would cause server-type errors)
       if (!/^[0-9a-fA-F]{24}$/.test(id)) return null;
-      const resp = await fetch(`/api/news/${id}`);
+      const resp = await fetch(`/api/news/${id}`, {
+        credentials: 'include',
+      });
       if (resp.ok) {
         const d = await resp.json();
         return d.news as NewsItem;
@@ -508,8 +510,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const resp = await fetch(`/api/products/${productId}/reviews`, {
         method: "POST",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ rating: review.rating, comment: review.comment }),
       });
 
