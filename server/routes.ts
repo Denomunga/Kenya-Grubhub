@@ -22,10 +22,12 @@ import MongoStore from "connect-mongo";
 import newsletterRoutes from "./routes/newsletter";
 import adminNewsletterRoutes from "./routes/admin-newsletter";
 import { verifyEmail } from "./services/emailVerification";
+import cors from "cors";
 
 declare module "express-session" {
   interface SessionData {
     userId?: string;
+    testValue?: string;
   }
 }
 
@@ -42,6 +44,14 @@ declare global {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // CORS configuration - MUST come before session middleware
+  app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true, // This is CRITICAL for sending cookies
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+  }));
+
   // Session setup with secure MongoDB storage
   app.use(
     session({
@@ -54,56 +64,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ttl: 7 * 24 * 60 * 60, // 7 days
         autoRemove: 'native',
         touchAfter: 24 * 3600, // Only update session once per day
-        crypto: {
-          secret: process.env.SESSION_CRYPTO_SECRET || process.env.SESSION_SECRET || "crypto-secret-change-in-production"
-        },
-        // Add serialization configuration
-        serialize: (session) => {
-          return JSON.stringify(session);
-        },
-        unserialize: (sessionStr) => {
-          try {
-            return JSON.parse(sessionStr);
-          } catch (error) {
-            console.error('Session unserialization error:', error);
-            return {};
-          }
-        }
       }),
       cookie: {
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-        sameSite: "none", // Important for cross-origin requests
-        domain: process.env.NODE_ENV === "production" ? undefined : undefined, // Let browser handle domain
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Changed from "none"
+        domain: process.env.NODE_ENV === "production" ? process.env.COOKIE_DOMAIN : undefined,
       },
     })
   );
 
-  // Add session store debugging
-  app.use((req, res, next) => {
-    console.log('Session store type:', req.sessionStore?.constructor?.name);
-    console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
-    console.log('Session before auth middleware:', req.session);
+  // Add session debugging middleware
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    console.log('=== SESSION DEBUG ===');
+    console.log('Session ID:', req.sessionID);
+    console.log('Session exists:', !!req.session);
+    console.log('User ID in session:', req.session?.userId);
+    console.log('Cookies from client:', req.headers.cookie);
+    console.log('Environment:', process.env.NODE_ENV);
+    console.log('=====================');
     next();
   });
 
   // Auth middleware - Fix the types here
   const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-    console.log('Session check - req.session:', req.session);
+    console.log('=== AUTH MIDDLEWARE ===');
     console.log('Session ID:', req.sessionID);
+    console.log('Session:', req.session);
     console.log('User ID in session:', req.session?.userId);
+    
+    if (!req.session) {
+      console.error('No session found');
+      return res.status(401).json({ message: "No session found" });
+    }
+    
     if (!req.session.userId) {
+      console.error('No userId in session');
       return res.status(401).json({ message: "Unauthorized" });
     }
+    
     try {
       const user = await User.findById(req.session.userId).select("-password");
       if (!user) {
+        // Clear invalid session
+        req.session.destroy((err) => {
+          if (err) console.error('Error destroying invalid session:', err);
+        });
         return res.status(401).json({ message: "User not found" });
       }
       req.user = user;
       next();
     } catch (error) {
+      console.error('Auth middleware error:', error);
       res.status(500).json({ message: "Server error" });
     }
   };
@@ -187,6 +200,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           console.log('Session saved successfully');
+          console.log('New session ID:', req.sessionID);
+          console.log('Session after save:', req.session);
           
           // Return user without password
           const userResponse = {
@@ -218,6 +233,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       body("password").notEmpty().withMessage("Password is required"),
     ],
     async (req: Request, res: Response) => {
+      console.log('=== LOGIN REQUEST ===');
+      console.log('Request body:', req.body);
+      console.log('Session before login:', req.session);
+      
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -236,6 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(401).json({ message: "Invalid credentials" });
         }
 
+        // Set session
         req.session.userId = user._id.toString();
         
         // Explicitly save session to MongoDB
@@ -246,6 +266,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           console.log('Login session saved successfully');
+          console.log('Session ID after login:', req.sessionID);
+          console.log('Session data after login:', req.session);
           
           const userResponse = {
             id: user._id.toString(),
@@ -271,6 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/logout", (req: Request, res: Response) => {
     req.session.destroy((err) => {
       if (err) {
+        console.error('Logout error:', err);
         return res.status(500).json({ message: "Logout failed" });
       }
       res.json({ message: "Logged out successfully" });
@@ -279,6 +302,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get current user - Fix parameter types
   app.get("/api/auth/me", requireAuth, async (req: Request, res: Response) => {
+    console.log('=== GET CURRENT USER ===');
+    console.log('User from session:', req.user);
+    
     const userResponse = {
       id: req.user!._id.toString(),
       username: req.user!.username,
@@ -293,6 +319,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       pendingPhone: req.user!.pendingPhone,
     };
     res.json({ user: userResponse });
+  });
+
+  // Test session endpoint (for debugging)
+  app.get("/api/auth/session-test", (req: Request, res: Response) => {
+    console.log('=== SESSION TEST ENDPOINT ===');
+    console.log('Session ID:', req.sessionID);
+    console.log('Session:', req.session);
+    console.log('Cookies:', req.headers.cookie);
+    
+    // Set a test value in session
+    if (req.session) {
+      req.session.testValue = `Test ${Date.now()}`;
+      req.session.save((err) => {
+        if (err) {
+          return res.status(500).json({ error: 'Session save failed', details: err.message });
+        }
+        res.json({ 
+          sessionId: req.sessionID, 
+          session: req.session,
+          cookies: req.headers.cookie,
+          message: 'Session test successful' 
+        });
+      });
+    } else {
+      res.status(500).json({ error: 'No session found' });
+    }
   });
 
   // Update profile - Fix parameter types
