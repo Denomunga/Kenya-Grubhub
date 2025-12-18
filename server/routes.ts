@@ -109,52 +109,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
-  // Add session store debugging
-  app.use((req, res, next) => {
-    console.log('=== Session Debug ===');
-    console.log('Session store type:', req.sessionStore?.constructor?.name);
-    console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
-    console.log('NODE_ENV:', process.env.NODE_ENV);
-    console.log('Session ID:', req.sessionID);
-    console.log('Cookies received:', req.headers.cookie);
-    console.log('Session before auth middleware:', req.session);
-    console.log('User ID in session:', req.session?.userId);
-    console.log('===================');
-    
-    // Add response header debugging
-    const originalSetHeader = res.setHeader;
-    res.setHeader = function(name: string, value: any) {
-      if (name.toLowerCase() === 'set-cookie') {
-        console.log('Set-Cookie header:', value);
-      }
-      return originalSetHeader.call(this, name, value);
-    };
-    
-    // Add session save debugging
-    if (req.session && req.sessionID) {
-      const originalSave = req.session.save;
-      req.session.save = function(callback?: (err?: any) => void) {
-        console.log('Session save attempt:', req.sessionID);
-        return originalSave.call(this, (err) => {
-          if (err) {
-            console.error('Session save error:', err);
-          } else {
-            console.log('Session saved successfully:', req.sessionID);
-            console.log('Session data after save:', { userId: req.session?.userId });
-          }
-          if (callback) callback(err);
-        });
-      };
-    }
-    
-    next();
-  });
-
   // Auth middleware - Fix the types here
   const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-    console.log('Session check - req.session:', req.session);
-    console.log('Session ID:', req.sessionID);
-    console.log('User ID in session:', req.session?.userId);
     if (!req.session.userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }

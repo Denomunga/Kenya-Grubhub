@@ -13,8 +13,6 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
     ...options,
   };
 
-  console.log('API Request:', { url, method: config.method || 'GET', credentials: config.credentials });
-  
   const response = await fetch(url, config);
   return response;
 }
