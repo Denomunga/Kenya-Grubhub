@@ -57,6 +57,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        sameSite: "none", // Important for cross-origin requests
+        domain: process.env.NODE_ENV === "production" ? undefined : undefined, // Let browser handle domain
       },
     })
   );
