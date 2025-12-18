@@ -214,10 +214,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const response = await fetch(`/api/users/${userId}/role`, {
+      const response = await apiFetch(`/api/users/${userId}/role`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ role: newRole, jobTitle }),
       });
 
@@ -260,10 +259,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.email && user?.role !== 'admin') {
         delete data.email;
       }
-      const response = await fetch("/api/auth/profile", {
+      const response = await apiFetch("/api/auth/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(data),
       });
 
@@ -389,9 +387,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", {
+      await apiFetch("/api/auth/logout", {
         method: "POST",
-        credentials: "include",
       });
       
       setUser(null);

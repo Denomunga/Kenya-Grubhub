@@ -2,6 +2,7 @@ import React from "react";
 import { useAuth, Role } from "@/lib/auth";
 import { useData } from "@/lib/data";
 import { useLocation } from "wouter";
+import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -477,7 +478,7 @@ export default function Dashboard() {
                             <Button size="sm" variant="secondary" onClick={async () => {
                               // verify phone
                               try {
-                                const resp = await fetch(`/api/users/${u.id}/phone/verify`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'Admin verified', note: '' }) });
+                                const resp = await apiFetch(`/api/users/${u.id}/phone/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'Admin verified', note: '' }) });
                                 if (resp.ok) {
                                   toast({ title: 'Verified', description: `${u.name}'s phone verified.` });
                                   // Refresh users
@@ -649,7 +650,7 @@ function ChangePhoneForm({ user, onDone }: { user: any; onDone?: () => void }) {
           if (!phone || phone.trim().length < 7) return toast({ title: 'Invalid phone', description: 'Enter a valid phone number', variant: 'destructive' });
           setLoading(true);
           try {
-            const resp = await fetch(`/api/users/${user.id}/phone`, { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, reason, note, verify }) });
+            const resp = await apiFetch(`/api/users/${user.id}/phone`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, reason, note, verify }) });
             if (resp.ok) {
               toast({ title: 'Phone updated', description: 'User phone updated.' });
               await refreshAllUsers();

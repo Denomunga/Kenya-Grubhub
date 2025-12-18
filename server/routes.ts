@@ -52,6 +52,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
   }));
 
+  console.log('CORS configured for origin:', process.env.FRONTEND_URL || 'http://localhost:3000');
+
   // Session setup with secure MongoDB storage
   app.use(
     session({
@@ -82,6 +84,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Session store type:', req.sessionStore?.constructor?.name);
     console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
     console.log('Session before auth middleware:', req.session);
+    console.log('Session ID:', req.sessionID);
+    console.log('Cookies received:', req.headers.cookie);
     next();
   });
 
@@ -243,6 +247,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           console.log('Login session saved successfully');
+          console.log('Session ID after save:', req.sessionID);
+          console.log('Session data after save:', { userId: req.session?.userId });
           
           const userResponse = {
             id: user._id.toString(),
