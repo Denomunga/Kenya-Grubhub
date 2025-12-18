@@ -52,10 +52,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             process.env.CORS_ORIGIN || 
             process.env.FRONTEND_URL || 
             'https://kenya-grubhub-gx7x.vercel.app',
-            /^https:\/\/kenya-grubhub-gx7x.*\.vercel\.app$/
+            /^https:\/\/kenya-grubhub-gx7x.*\.vercel\.app$/,
+            /^https:\/\/.*\.onrender\.com$/ // Allow Render URLs
           ]
         : ['http://localhost:5173', 'http://localhost:3000'];
       
+      // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) return callback(null, true);
       
       for (const allowed of allowedOrigins) {
@@ -67,11 +69,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      console.log(`CORS blocking origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    exposedHeaders: ['Set-Cookie']
   }));
 
   console.log('CORS configured for origin:', process.env.FRONTEND_URL || 'http://localhost:3000');
@@ -97,17 +101,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
         sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax", // Use lax for local development
+        domain: process.env.NODE_ENV === 'production' ? undefined : undefined, // Let browser handle domain
       },
+      name: 'kenya-grubhub-session', // Explicit session name
     })
   );
 
   // Add session store debugging
   app.use((req, res, next) => {
+    console.log('=== Session Debug ===');
     console.log('Session store type:', req.sessionStore?.constructor?.name);
     console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
-    console.log('Session before auth middleware:', req.session);
+    console.log('NODE_ENV:', process.env.NODE_ENV);
     console.log('Session ID:', req.sessionID);
     console.log('Cookies received:', req.headers.cookie);
+    console.log('Session before auth middleware:', req.session);
+    console.log('User ID in session:', req.session?.userId);
+    console.log('===================');
     next();
   });
 
