@@ -715,6 +715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload endpoint - accepts field name 'image'
+  console.log("Registering /api/uploads endpoint...");
   app.post("/api/uploads", requireAuth, upload.single("image"), async (req: Request, res: Response) => {
     try {
       // Only allow admin or staff to upload assets
@@ -1412,6 +1413,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   });
 
   // Get all threads (Admin/Staff only) - Fix parameter types
+  console.log("Registering /api/chat/threads endpoint...");
   app.get("/api/chat/threads", requireAuth, async (req: Request, res: Response) => {
     if (req.user!.role === "user") {
       return res.status(403).json({ message: "Access denied" });
