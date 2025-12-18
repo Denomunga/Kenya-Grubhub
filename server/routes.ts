@@ -171,27 +171,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Set session
         req.session.userId = user._id.toString();
         
-        // Explicitly save session to MongoDB
+        // Explicitly save session to MongoDB with proper error handling
         req.session.save((err) => {
           if (err) {
             console.error('Session save error:', err);
+            return res.status(500).json({ message: "Session save failed" });
           }
+          
+          console.log('Session saved successfully');
+          
+          // Return user without password
+          const userResponse = {
+            id: user._id.toString(),
+            username: user.username,
+            email: user.email,
+            name: user.name,
+            phone: user.phone,
+            role: user.role,
+            jobTitle: user.jobTitle,
+            avatar: user.avatar,
+            lastSessionInvalidatedAt: user.lastSessionInvalidatedAt ? user.lastSessionInvalidatedAt.toISOString() : undefined,
+          };
+
+          res.status(201).json({ user: userResponse });
         });
-
-        // Return user without password
-        const userResponse = {
-          id: user._id.toString(),
-          username: user.username,
-          email: user.email,
-          name: user.name,
-          phone: user.phone,
-          role: user.role,
-          jobTitle: user.jobTitle,
-          avatar: user.avatar,
-          lastSessionInvalidatedAt: user.lastSessionInvalidatedAt ? user.lastSessionInvalidatedAt.toISOString() : undefined,
-        };
-
-        res.status(201).json({ user: userResponse });
       } catch (error: any) {
         console.error("Register error:", error);
         res.status(500).json({ message: "Server error during registration" });
@@ -231,21 +234,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.save((err) => {
           if (err) {
             console.error('Session save error:', err);
+            return res.status(500).json({ message: "Session save failed" });
           }
+          
+          console.log('Login session saved successfully');
+          
+          const userResponse = {
+            id: user._id.toString(),
+            username: user.username,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            jobTitle: user.jobTitle,
+            avatar: user.avatar,
+            lastSessionInvalidatedAt: user.lastSessionInvalidatedAt ? user.lastSessionInvalidatedAt.toISOString() : undefined,
+          };
+
+          res.json({ user: userResponse });
         });
-
-        const userResponse = {
-          id: user._id.toString(),
-          username: user.username,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          jobTitle: user.jobTitle,
-          avatar: user.avatar,
-          lastSessionInvalidatedAt: user.lastSessionInvalidatedAt ? user.lastSessionInvalidatedAt.toISOString() : undefined,
-        };
-
-        res.json({ user: userResponse });
       } catch (error) {
         console.error("Login error:", error);
         res.status(500).json({ message: "Server error during login" });
