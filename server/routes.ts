@@ -100,8 +100,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secure: process.env.NODE_ENV === 'production', // Only require HTTPS in production
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-        sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax", // Use lax for local development
-        domain: process.env.NODE_ENV === 'production' ? undefined : undefined, // Let browser handle domain
+        sameSite: 'none', // MUST be 'none' for cross-origin requests in production
+        domain: process.env.NODE_ENV === 'production' ? undefined : undefined,
+        path: '/',
       },
       name: 'kenya-grubhub-session', // Explicit session name
     })
@@ -118,6 +119,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Session before auth middleware:', req.session);
     console.log('User ID in session:', req.session?.userId);
     console.log('===================');
+    
+    // Add session save debugging
+    if (req.session && req.sessionID) {
+      const originalSave = req.session.save;
+      req.session.save = function(callback?: (err?: any) => void) {
+        console.log('Session save attempt:', req.sessionID);
+        return originalSave.call(this, (err) => {
+          if (err) {
+            console.error('Session save error:', err);
+          } else {
+            console.log('Session saved successfully:', req.sessionID);
+          }
+          if (callback) callback(err);
+        });
+      };
+    }
+    
     next();
   });
 
