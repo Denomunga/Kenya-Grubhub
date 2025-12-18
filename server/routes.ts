@@ -92,13 +92,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       body("phone").trim().isLength({ min: 7 }).withMessage("Phone is required and must be valid"),
     ],
     async (req: Request, res: Response) => {
+      console.log('Register request body:', req.body);
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.log('Validation errors:', errors.array());
         return res.status(400).json({ errors: errors.array() });
       }
 
       try {
         const { username, email, password, name, phone } = req.body;
+        console.log('Extracted values:', { username, email, name, phone });
 
         // Additional password strength validation
         const strongPasswordRegex = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}/;
