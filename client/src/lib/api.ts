@@ -1,4 +1,4 @@
-export const API_BASE_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5001';
+export const API_BASE_URL = import.meta.env?.VITE_API_URL || 'https://kenya-grubhub.onrender.com';
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
