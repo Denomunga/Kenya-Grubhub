@@ -18,12 +18,10 @@ import { Order } from "./models/Order";
 import mongoose from "mongoose";
 import { NewsAudit } from "./models/NewsAudit";
 import session from "express-session";
-import MemoryStore from "memorystore";
+import MongoStore from "connect-mongo";
 import newsletterRoutes from "./routes/newsletter";
 import adminNewsletterRoutes from "./routes/admin-newsletter";
 import { verifyEmail } from "./services/emailVerification";
-
-const MemoryStoreSession = MemoryStore(session);
 
 declare module "express-session" {
   interface SessionData {
@@ -44,14 +42,21 @@ declare global {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Session setup
+  // Session setup with secure MongoDB storage
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "kenyan-bistro-secret-key-change-in-production",
       resave: false,
       saveUninitialized: false,
-      store: new MemoryStoreSession({
-        checkPeriod: 86400000, // 24 hours
+      store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI!,
+        collectionName: 'sessions',
+        ttl: 7 * 24 * 60 * 60, // 7 days
+        autoRemove: 'native',
+        touchAfter: 24 * 3600, // Only update session once per day
+        crypto: {
+          secret: process.env.SESSION_CRYPTO_SECRET || process.env.SESSION_SECRET || "crypto-secret-change-in-production"
+        }
       }),
       cookie: {
         secure: process.env.NODE_ENV === "production",
