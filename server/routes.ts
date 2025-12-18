@@ -23,6 +23,8 @@ import newsletterRoutes from "./routes/newsletter";
 import adminNewsletterRoutes from "./routes/admin-newsletter";
 import { verifyEmail } from "./services/emailVerification";
 
+import cors from "cors";
+
 declare module "express-session" {
   interface SessionData {
     userId?: string;
@@ -42,6 +44,14 @@ declare global {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // CORS configuration - MUST come before session middleware
+  app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true, // This is CRITICAL for sending cookies
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+  }));
+
   // Session setup with secure MongoDB storage
   app.use(
     session({
@@ -59,10 +69,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }),
       cookie: {
-        secure: false, // Allow cookies in local development
+        secure: true, // Required for production/HTTPS
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-        sameSite: "lax", // Use lax for local development
+        sameSite: "none", // Required for cross-origin requests
       },
     })
   );
