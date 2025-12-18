@@ -49,10 +49,15 @@ app.use(cors({
 
 // Don't parse JSON for multipart/form-data requests
 app.use((req, res, next) => {
+  console.log(`Request Content-Type: ${req.get('Content-Type')}`);
+  console.log(`Is multipart: ${req.is('multipart/form-data')}`);
+  
   if (req.is('multipart/form-data')) {
     // Skip JSON parsing for file uploads
+    console.log('Skipping JSON parsing for multipart form data');
     next();
   } else {
+    console.log('Applying JSON parsing');
     express.json({ limit: "10mb" })(req, res, next);
   }
 });
