@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { GripVertical, Edit, Trash, Plus, X } from 'lucide-react';
 import { useData } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import { apiFetch } from '@/lib/api';
 import { MenuItem } from '@/lib/data';
 
 interface DraggableMenuItemProps {
@@ -162,7 +163,7 @@ const DragDropMenuManager: React.FC = () => {
         formData.append('image', file);
         
         try {
-          const response = await fetch('/api/uploads', {
+          const response = await apiFetch('/api/uploads', {
             method: 'POST',
             body: formData,
             credentials: 'include',
@@ -242,7 +243,7 @@ const DragDropMenuManager: React.FC = () => {
         formData.append('image', file);
         
         try {
-          const response = await fetch('/api/uploads', {
+          const response = await apiFetch('/api/uploads', {
             method: 'POST',
             body: formData,
             credentials: 'include',

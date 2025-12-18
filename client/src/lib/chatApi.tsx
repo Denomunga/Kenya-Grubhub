@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useAuth } from "./auth";
+import { apiFetch } from "./api";
 
 export interface ChatMessage {
   id: string;
@@ -44,8 +45,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     
     try {
-      const response = await fetch(`/api/chat/threads/${threadId}/messages`, {
-        credentials: "include",
+      const response = await apiFetch(`/api/chat/threads/${threadId}/messages`, {
       });
       
       if (response.ok) {
@@ -62,8 +62,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (!user || user.role === "user") return;
     
     try {
-      const response = await fetch("/api/chat/threads", {
-        credentials: "include",
+      const response = await apiFetch("/api/chat/threads", {
       });
       
       if (response.ok) {
@@ -118,10 +117,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const markThreadAsRead = async (threadId: string, readerRole: "admin" | "staff" | "user") => {
     try {
-      await fetch(`/api/chat/threads/${threadId}/read`, {
+      await apiFetch(`/api/chat/threads/${threadId}/read`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ readerRole }),
       });
 
