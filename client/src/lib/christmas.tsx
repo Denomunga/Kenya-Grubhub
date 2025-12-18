@@ -16,13 +16,8 @@ export function ChristmasProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem('christmasMode');
     if (saved) {
       setIsChristmasMode(JSON.parse(saved));
-    } else {
-      // Auto-enable in December
-      const currentMonth = new Date().getMonth();
-      if (currentMonth === 11) {
-        setIsChristmasMode(true);
-      }
     }
+    // Removed auto-activation in December - only admin can enable
   }, []);
 
   // Save to localStorage when state changes
