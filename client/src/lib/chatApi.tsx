@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useAuth } from "./auth";
 
 export interface ChatMessage {
@@ -91,7 +91,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const sendMessage = async (
     threadId: string,
-    sender: { id: string, name: string, role: "admin" | "staff" | "user" },
+    _sender: { id: string, name: string, role: "admin" | "staff" | "user" },
     text: string
   ) => {
     try {

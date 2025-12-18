@@ -1,3 +1,8 @@
+// Note: This schema is currently unused due to database architecture conflict
+// The server uses MongoDB (Mongoose) while this schema is for PostgreSQL (Drizzle)
+// Uncomment when migrating to PostgreSQL or remove if not needed
+
+/*
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -16,3 +21,4 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+*/

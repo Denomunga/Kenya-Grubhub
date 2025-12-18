@@ -1,3 +1,8 @@
+// Note: This storage layer is currently unused as the app uses MongoDB/Mongoose
+// The shared schema is commented out due to database architecture conflict
+// This can be re-enabled when migrating to PostgreSQL
+
+/*
 import { type User, type InsertUser } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -36,3 +41,4 @@ export class MemStorage implements IStorage {
 }
 
 export const storage = new MemStorage();
+*/

@@ -20,18 +20,21 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { User, Clock, Package, Edit, Mail, Hash } from "lucide-react";
+import { Clock, Package, Edit, Mail, Hash } from "lucide-react";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Valid email is required"),
+  email: z.string().email("Valid email is required").optional(),
   avatar: z.string().url("Must be a valid URL").optional().or(z.literal("")),
 });
 
 export default function Profile() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, requestPasswordChange, requestPhoneChange } = useAuth();
   const { orders } = useData();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
+  const [newPhone, setNewPhone] = useState('');
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -53,11 +56,12 @@ export default function Profile() {
   }, [user, form]);
 
   async function onSubmit(values: z.infer<typeof profileSchema>) {
-    const success = await updateProfile({
-      name: values.name,
-      email: values.email,
-      avatar: values.avatar || undefined,
-    });
+    const payload: any = { name: values.name, avatar: values.avatar || undefined };
+    // Only include email for admin users (server also enforces this)
+    if (user?.role === 'admin' && values.email) {
+      payload.email = values.email;
+    }
+    const success = await updateProfile(payload);
     if (success) {
       setEditDialogOpen(false);
     }
@@ -75,16 +79,16 @@ export default function Profile() {
   const myOrders = orders.filter(o => o.user === "CurrentUser" || o.user === user.username);
 
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="container mx-auto px-4 py-12 particle-container gradient-mesh">
       <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
         {/* Profile Card */}
         <div className="md:col-span-1">
-          <Card>
+          <Card className="card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow">
             <CardHeader className="text-center">
               <div className="mx-auto mb-4 relative">
                 <Avatar className="h-24 w-24">
                   <AvatarImage src={user.avatar} />
-                  <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                  <AvatarFallback className="text-2xl bg-blue-600 text-white">
                     {user.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -101,6 +105,18 @@ export default function Profile() {
                 <Mail className="h-4 w-4" />
                 <span data-testid="text-profile-email">{user.email}</span>
               </div>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground mt-2">
+                <span className="text-sm font-medium">Phone:</span>
+                <span data-testid="text-profile-phone">{user.phone || 'Not added'}</span>
+              </div>
+              {user?.pendingPhone && (
+                <div className="text-sm text-muted-foreground/80 mt-1">Pending change to {user.pendingPhone} — check your email to confirm.</div>
+              )}
+              {user?.role !== 'admin' && (
+                <div className="text-xs text-muted-foreground/80 mt-1">
+                  To change your email, please contact support or an administrator.
+                </div>
+              )}
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Hash className="h-4 w-4" />
                 <span data-testid="text-profile-id">{user.id}</span>
@@ -135,19 +151,21 @@ export default function Profile() {
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="john@example.com" {...field} data-testid="input-edit-email" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {user?.role === 'admin' && (
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input type="email" placeholder="john@example.com" {...field} data-testid="input-edit-email" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                       <FormField
                         control={form.control}
                         name="avatar"
@@ -169,6 +187,50 @@ export default function Profile() {
                       </div>
                     </form>
                   </Form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full mt-2">Change Password</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Change Password</DialogTitle>
+                    <DialogDescription>We'll send a confirmation link to your email so you can set a new password securely.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm">Click the button below and check your email for the confirmation link to complete your password change.</p>
+                    <div className="flex gap-2">
+                      <Button onClick={async () => {
+                        const ok = await requestPasswordChange("");
+                        if (ok) setPasswordDialogOpen(false);
+                      }} className="flex-1">Send confirmation link</Button>
+                      <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full mt-2">Change Phone</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Change Phone</DialogTitle>
+                    <DialogDescription>Enter your new phone number. We'll send a confirmation link to your registered email to confirm the change.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="e.g. +254700000000" className="w-full rounded-md border px-3 py-2" />
+                    <div className="flex gap-2">
+                      <Button onClick={async () => {
+                        if (!newPhone || newPhone.trim().length < 7) return;
+                        const ok = await requestPhoneChange(newPhone.trim());
+                        if (ok) setPhoneDialogOpen(false);
+                      }} className="flex-1">Request Change</Button>
+                      <Button variant="outline" onClick={() => setPhoneDialogOpen(false)}>Cancel</Button>
+                    </div>
+                  </div>
                 </DialogContent>
               </Dialog>
             </CardContent>

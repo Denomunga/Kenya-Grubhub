@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { useChat, ChatMessage } from "@/lib/chatApi";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { useLocation } from "wouter";
 
 export default function Chat() {
   const { user, isAuthenticated, isManager, isAdmin } = useAuth();
-  const { messages, sendMessage, getThreads, markThreadAsRead, refreshMessages, refreshThreads } = useChat();
+  const { messages, sendMessage, getThreads, markThreadAsRead, refreshMessages } = useChat();
   const [inputValue, setInputValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [, setLocation] = useLocation();
@@ -76,9 +76,9 @@ export default function Chat() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-4 text-center space-y-4">
-        <div className="bg-muted p-4 rounded-full">
-          <Lock className="h-8 w-8 text-muted-foreground" />
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-4 text-center space-y-4 particle-container gradient-mesh">
+        <div className="bg-blue-600 p-4 rounded-full">
+          <Lock className="h-8 w-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold">Secure Chat Login Required</h2>
         <p className="text-muted-foreground max-w-md">
@@ -92,11 +92,11 @@ export default function Chat() {
   // RENDER: Admin / Manager View (Inbox + Chat)
   if (isAdmin || isManager) {
     return (
-      <div className="container mx-auto px-4 py-8 h-[85vh]">
+      <div className="container mx-auto px-4 py-8 h-[85vh] particle-container gradient-mesh">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
           
           {/* Left Panel: Thread List */}
-          <Card className="md:col-span-1 flex flex-col h-full border-none shadow-lg overflow-hidden">
+          <Card className="md:col-span-1 flex flex-col h-full card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow overflow-hidden">
             <CardHeader className="bg-muted/30 pb-4">
               <div className="flex items-center justify-between mb-2">
                 <CardTitle className="text-lg">Inbox</CardTitle>

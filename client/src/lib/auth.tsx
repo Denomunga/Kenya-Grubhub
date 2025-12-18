@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
@@ -8,18 +8,26 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  phone?: string;
+  phoneVerified?: boolean;
+  pendingPhone?: string;
   role: Role;
   name: string;
   avatar?: string;
   jobTitle?: string;
+  lastSessionInvalidatedAt?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<boolean>;
-  register: (username: string, email: string, password: string, name: string) => Promise<boolean>;
+  register: (username: string, email: string, password: string, name: string, phone?: string) => Promise<boolean>;
   updateUserRole: (userId: string, newRole: Role, jobTitle?: string) => Promise<boolean>;
   updateProfile: (data: { name?: string; email?: string; avatar?: string }) => Promise<boolean>;
+  requestPasswordChange: (newPassword: string) => Promise<boolean>;
+  requestPhoneChange: (newPhone: string) => Promise<boolean>;
+  confirmPasswordReset: (token: string, newPassword: string) => Promise<boolean>;
+  confirmPhoneChange: (token: string) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -36,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastInvalidatedAt, setLastInvalidatedAt] = useState<string | undefined>(undefined);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -49,6 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
+          if (data.user?.lastSessionInvalidatedAt) setLastInvalidatedAt(data.user.lastSessionInvalidatedAt);
+          if (data.user?.lastSessionInvalidatedAt) {
+            setLastInvalidatedAt(data.user.lastSessionInvalidatedAt);
+          }
         }
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -58,6 +71,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     checkAuth();
   }, []);
+
+  // Poll /api/auth/me every 60 seconds to detect session invalidation and notify
+  useEffect(() => {
+    const id = setInterval(async () => {
+      try {
+        const resp = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!resp.ok) {
+          // if session became invalid, log out and show a message
+          if (user) {
+            setUser(null);
+            toast({ title: 'Logged out', description: 'Your session was ended. This can happen if your password or security settings were changed.', variant: 'destructive' });
+          }
+          return;
+        }
+        const d = await resp.json();
+        if (d.user?.lastSessionInvalidatedAt && lastInvalidatedAt && new Date(d.user.lastSessionInvalidatedAt).getTime() > new Date(lastInvalidatedAt).getTime()) {
+          // sessions were invalidated after our recorded time
+          toast({ title: 'Session invalidated', description: 'Your sessions were logged out due to password change.', variant: 'destructive' });
+          // force logout
+          setUser(null);
+        }
+        if (d.user?.lastSessionInvalidatedAt) setLastInvalidatedAt(d.user.lastSessionInvalidatedAt);
+      } catch (err) {
+        // ignore polling errors
+      }
+    }, 60000);
+    return () => clearInterval(id);
+  }, [user, lastInvalidatedAt, toast]);
 
   // Fetch all users for admin
   const refreshAllUsers = async () => {
@@ -103,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setUser(data.user);
+      if (data.user?.lastSessionInvalidatedAt) setLastInvalidatedAt(data.user.lastSessionInvalidatedAt);
       
       const roleMsg = data.user.role === "admin" ? "Admin Access Granted" : 
                       data.user.role === "staff" ? "Staff Access Granted" : "Welcome Back!";
@@ -127,13 +169,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (username: string, email: string, password: string, name: string) => {
+  const register = async (username: string, email: string, password: string, name: string, phone?: string) => {
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ username, email, password, name }),
+        body: JSON.stringify({ username, email, password, name, phone }),
       });
 
       const data = await response.json();
@@ -148,6 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setUser(data.user);
+      if (data.user?.lastSessionInvalidatedAt) setLastInvalidatedAt(data.user.lastSessionInvalidatedAt);
       toast({ title: "Welcome!", description: "Account created successfully." });
       
       // Users go to home page after registration
@@ -200,6 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userId === user.id) {
         const data = await response.json();
         setUser(data.user);
+        if (data.user?.lastSessionInvalidatedAt) setLastInvalidatedAt(data.user.lastSessionInvalidatedAt);
       }
 
       return true;
@@ -215,6 +259,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (data: { name?: string; email?: string; avatar?: string }) => {
     try {
+      // Prevent non-admin users from sending email updates from the client
+      if (data.email && user?.role !== 'admin') {
+        delete data.email;
+      }
       const response = await fetch("/api/auth/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -246,6 +294,102 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const requestPasswordChange = async () => {
+    try {
+      const resp = await fetch('/api/auth/password-change-request', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!resp.ok) {
+        const d = await resp.json();
+        toast({ title: 'Password change failed', description: d.message || 'Could not request password change', variant: 'destructive' });
+        return false;
+      }
+      toast({ title: 'Confirmation sent', description: 'Check your email to confirm the password change.' });
+      return true;
+    } catch (err) {
+      console.error('Request password change failed', err);
+      toast({ title: 'Password change failed', description: 'Network error', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  const requestPhoneChange = async (newPhone: string) => {
+    try {
+      const resp = await fetch('/api/auth/phone-change-request', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPhone }),
+      });
+      if (!resp.ok) {
+        const d = await resp.json();
+        toast({ title: 'Phone change failed', description: d.message || 'Could not request phone change', variant: 'destructive' });
+        return false;
+      }
+      toast({ title: 'Confirmation sent', description: 'Check your email to confirm the phone change.' });
+      return true;
+    } catch (err) {
+      console.error('Request phone change failed', err);
+      toast({ title: 'Phone change failed', description: 'Network error', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  const confirmPhoneChange = async (token: string) => {
+    try {
+      const resp = await fetch('/api/auth/phone-confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      if (!resp.ok) {
+        const d = await resp.json();
+        toast({ title: 'Confirmation failed', description: d.message || 'Invalid or expired token', variant: 'destructive' });
+        return false;
+      }
+      toast({ title: 'Phone updated', description: 'Your phone number was updated.' });
+      // Refresh user information
+      try {
+        const r = await fetch('/api/auth/me', { credentials: 'include' });
+        if (r.ok) {
+          const d = await r.json();
+          setUser(d.user);
+          if (d.user?.lastSessionInvalidatedAt) setLastInvalidatedAt(d.user.lastSessionInvalidatedAt);
+        }
+      } catch (e) {
+        // ignore
+      }
+      return true;
+    } catch (err) {
+      console.error('Confirm phone change failed', err);
+      toast({ title: 'Confirmation failed', description: 'Network error', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  const confirmPasswordReset = async (token: string, newPassword: string) => {
+    try {
+      const resp = await fetch('/api/auth/password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword }),
+      });
+      if (!resp.ok) {
+        const d = await resp.json();
+        toast({ title: 'Confirmation failed', description: d.message || 'Invalid or expired token', variant: 'destructive' });
+        return false;
+      }
+
+      toast({ title: 'Password changed', description: 'Your password was updated.' });
+      return true;
+    } catch (err) {
+      console.error('Confirm password reset failed', err);
+      toast({ title: 'Confirmation failed', description: 'Network error', variant: 'destructive' });
+      return false;
+    }
+  };
+
   const logout = async () => {
     try {
       await fetch("/api/auth/logout", {
@@ -273,6 +417,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         updateUserRole,
         updateProfile,
+        requestPasswordChange,
+        requestPhoneChange,
+        confirmPasswordReset,
+        confirmPhoneChange,
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.role === "admin",

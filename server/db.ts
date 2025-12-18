@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { log } from "./vite";
-import { User } from "./models/User";
+import { log } from "./logger.js";
+import { User } from "./models/User.js";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 

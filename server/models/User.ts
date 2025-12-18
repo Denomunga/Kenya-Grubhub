@@ -8,6 +8,18 @@ export interface IUser extends Document {
   role: "admin" | "staff" | "user";
   jobTitle?: string;
   avatar?: string;
+  // Pending password change fields (email-confirmation flow)
+  pendingPasswordHash?: string;
+  pendingPasswordToken?: string;
+  pendingPasswordExpires?: Date;
+  // Phone number and verification
+  phone?: string;
+  phoneVerified?: boolean;
+  pendingPhone?: string;
+  pendingPhoneToken?: string;
+  pendingPhoneExpires?: Date;
+  // timestamp when sessions for this user were last invalidated
+  lastSessionInvalidatedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +62,14 @@ const UserSchema = new Schema<IUser>(
     avatar: {
       type: String,
     },
+    phone: { type: String, unique: true, sparse: true },
+    phoneVerified: { type: Boolean, default: false },
+    pendingPhone: { type: String },
+    pendingPhoneToken: { type: String },
+    pendingPhoneExpires: { type: Date },
+    pendingPasswordHash: { type: String },
+    pendingPasswordToken: { type: String },
+    pendingPasswordExpires: { type: Date },
   },
   {
     timestamps: true,
