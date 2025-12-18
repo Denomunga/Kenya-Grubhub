@@ -19,6 +19,13 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
   ? [process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'https://kenya-grubhub-gx7x.vercel.app']
   : ['http://localhost:5173', 'http://localhost:3000'];
 
+console.log('🔧 CORS Configuration:', {
+  NODE_ENV: process.env.NODE_ENV,
+  CORS_ORIGIN: process.env.CORS_ORIGIN,
+  FRONTEND_URL: process.env.FRONTEND_URL,
+  allowedOrigins
+});
+
 app.use(cors({ 
   origin: allowedOrigins, 
   credentials: true,
@@ -127,6 +134,9 @@ async function startServer() {
           credentials: true,
           methods: ['GET', 'POST']
         } 
+      });
+      console.log('🔧 Socket.io CORS Configuration:', {
+        allowedOrigins
       });
       // Store it for access from routes
       (app as any).locals.io = io;
