@@ -44,6 +44,7 @@ declare global {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  console.log("🚀 registerRoutes function called - starting route registration...");
   // CORS configuration - MUST come before session middleware
   app.use(cors({
     origin: function(origin, callback) {
@@ -1473,6 +1474,12 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
 
   // Admin newsletter routes (protected)
   app.use("/api/admin/newsletter", requireAuth, adminNewsletterRoutes);
+
+  // Test endpoint to verify routes are registering
+  app.get("/api/test", (req, res) => {
+    console.log("Test endpoint hit!");
+    res.json({ message: "Routes are working!", timestamp: new Date().toISOString() });
+  });
 
   const httpServer = createServer(app);
 
