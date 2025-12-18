@@ -717,7 +717,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Upload endpoint - accepts field name 'image'
   console.log("Registering /api/uploads endpoint...");
+  
+  // Test GET endpoint for uploads
+  app.get("/api/uploads", requireAuth, (req, res) => {
+    console.log("Upload GET endpoint hit!");
+    res.json({ message: "Upload endpoint is accessible", user: req.user?.role });
+  });
+  
   app.post("/api/uploads", requireAuth, upload.single("image"), async (req: Request, res: Response) => {
+    console.log("Upload endpoint hit!");
     try {
       // Only allow admin or staff to upload assets
       if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
