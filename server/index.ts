@@ -16,7 +16,7 @@ const app = express();
 // Security: Express middleware setup
 // allow requests from the frontend dev server during development
 const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [process.env.FRONTEND_URL || 'https://yourdomain.com']
+  ? [process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'https://kenya-grubhub-gx7x.vercel.app']
   : ['http://localhost:5173', 'http://localhost:3000'];
 
 app.use(cors({ 
