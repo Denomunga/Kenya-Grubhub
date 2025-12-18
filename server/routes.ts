@@ -109,12 +109,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Verify email is real and deliverable
-        const emailVerification = await verifyEmail(email);
-        if (!emailVerification.isValid) {
-          return res.status(400).json({ 
-            message: emailVerification.message 
-          });
-        }
+        // Temporarily disabled for testing
+        // const emailVerification = await verifyEmail(email);
+        // if (!emailVerification.isValid) {
+        //   return res.status(400).json({ 
+        //     message: emailVerification.message 
+        //   });
+        // }
 
         // Check if user exists
         const existingUser = await User.findOne({ 
