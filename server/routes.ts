@@ -158,6 +158,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Set session
         req.session.userId = user._id.toString();
+        
+        // Explicitly save session to MongoDB
+        req.session.save((err) => {
+          if (err) {
+            console.error('Session save error:', err);
+          }
+        });
 
         // Return user without password
         const userResponse = {
@@ -207,6 +214,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         req.session.userId = user._id.toString();
+        
+        // Explicitly save session to MongoDB
+        req.session.save((err) => {
+          if (err) {
+            console.error('Session save error:', err);
+          }
+        });
 
         const userResponse = {
           id: user._id.toString(),
