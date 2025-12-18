@@ -329,8 +329,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const resp = await apiFetch('/api/menu', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: item.name,
           description: item.description,
@@ -359,10 +358,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Try server delete first
   try {
     if (/^[0-9a-fA-F]{24}$/.test(id)) {
-      const resp = await fetch(`/api/menu/${id}`, {
+      const resp = await apiFetch(`/api/menu/${id}`, {
         method: 'DELETE',
-        credentials: 'include',
-      });
+              });
       if (resp.ok) {
         setMenu(prev => prev.filter(i => i.id !== id));
         return;
@@ -381,10 +379,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     // Try to persist server-side
     try {
-      const resp = await fetch(`/api/menu/${item.id}`, {
+      const resp = await apiFetch(`/api/menu/${item.id}`, {
         method: 'PUT',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: item.name,
           description: item.description,
@@ -416,10 +413,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setNews(prev => prev.filter(n => n.id !== newsId));
         return true;
       }
-      const resp = await fetch(`/api/news/${newsId}`, {
+      const resp = await apiFetch(`/api/news/${newsId}`, {
         method: 'DELETE',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason, note }),
       });
       if (resp.ok) {
@@ -442,8 +438,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const resp = await apiFetch('/api/news', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
       });
 
@@ -469,9 +464,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       // Avoid fetching invalid ids (which would cause server-type errors)
       if (!/^[0-9a-fA-F]{24}$/.test(id)) return null;
-      const resp = await fetch(`/api/news/${id}`, {
-        credentials: 'include',
-      });
+      const resp = await apiFetch(`/api/news/${id}`, {
+              });
       if (resp.ok) {
         const d = await resp.json();
         return d.news as NewsItem;
@@ -485,10 +479,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const updateNewsViews = async (id: string, views: number) => {
     try {
       if (!/^[0-9a-fA-F]{24}$/.test(id)) return false;
-      const resp = await fetch(`/api/news/${id}/views`, {
+      const resp = await apiFetch(`/api/news/${id}/views`, {
         method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ views }),
       });
       if (resp.ok) {
@@ -508,10 +501,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const addReviewForProduct = async (productId: string, review: Omit<Review, "id" | "productId" | "date" | "userId"> & { userId?: string }) => {
     // Try to persist to server first (if available). If it fails, fall back to local-only storage.
     try {
-      const resp = await fetch(`/api/products/${productId}/reviews`, {
+      const resp = await apiFetch(`/api/products/${productId}/reviews`, {
         method: "POST",
-        credentials: 'include',
-        headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rating: review.rating, comment: review.comment }),
       });
 
@@ -563,7 +555,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (opts.exportAll) params.set('exportAll', 'true');
 
       const url = `/api/reviews/audit?${params.toString()}`;
-      const resp = await fetch(url, { credentials: 'include' });
+      const resp = await apiFetch(url);
       if (resp.ok) {
         const contentType = resp.headers.get('content-type') || '';
         if (opts.exportCsv || contentType.includes('text/csv')) {
