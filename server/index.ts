@@ -122,6 +122,19 @@ async function startServer() {
     } catch (err) {
       console.warn("⚠️  Could not setup uploads static path:", err);
     }
+
+    // Serve frontend static files for dashboard and other routes
+    try {
+      const clientDistPath = resolve(process.cwd(), "..", "client", "dist");
+      if (fs.existsSync(clientDistPath)) {
+        app.use(express.static(clientDistPath));
+        log("✅ Frontend static files served from:", clientDistPath);
+      } else {
+        console.warn("⚠️  Client dist directory not found at:", clientDistPath);
+      }
+    } catch (err) {
+      console.warn("⚠️  Could not setup frontend static path:", err);
+    }
     log("✅ Routes registered successfully");
   } catch (err) {
     console.error("❌ Failed to register routes:", err);
