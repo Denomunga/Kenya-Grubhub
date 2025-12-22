@@ -17,6 +17,7 @@ import {
   Megaphone
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/api";
 
 interface NewsletterStats {
   totalSubscribers: number;
@@ -61,9 +62,7 @@ const NewsletterManager: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/admin/newsletter/stats', {
-        credentials: 'include',
-      });
+      const response = await apiFetch('/api/admin/newsletter/stats');
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -75,9 +74,7 @@ const NewsletterManager: React.FC = () => {
 
   const fetchSubscribers = async () => {
     try {
-      const response = await fetch('/api/admin/newsletter/subscribers?limit=20', {
-        credentials: 'include',
-      });
+      const response = await apiFetch('/api/admin/newsletter/subscribers?limit=20');
       const data = await response.json();
       if (data.success) {
         setSubscribers(data.data.subscribers);
@@ -102,12 +99,8 @@ const NewsletterManager: React.FC = () => {
     setIsLoading(true);
     
     try {
-      const response = await fetch('/api/admin/newsletter/send', {
+      const response = await apiFetch('/api/admin/newsletter/send', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({
           type: campaignType,
           subject,

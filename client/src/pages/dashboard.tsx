@@ -914,7 +914,7 @@ function UserAuditViewer() {
     if (opts.exportAll) params.set('exportAll', 'true');
     if (opts.exportCsv) params.set('export', 'csv');
     const url = `/api/users/audit?${params.toString()}`;
-    const resp = await fetch(url, { credentials: 'include' });
+    const resp = await apiFetch(url);
     if (!resp.ok) throw new Error(await resp.text());
     const ct = resp.headers.get('content-type') || '';
     if (opts.exportCsv || ct.includes('text/csv')) {
