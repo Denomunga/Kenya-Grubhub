@@ -503,7 +503,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const resp = await apiFetch(`/api/products/${productId}/reviews`, {
         method: "POST",
-                headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rating: review.rating, comment: review.comment }),
       });
 
@@ -601,7 +600,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const removeReview = async (reviewId: string, reason?: string, note?: string) => {
     // attempt server deletion first (send reason / note to server as JSON body)
     try {
-      const resp = await apiFetch(`/api/reviews/${reviewId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, note }) });
+      const resp = await apiFetch(`/api/reviews/${reviewId}`, { 
+        method: 'DELETE', 
+        body: JSON.stringify({ reason, note }) 
+      });
       if (resp.ok) {
         setReviews(prev => prev.filter(r => r.id !== reviewId));
         return true;
