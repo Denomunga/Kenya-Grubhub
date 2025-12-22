@@ -25,9 +25,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Trash, DollarSign, Users, ShoppingBag, Mail, TrendingUp } from "lucide-react";
+import { Trash, DollarSign, Users, ShoppingBag, Mail, TrendingUp, Newspaper } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import NewsletterManager from "@/components/admin/NewsletterManager";
+import NewsManager from "@/components/admin/NewsManager";
 import DragDropMenuManager from "@/components/admin/DragDropMenuManager";
 import AnimatedCharts from "@/components/admin/AnimatedCharts";
 
@@ -155,6 +156,7 @@ export default function Dashboard() {
           <TabsTrigger value="analytics" className="magnetic hover-letter-spacing">Analytics</TabsTrigger>
           <TabsTrigger value="orders" className="magnetic hover-letter-spacing">Orders</TabsTrigger>
           <TabsTrigger value="menu" className="magnetic hover-letter-spacing">Menu</TabsTrigger>
+          <TabsTrigger value="news" className="magnetic hover-letter-spacing"><Newspaper className="h-4 w-4 mr-2" />News</TabsTrigger>
           <TabsTrigger value="newsletter" className="magnetic hover-letter-spacing"><Mail className="h-4 w-4 mr-2" />Newsletter</TabsTrigger>
           {isAdmin && <TabsTrigger value="users" className="magnetic hover-letter-spacing">Users</TabsTrigger>}
           {isAdmin && <TabsTrigger value="support" className="magnetic hover-letter-spacing">Support</TabsTrigger>}
@@ -512,6 +514,9 @@ export default function Dashboard() {
             </Card>
           </TabsContent>
         )}
+        <TabsContent value="news">
+          <NewsManager />
+        </TabsContent>
         <TabsContent value="newsletter">
           <NewsletterManager />
         </TabsContent>
