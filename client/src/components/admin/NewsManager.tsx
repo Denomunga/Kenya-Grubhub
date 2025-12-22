@@ -10,10 +10,12 @@ import {
   Plus, 
   Eye,
   Calendar,
-  User
+  User,
+  X
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/lib/data";
+import { apiFetch } from "@/lib/api";
 
 interface NewsItem {
   id: string;
@@ -36,6 +38,23 @@ const NewsManager: React.FC = () => {
   const [author, setAuthor] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [image, setImage] = useState('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      // For news, allow only 1 image
+      if (files.length > 1) {
+        toast({ title: 'Error', description: 'Only 1 image allowed per news article', variant: 'destructive' });
+        return;
+      }
+      setImageFiles(files);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleAddNews = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,13 +71,40 @@ const NewsManager: React.FC = () => {
     setIsLoading(true);
     
     try {
+      let uploadedImageUrl = '';
+      
+      // Upload image if selected
+      if (imageFiles.length > 0) {
+        const file = imageFiles[0];
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        try {
+          const response = await apiFetch('/api/uploads', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            uploadedImageUrl = data.url;
+          } else {
+            throw new Error('Upload failed');
+          }
+        } catch (error) {
+          toast({ title: 'Error', description: `Failed to upload ${file.name}`, variant: 'destructive' });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const newsItem: NewsItem = {
         id: Date.now().toString(),
         title,
         content,
         author,
         date,
-        image: image || undefined,
+        image: uploadedImageUrl || image || undefined,
         views: 0
       };
 
@@ -70,6 +116,7 @@ const NewsManager: React.FC = () => {
       setAuthor('');
       setDate(new Date().toISOString().split('T')[0]);
       setImage('');
+      setImageFiles([]);
       
       toast({
         title: "Success",
@@ -154,9 +201,47 @@ const NewsManager: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="image">Featured Image URL (optional)</Label>
+                  <Label htmlFor="image-upload">Featured Image (optional)</Label>
                   <Input
-                    id="image"
+                    id="image-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="liquid-transition"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Upload an image for your news article. Recommended size: 1200x630px.
+                  </p>
+                  
+                  {/* Image Preview */}
+                  {imageFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-foreground">Selected Image:</p>
+                      <div className="relative group">
+                        <img
+                          src={URL.createObjectURL(imageFiles[0])}
+                          alt="News article preview"
+                          className="w-full h-48 object-cover rounded border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(0)}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center truncate">
+                          {imageFiles[0].name}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="image-url">Or enter Image URL (optional)</Label>
+                  <Input
+                    id="image-url"
                     placeholder="https://example.com/image.jpg"
                     value={image}
                     onChange={(e) => setImage(e.target.value)}
