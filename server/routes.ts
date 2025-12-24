@@ -1665,11 +1665,18 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   // Business Location Management
   app.get('/api/business-location', async (_req: Request, res: Response) => {
     try {
+      console.log('BusinessLocation: Fetching business location...');
+      console.log('BusinessLocation: Model available:', !!BusinessLocation);
+      
       const location = await BusinessLocation.findOne({ isActive: true });
+      console.log('BusinessLocation: Found location:', !!location);
+      
       if (!location) {
+        console.log('BusinessLocation: No active location found, returning 404');
         return res.status(404).json({ message: 'No active business location found' });
       }
-      res.json({
+      
+      const response = {
         id: location._id.toString(),
         name: location.name,
         address: location.address,
@@ -1681,7 +1688,10 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         openingHours: location.openingHours,
         description: location.description,
         isActive: location.isActive
-      });
+      };
+      
+      console.log('BusinessLocation: Returning location data');
+      res.json(response);
     } catch (error) {
       console.error('Get business location error:', error);
       res.status(500).json({ message: 'Failed to fetch business location' });
