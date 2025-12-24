@@ -34,3 +34,4 @@ const NewsSchema = new Schema<INews>(
 );
 
 export const News = mongoose.model<INews>("News", NewsSchema);
+export type NewsDoc = INews;

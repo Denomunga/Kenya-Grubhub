@@ -39,13 +39,24 @@ export interface Review {
   deletedNote?: string;
 }
 
+export interface OrderLocation {
+  address: string;
+  latitude: number;
+  longitude: number;
+  placeId?: string;
+  instructions?: string;
+}
+
 export interface Order {
   id: string;
   items: { item: MenuItem; quantity: number }[];
   total: number;
-  status: "Pending" | "Preparing" | "Ready" | "Delivered";
+  status: "Pending" | "Preparing" | "Ready" | "Delivered" | "Cancelled";
   user: string;
+  userEmail?: string;
+  userPhone?: string;
   date: string;
+  location?: OrderLocation;
 }
 
 export interface Staff {
@@ -94,8 +105,10 @@ interface DataContextType {
   removeReview: (reviewId: string, reason?: string, note?: string) => Promise<boolean>;
 
   orders: Order[];
-  placeOrder: (items: { item: MenuItem; quantity: number }[]) => void;
+  placeOrder: (items: { item: MenuItem; quantity: number }[], location?: OrderLocation) => void;
   updateOrderStatus: (id: string, status: Order["status"]) => void;
+  cancelOrder: (id: string) => Promise<boolean>;
+  modifyOrder: (id: string, items: { item: MenuItem; quantity: number }[]) => Promise<boolean>;
 
   staff: Staff[];
   addStaff: (staff: Staff) => void;
@@ -281,11 +294,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
       socket = io(apiOrigin || window.location.origin, { path: '/socket.io' });
       socket.on('connect', () => console.debug('socket connected', socket!.id));
       socket.on('orders:new', (payload: any) => {
-        setOrders(prev => [{ id: payload.id, items: payload.items.map((it: any) => ({ item: { id: it.productId || Date.now().toString(), name: it.name, description: '', price: it.price, category: 'Main', image: '', available: true }, quantity: it.quantity })), total: payload.total, status: payload.status, user: payload.user || 'Unknown', date: payload.createdAt }, ...prev]);
+        setOrders(prev => [{ 
+          id: payload.id, 
+          items: payload.items.map((it: any) => ({ item: { id: it.productId || Date.now().toString(), name: it.name, description: '', price: it.price, category: 'Main', image: '', available: true }, quantity: it.quantity })), 
+          total: payload.total, 
+          status: payload.status, 
+          user: payload.user || 'Unknown',
+          userEmail: payload.userEmail || undefined,
+          userPhone: payload.userPhone || undefined,
+          date: payload.createdAt,
+          location: payload.location || undefined
+        }, ...prev]);
         try { window.dispatchEvent(new CustomEvent('orders:new', { detail: payload })); } catch (e) { }
       });
       socket.on('orders:update', (payload: any) => {
-        setOrders(prev => prev.map(o => o.id === payload.id ? ({ ...o, status: payload.status, eta: payload.eta }) : o));
+        setOrders(prev => prev.map(o => o.id === payload.id ? { 
+          ...o, 
+          status: payload.status, 
+          eta: payload.eta,
+          items: payload.items ? payload.items.map((it: any) => ({ 
+            item: { 
+              id: it.productId || Date.now().toString(), 
+              name: it.name, 
+              description: '', 
+              price: it.price, 
+              category: 'Main', 
+              image: '', 
+              available: true 
+            }, 
+            quantity: it.quantity 
+          })) : o.items,
+          total: payload.total || o.total
+        } : o));
         try { window.dispatchEvent(new CustomEvent('orders:update', { detail: payload })); } catch (e) { }
       });
       socket.on('chat:message', (payload: any) => {
@@ -617,21 +657,99 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const placeOrder = (items: { item: MenuItem; quantity: number }[]) => {
+  const placeOrder = (items: { item: MenuItem; quantity: number }[], location?: OrderLocation) => {
     const total = items.reduce((sum, i) => sum + (i.item.price * i.quantity), 0);
     const newOrder: Order = {
       id: Date.now().toString(),
       items,
       total,
       status: "Pending",
-      user: "CurrentUser", // Simplified
+      user: "CurrentUser", // Simplified - will be updated by API response
       date: new Date().toISOString(),
+      location: location || undefined,
     };
     setOrders([newOrder, ...orders]);
+    
+    // Send to API with user contact info
+    // In a real implementation, this would get user info from auth context
+    apiFetch('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        items: items.map(i => ({
+          productId: i.item.id,
+          name: i.item.name,
+          quantity: i.quantity,
+          price: i.item.price
+        })),
+        total,
+        user: "CurrentUser",
+        userId: "current-user-id", // Would come from auth
+        userEmail: "user@example.com", // Would come from auth
+        userPhone: "+254700000000", // Would come from auth
+        location
+      })
+    }).catch(err => {
+      console.error('Failed to place order:', err);
+    });
   };
 
   const updateOrderStatus = (id: string, status: Order["status"]) => {
     setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
+  };
+
+  const cancelOrder = async (id: string): Promise<boolean> => {
+    try {
+      const response = await apiFetch(`/api/orders/${id}/cancel`, {
+        method: 'PATCH',
+        body: JSON.stringify({})
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update local state with the cancelled order
+        setOrders(orders.map(o => o.id === id ? { ...o, status: data.order.status } : o));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to cancel order:', error);
+      return false;
+    }
+  };
+
+  const modifyOrder = async (id: string, items: { item: MenuItem; quantity: number }[]): Promise<boolean> => {
+    try {
+      const total = items.reduce((sum, i) => sum + (i.item.price * i.quantity), 0);
+      const formattedItems = items.map(i => ({
+        productId: i.item.id,
+        name: i.item.name,
+        quantity: i.quantity,
+        price: i.item.price
+      }));
+
+      const response = await apiFetch(`/api/orders/${id}/modify`, {
+        method: 'PATCH',
+        body: JSON.stringify({ items: formattedItems, total })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update local state with the modified order
+        setOrders(orders.map(o => o.id === id ? { 
+          ...o, 
+          items: data.order.items.map((item: any) => ({
+            item: { id: item.productId || Date.now().toString(), name: item.name, description: '', price: item.price, category: 'Main', image: '', available: true },
+            quantity: item.quantity
+          })),
+          total: data.order.total 
+        } : o));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to modify order:', error);
+      return false;
+    }
   };
 
   const addStaff = (newStaff: Staff) => setStaff([...staff, newStaff]);
@@ -714,7 +832,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       menu, addMenuItem, deleteMenuItem, updateMenuItem,
       news, addNews, deleteNews, getNewsById, updateNewsViews,
       reviews, getReviewsForProduct, addReviewForProduct, removeReview,
-      orders, placeOrder, updateOrderStatus,
+      orders, placeOrder, updateOrderStatus, cancelOrder, modifyOrder,
       staff, addStaff, removeStaff,
       messages, sendMessage, markThreadAsRead, setTypingStatus, getThreads,
       fetchReviewAudits, restoreReview,

@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, Plus, Minus, Trash } from "lucide-react";
+import { ShoppingBag, Plus, Minus, Trash, MapPin } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sheet,
@@ -22,13 +22,19 @@ import {
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import ProductImageViewer, { ProductImage } from "@/components/ui/ProductImageViewer";
+import LocationPicker from '@/components/ui/LocationPicker';
+import OrderConfirmation from '@/components/ui/OrderConfirmation';
 
 export default function Menu() {
   const { menu, placeOrder, getReviewsForProduct, addReviewForProduct, removeReview, reviews } = useContext(DataContext)!;
-  const { isAuthenticated, isAdmin, isStaff } = useAuth();
+  const { user, isAuthenticated, isAdmin, isStaff } = useAuth();
   const { toast } = useToast();
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [cart, setCart] = useState<{ item: MenuItem; quantity: number }[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
+  const [orderConfirmationOpen, setOrderConfirmationOpen] = useState(false);
+  const [lastOrder, setLastOrder] = useState<any>(null);
   // Deletion confirmation state for reviews
   const [confirmDeleteReviewId, setConfirmDeleteReviewId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -124,9 +130,39 @@ export default function Menu() {
         
 
   const handleCheckout = () => {
-    placeOrder(cart);
+    if (!selectedLocation) {
+      toast({ 
+        title: "Location Required", 
+        description: "Please select a delivery location before checkout.",
+        variant: "destructive" 
+      });
+      setLocationDialogOpen(true);
+      return;
+    }
+    
+    // Create the order
+    const newOrder = {
+      id: Date.now().toString(),
+      items: cart,
+      total: cart.reduce((sum, i) => sum + (i.item.price * i.quantity), 0),
+      status: "Pending",
+      user: user?.name || "CurrentUser",
+      userEmail: user?.email || undefined,
+      userPhone: user?.phone || undefined,
+      date: new Date().toISOString(),
+      location: selectedLocation,
+    };
+    
+    // Place the order
+    placeOrder(cart, selectedLocation);
+    
+    // Set the last order for confirmation
+    setLastOrder(newOrder);
+    setOrderConfirmationOpen(true);
+    
+    // Clear cart and location
     setCart([]);
-    toast({ title: "Order Placed!", description: "Your food is being prepared." });
+    setSelectedLocation(null);
   };
 
   const cartTotal = cart.reduce((sum, i) => sum + (i.item.price * i.quantity), 0);
@@ -208,12 +244,47 @@ export default function Menu() {
 
               <SheetFooter className="mt-auto border-t pt-4">
                 <div className="w-full space-y-4">
+                  {/* Location Display */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Delivery Location:</span>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => setLocationDialogOpen(true)}
+                      >
+                        {selectedLocation ? 'Change' : 'Select'}
+                      </Button>
+                    </div>
+                    {selectedLocation ? (
+                      <div className="bg-muted p-2 rounded text-sm">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-primary" />
+                          <span className="truncate">{selectedLocation.address}</span>
+                        </div>
+                        {selectedLocation.instructions && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Instructions: {selectedLocation.instructions}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground text-center">
+                        No delivery location selected
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex justify-between items-center font-bold text-lg">
                     <span>Total</span>
                     <span>{cartTotal} KSHS</span>
                   </div>
-                  <Button className="w-full h-12 text-lg" disabled={cart.length === 0} onClick={handleCheckout}>
-                    Checkout
+                  <Button 
+                    className="w-full h-12 text-lg" 
+                    disabled={cart.length === 0 || !selectedLocation} 
+                    onClick={handleCheckout}
+                  >
+                    Checkout {selectedLocation ? '' : '(Location Required)'}
                   </Button>
                 </div>
               </SheetFooter>
@@ -222,7 +293,7 @@ export default function Menu() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <AnimatePresence mode="popLayout">
           {filteredMenu.map((item: MenuItem) => (
             <motion.div
@@ -389,6 +460,30 @@ export default function Menu() {
         </DialogContent>
       </Dialog>
       
+      {/* Order Confirmation Dialog */}
+      <Dialog open={orderConfirmationOpen} onOpenChange={setOrderConfirmationOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {lastOrder && (
+            <OrderConfirmation
+              order={lastOrder}
+              onClose={() => setOrderConfirmationOpen(false)}
+              onTrackOrder={() => {
+                toast({
+                  title: "Order Tracking",
+                  description: "Order tracking feature coming soon!",
+                });
+              }}
+              onContactSupport={() => {
+                toast({
+                  title: "Contact Support",
+                  description: "Support contact options coming soon!",
+                });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Product Image Viewer */}
       {selectedProduct && (
         <ProductImageViewer
@@ -401,6 +496,27 @@ export default function Menu() {
           }}
         />
       )}
+
+      {/* Location Selection Dialog */}
+      <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Select Delivery Location</DialogTitle>
+            <DialogDescription>
+              Choose where you want your order delivered. You can search for an address, use your current location, or click on the map.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <LocationPicker
+            onLocationSelect={(location) => {
+              setSelectedLocation(location);
+              setLocationDialogOpen(false);
+            }}
+            initialLocation={selectedLocation}
+            placeholder="Search for delivery address..."
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

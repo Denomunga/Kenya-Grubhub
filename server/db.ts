@@ -26,7 +26,7 @@ async function initializeDatabase() {
     // Check if admin exists
     const adminExists = await User.findOne({ username: "admin" });
     if (!adminExists) {
-      const hashedPassword = await bcrypt.hash("admin", 10);
+      const hashedPassword = await bcrypt.hash("", 10);
       await User.create({
         username: "admin",
         email: "admin@kenyanbistro.co.ke",

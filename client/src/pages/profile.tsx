@@ -4,6 +4,7 @@ import { useData } from "@/lib/data";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +20,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Clock, Package, Edit, Mail, Hash } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Clock, Package, Edit, Mail, Hash, X } from "lucide-react";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -30,11 +31,17 @@ const profileSchema = z.object({
 
 export default function Profile() {
   const { user, updateProfile, requestPasswordChange, requestPhoneChange } = useAuth();
-  const { orders } = useData();
+  const { orders, cancelOrder, modifyOrder } = useData();
+  const { toast } = useToast();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
   const [newPhone, setNewPhone] = useState('');
+  const [modifyDialogOpen, setModifyDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [modifyCart, setModifyCart] = useState<{ item: any; quantity: number }[]>([]);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isModifying, setIsModifying] = useState(false);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -77,6 +84,61 @@ export default function Profile() {
 
   // Filter orders for this user (mock logic)
   const myOrders = orders.filter(o => o.user === "CurrentUser" || o.user === user.username);
+
+  const handleCancelOrder = async (orderId: string) => {
+    setIsCancelling(true);
+    const success = await cancelOrder(orderId);
+    if (success) {
+      toast({
+        title: "Order Cancelled",
+        description: "Your order has been successfully cancelled.",
+      });
+    } else {
+      toast({
+        title: "Cancellation Failed",
+        description: "Failed to cancel order. Please try again.",
+        variant: "destructive",
+      });
+    }
+    setIsCancelling(false);
+  };
+
+  const handleModifyOrder = (order: any) => {
+    setSelectedOrder(order);
+    setModifyCart(order.items.map((item: any) => ({ item: item.item, quantity: item.quantity })));
+    setModifyDialogOpen(true);
+  };
+
+  const handleSaveModification = async () => {
+    if (!selectedOrder || modifyCart.length === 0) return;
+    
+    setIsModifying(true);
+    const success = await modifyOrder(selectedOrder.id, modifyCart);
+    if (success) {
+      toast({
+        title: "Order Modified",
+        description: "Your order has been successfully updated.",
+      });
+      setModifyDialogOpen(false);
+      setSelectedOrder(null);
+      setModifyCart([]);
+    } else {
+      toast({
+        title: "Modification Failed",
+        description: "Failed to modify order. Please try again.",
+        variant: "destructive",
+      });
+    }
+    setIsModifying(false);
+  };
+
+  const canCancelOrder = (order: any) => {
+    return ['Pending', 'Preparing'].includes(order.status);
+  };
+
+  const canModifyOrder = (order: any) => {
+    return order.status === 'Pending';
+  };
 
   return (
     <div className="container mx-auto px-4 py-12 particle-container gradient-mesh">
@@ -271,7 +333,33 @@ export default function Profile() {
                               {new Date(order.date).toLocaleDateString()}
                             </div>
                           </div>
-                          <span className="font-bold text-primary">{order.total} KSHS</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-primary">{order.total} KSHS</span>
+                            <div className="flex gap-1">
+                              {canModifyOrder(order) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleModifyOrder(order)}
+                                  className="text-xs h-8 px-2"
+                                >
+                                  <Edit className="h-3 w-3 mr-1" />
+                                  Modify
+                                </Button>
+                              )}
+                              {canCancelOrder(order) && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleCancelOrder(order.id)}
+                                  disabled={isCancelling}
+                                  className="text-xs h-8 px-2"
+                                >
+                                  {isCancelling ? 'Cancelling...' : 'Cancel'}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
                         </div>
                         
                         <div className="space-y-2">
@@ -293,6 +381,95 @@ export default function Profile() {
           </Card>
         </div>
       </div>
+
+      {/* Order Modification Dialog */}
+      <Dialog open={modifyDialogOpen} onOpenChange={setModifyDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Modify Order #{selectedOrder?.id?.slice(-6)}</DialogTitle>
+            <DialogDescription>
+              Update your order items and quantities. Only pending orders can be modified.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h4 className="font-medium">Order Items</h4>
+              {modifyCart.map((item, index) => (
+                <div key={index} className="flex items-center justify-between p-2 border rounded">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{item.item.name}</span>
+                    <span className="text-sm text-muted-foreground">KSHS {item.item.price} each</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (item.quantity > 1) {
+                          setModifyCart(prev => prev.map((i, idx) => 
+                            idx === index ? { ...i, quantity: i.quantity - 1 } : i
+                          ));
+                        }
+                      }}
+                    >
+                      -
+                    </Button>
+                    <span className="w-8 text-center">{item.quantity}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setModifyCart(prev => prev.map((i, idx) => 
+                          idx === index ? { ...i, quantity: i.quantity + 1 } : i
+                        ));
+                      }}
+                    >
+                      +
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        setModifyCart(prev => prev.filter((_, idx) => idx !== index));
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              
+              {modifyCart.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">
+                  No items in order. Add items to continue.
+                </p>
+              )}
+            </div>
+            
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Total:</span>
+                <span className="font-bold text-lg">
+                  KSHS {modifyCart.reduce((sum, item) => sum + (item.item.price * item.quantity), 0)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModifyDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveModification}
+              disabled={isModifying || modifyCart.length === 0}
+            >
+              {isModifying ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

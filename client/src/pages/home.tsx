@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api";
 import HeroSection from "@/components/home/HeroSection";
 import CategoryFilter from "@/components/home/CategoryFilter";
 import FeaturedDishes from "@/components/home/FeaturedDishes";
+import InteractiveMap from "@/components/home/InteractiveMap";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, MapPin, CheckCircle, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -30,6 +31,8 @@ export default function Home() {
   const [, setSelectedNews] = useState<NewsItem | null>(null);
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [businessLocation, setBusinessLocation] = useState<any>(null);
+  const [locationLoading, setLocationLoading] = useState(true);
   
   // Newsletter state
   const [email, setEmail] = useState('');
@@ -77,6 +80,25 @@ export default function Home() {
   );
   
   
+  // Fetch business location
+  useEffect(() => {
+    const fetchBusinessLocation = async () => {
+      try {
+        const response = await fetch('/api/business-location');
+        if (response.ok) {
+          const data = await response.json();
+          setBusinessLocation(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch business location:', error);
+      } finally {
+        setLocationLoading(false);
+      }
+    };
+    
+    fetchBusinessLocation();
+  }, []);
+
   // Fetch news on component mount
   useEffect(() => {
     const fetchNews = async () => {
@@ -626,7 +648,7 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              Visit Our Location
+              {locationLoading ? 'Loading...' : (businessLocation?.name || 'Visit Our Location')}
             </motion.h2>
             
             <div className="space-y-8">
@@ -640,9 +662,15 @@ export default function Home() {
                   <MapPin className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-xl mb-2">Westlands Location</h3>
-                  <p className="text-white/90 leading-relaxed">123 Mpaka Road, Westlands</p>
-                  <p className="text-white/90">Nairobi, Kenya</p>
+                  <h3 className="font-bold text-xl mb-2">
+                    {businessLocation?.name || 'Westlands Location'}
+                  </h3>
+                  <p className="text-white/90 leading-relaxed">
+                    {locationLoading ? 'Loading address...' : (businessLocation?.address || '123 Mpaka Road, Westlands')}
+                  </p>
+                  <p className="text-white/90">
+                    {businessLocation?.address ? '' : 'Nairobi, Kenya'}
+                  </p>
                 </div>
               </motion.div>
 
@@ -657,8 +685,19 @@ export default function Home() {
                 </div>
                 <div>
                   <h3 className="font-bold text-xl mb-2">Opening Hours</h3>
-                  <p className="text-white/90 leading-relaxed">Monday - Friday: 11am - 10pm</p>
-                  <p className="text-white/90 leading-relaxed">Weekends: 10am - 11pm</p>
+                  {locationLoading ? (
+                    <p className="text-white/90 leading-relaxed">Loading hours...</p>
+                  ) : businessLocation?.openingHours ? (
+                    <div className="text-white/90 leading-relaxed">
+                      <p>Monday - Friday: {businessLocation.openingHours.monday || businessLocation.openingHours.friday}</p>
+                      <p>Weekends: {businessLocation.openingHours.saturday || businessLocation.openingHours.sunday}</p>
+                    </div>
+                  ) : (
+                    <div className="text-white/90 leading-relaxed">
+                      <p>Monday - Friday: 11am - 10pm</p>
+                      <p>Weekends: 10am - 11pm</p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             </div>
@@ -670,25 +709,7 @@ export default function Home() {
           whileInView={{ x: 0 }}
           transition={{ duration: 0.6 }}
         >
-          {/* Professional Map Placeholder */}
-          <div className="absolute inset-0 bg-linear-to-br from-blue-50 to-white flex items-center justify-center">
-            <div className="text-center p-8">
-              <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                className="mb-6"
-              >
-                <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center shadow-xl mx-auto">
-                  <MapPin className="h-10 w-10 text-white" />
-                </div>
-              </motion.div>
-              <h3 className="text-2xl font-bold text-foreground mb-2">Find Us Easily</h3>
-              <p className="text-muted-foreground mb-4">Located in the heart of Westlands</p>
-              <div className="w-full h-32 bg-muted/30 rounded-xl border border-border/20 flex items-center justify-center">
-                <p className="text-sm text-muted-foreground">Interactive Map</p>
-              </div>
-            </div>
-          </div>
+          <InteractiveMap />
         </motion.div>
       </motion.section>
     </div>

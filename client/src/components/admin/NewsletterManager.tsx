@@ -212,7 +212,7 @@ const NewsletterManager: React.FC = () => {
 
       {/* Stats Overview */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -321,7 +321,7 @@ const NewsletterManager: React.FC = () => {
                 </div>
 
                 {/* Optional Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="imageUrl">Image URL (Optional)</Label>
                     <Input
@@ -407,7 +407,7 @@ const NewsletterManager: React.FC = () => {
 
         {/* Examples Tab */}
         <TabsContent value="examples" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {campaignExamples.map((campaign) => (
               <Card key={campaign.type} className="cursor-pointer hover:shadow-lg transition-shadow"
                     onClick={() => {

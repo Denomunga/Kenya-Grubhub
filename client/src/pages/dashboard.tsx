@@ -22,15 +22,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Trash, DollarSign, Users, ShoppingBag, Mail, TrendingUp, Newspaper } from "lucide-react";
+import { DollarSign, Users, ShoppingBag, Mail, TrendingUp, MapPin, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import NewsletterManager from "@/components/admin/NewsletterManager";
 import NewsManager from "@/components/admin/NewsManager";
 import DragDropMenuManager from "@/components/admin/DragDropMenuManager";
 import AnimatedCharts from "@/components/admin/AnimatedCharts";
+import OrderLocationView from "@/components/admin/OrderLocationView";
+import BusinessLocationManager from "@/components/admin/BusinessLocationManager";
 
 function playBeep() {
   try {
@@ -52,19 +53,11 @@ export default function Dashboard() {
   const { user, isAdmin, isStaff, allUsers, updateUserRole, refreshAllUsers } = useAuth();
   const [, setLocation] = useLocation();
   const { 
-    
-    orders, updateOrderStatus, news, deleteNews,
-    serverHealth, kpis
+    orders, updateOrderStatus, serverHealth, kpis
   } = useData();
   const { toast } = useToast();
   const [opm, setOpm] = React.useState<number>(0); // orders per minute
   const orderTimestampsRef = React.useRef<number[]>([]);
-  // News deletion state
-  const [confirmDeleteNewsId, setConfirmDeleteNewsId] = React.useState<string | null>(null);
-  const [deleteNewsOpen, setDeleteNewsOpen] = React.useState(false);
-  const [isDeletingNews, setIsDeletingNews] = React.useState(false);
-  const [deleteNewsReason, setDeleteNewsReason] = React.useState<string>('');
-  const [deleteNewsNote, setDeleteNewsNote] = React.useState<string>('');
 
   React.useEffect(() => {
     if (!isAdmin && !isStaff) {
@@ -121,58 +114,62 @@ export default function Dashboard() {
     }
   };
 
-  // Scroll-based font weight animation
-  const [scrollY, setScrollY] = React.useState(0);
-  React.useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const fontWeight = Math.min(900, Math.max(400, 400 + scrollY / 10));
+  // Scroll-based font weight animation (currently unused)
+  // const [scrollY, setScrollY] = React.useState(0);
+  // React.useEffect(() => {
+  //   const handleScroll = () => setScrollY(window.scrollY);
+  //   window.addEventListener('scroll', handleScroll);
+  //   return () => window.removeEventListener('scroll', handleScroll);
+  // }, []);
+  // const fontWeight = Math.min(900, Math.max(400, 400 + scrollY / 10));
 
   if (!user || (!isAdmin && !isStaff)) return null;
 
   return (
-    <div className="container mx-auto px-4 py-8 particle-container gradient-mesh">
-      <div className="flex justify-between items-center mb-8 liquid-transition">
-        <div className="text-reveal-mask">
-          <h1 
-            className="text-4xl font-heading font-bold text-holographic hover-letter-spacing font-scroll-responsive"
-            style={{ '--font-weight': fontWeight } as React.CSSProperties}
-          >
-            YOU ARE MY WORLD WALI!
+    <div className="container mx-auto px-4 py-8 particle-container">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-4xl font-heading font-bold text-foreground mb-2">
+            Admin Dashboard
           </h1>
           <p className="text-muted-foreground text-lg">Welcome back, {user.name}</p>
         </div>
-        <Badge variant="outline" className="text-lg px-4 py-1 border-animated-gradient luminous-glow magnetic">
-          {user.role.toUpperCase()}
-        </Badge>
+        <div className="flex items-center gap-4">
+          <Badge variant="outline" className="text-lg px-4 py-2 border-primary/20 bg-primary/5 text-primary">
+            {user.role.toUpperCase()}
+          </Badge>
+          <div className="text-right">
+            <div className="text-sm text-muted-foreground">System Status</div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium text-green-600">Online</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-8">
-        <TabsList className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-9 gap-2 border-animated-gradient p-1">
-          <TabsTrigger value="overview" className="magnetic hover-letter-spacing">Overview</TabsTrigger>
-          <TabsTrigger value="analytics" className="magnetic hover-letter-spacing">Analytics</TabsTrigger>
-          <TabsTrigger value="orders" className="magnetic hover-letter-spacing">Orders</TabsTrigger>
-          <TabsTrigger value="menu" className="magnetic hover-letter-spacing">Menu</TabsTrigger>
-          <TabsTrigger value="news" className="magnetic hover-letter-spacing"><Newspaper className="h-4 w-4 mr-2" />News</TabsTrigger>
-          <TabsTrigger value="newsletter" className="magnetic hover-letter-spacing"><Mail className="h-4 w-4 mr-2" />Newsletter</TabsTrigger>
-          {isAdmin && <TabsTrigger value="users" className="magnetic hover-letter-spacing">Users</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="support" className="magnetic hover-letter-spacing">Support</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="user-audit" className="magnetic hover-letter-spacing">Audits</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="audit" className="magnetic hover-letter-spacing">Audit</TabsTrigger>}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 p-1 bg-muted/50 rounded-lg border">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Overview</TabsTrigger>
+          <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Analytics</TabsTrigger>
+          <TabsTrigger value="orders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Orders</TabsTrigger>
+          <TabsTrigger value="menu" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Menu</TabsTrigger>
+          <TabsTrigger value="location" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Location</TabsTrigger>
+          <TabsTrigger value="news" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">News</TabsTrigger>
+          <TabsTrigger value="newsletter" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Newsletter</TabsTrigger>
+          {isAdmin && <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Users</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="support" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Support</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview">
-          <div className="grid md:grid-cols-4 gap-6">
-            <Card className="card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="border shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-primary animate-float" />
+                <DollarSign className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
-                  <div className="text-2xl font-bold text-gradient">
+                <div className="text-2xl font-bold">
                   {kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0)} KSHS
                 </div>
                 <div className="flex items-center gap-2 mt-2">
@@ -181,10 +178,10 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow">
+            <Card className="border shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">System Health</CardTitle>
-                <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse-glow"></div>
+                <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
               </CardHeader>
               <CardContent>
                 {serverHealth ? (
@@ -198,28 +195,28 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
-            <Card className="card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow">
+            <Card className="border shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
-                <ShoppingBag className="h-4 w-4 text-primary animate-float" />
+                <ShoppingBag className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gradient">
+                <div className="text-2xl font-bold">
                   {orders.filter(o => o.status !== "Delivered").length}
                 </div>
                 <div className="flex items-center gap-2 mt-2">
-                  <div className="w-2 h-2 bg-coral-500 rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
                   <p className="text-xs text-muted-foreground">Live updates</p>
                 </div>
               </CardContent>
             </Card>
-            <Card className="card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow">
+            <Card className="border shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-primary animate-float" />
+                <Users className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gradient">{allUsers.length}</div>
+                <div className="text-2xl font-bold">{allUsers.length}</div>
                 <div className="flex items-center gap-2 mt-2">
                   <TrendingUp className="h-4 w-4 text-green-500" />
                   <p className="text-xs text-muted-foreground">+12% this month</p>
@@ -234,182 +231,181 @@ export default function Dashboard() {
         </TabsContent>
 
         <TabsContent value="orders">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Orders</CardTitle>
-              <CardDescription>Manage incoming orders and update their status.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Live Orders KPI */}
-              <div className="flex items-center gap-4 mb-4">
-                <div className="bg-white/5 rounded p-3">
-                  <div className="text-sm text-muted-foreground">Orders / min</div>
-                  <div className="text-xl font-bold">{opm}</div>
-                </div>
-                <div className="bg-white/5 rounded p-3">
-                  <div className="text-sm text-muted-foreground">Active Orders</div>
-                  <div className="text-xl font-bold">{kpis?.activeOrders ?? orders.filter(o => o.status !== 'Delivered').length}</div>
-                </div>
-                <div className="bg-white/5 rounded p-3">
-                  <div className="text-sm text-muted-foreground">Total Revenue</div>
-                  <div className="text-xl font-bold">{kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0)} KSHS</div>
-                </div>
-              </div>
-              {/* Live Orders feed */}
-              <div className="mb-4">
-                <h3 className="text-md font-medium mb-2">Live Orders Feed</h3>
-                <div className="space-y-2 max-h-44 overflow-y-auto border rounded p-2">
-                  {orders.slice(0, 10).map(o => (
-                    <div key={o.id} className="flex justify-between items-center p-2 bg-background/50 rounded">
-                      <div>
-                          <div className="text-sm font-medium">#{o.id.slice(-6)} — {o.user}</div>
-                        <div className="text-xs text-muted-foreground">{o.items.length} items • {o.total} KSHS</div>
-                      </div>
-                      <div>
-                        <Badge variant="outline">{o.status}</Badge>
-                      </div>
-                    </div>
+          <div className="space-y-6">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Orders / min</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{opm}</div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{kpis?.activeOrders ?? orders.filter(o => o.status !== 'Delivered').length}</div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0)} KSHS</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Active Orders */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Active Orders</CardTitle>
+                <CardDescription>Manage incoming orders and update their status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {orders.filter(o => o.status !== 'Delivered').slice(0, 6).map((order) => (
+                    <OrderLocationView
+                      key={order.id}
+                      order={{
+                        ...order,
+                        createdAt: order.date || new Date().toISOString()
+                      }}
+                      onUpdateStatus={(orderId: string, status: string) => updateOrderStatus(orderId, status as any)}
+                      onContactCustomer={(customerName) => {
+                        toast({
+                          title: "Contact Customer",
+                          description: `Opening contact options for ${customerName}`,
+                        });
+                      }}
+                    />
                   ))}
                 </div>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order ID</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">#{order.id.slice(-6)}</TableCell>
-                      <TableCell>{order.user}</TableCell>
-                      <TableCell>{order.items.length} items</TableCell>
-                      <TableCell>{order.total} KSHS</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={order.status === "Delivered" ? "secondary" : "outline"}
-                          className={order.status === "Pending" ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}
-                        >
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Select 
-                          defaultValue={order.status} 
-                          onValueChange={(val: any) => updateOrderStatus(order.id, val)}
-                        >
-                          <SelectTrigger className="w-[130px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pending">Pending</SelectItem>
-                            <SelectItem value="Preparing">Preparing</SelectItem>
-                            <SelectItem value="Ready">Ready</SelectItem>
-                            <SelectItem value="Delivered">Delivered</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="mt-8">
-                <h3 className="text-xl font-heading font-bold mb-3">News Management</h3>
-                {news.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No news posts yet.</div>
-                ) : (
-                  <div className="space-y-3">
-                    {news.map(n => (
-                      <div key={n.id} className="flex items-center justify-between gap-4 border p-3 rounded">
-                        <div className="flex-1">
-                          <div className="font-medium">{n.title}</div>
-                          <div className="text-xs text-muted-foreground">Posted {n.date} by {n.author} • {n.views ?? 0} views</div>
-                        </div>
-                        <div className="flex gap-2">
-                          {(isAdmin || isStaff) && (
-                            <>
-                              <Dialog open={deleteNewsOpen && confirmDeleteNewsId === n.id} onOpenChange={setDeleteNewsOpen}>
-                                <DialogTrigger asChild>
-                                  <Button variant="destructive" size="sm" onClick={() => { setConfirmDeleteNewsId(n.id); setDeleteNewsOpen(true); setDeleteNewsReason(''); setDeleteNewsNote(''); }}>
-                                    <Trash className="h-4 w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Delete News</DialogTitle>
-                                    <div className="text-sm text-muted-foreground">This will remove the news post from public view. Provide a reason for audit purposes.</div>
-                                  </DialogHeader>
-                                  <div className="mt-4 space-y-2">
-                                    <label className="text-sm block">Reason</label>
-                                    <select value={deleteNewsReason} onChange={(e) => setDeleteNewsReason(e.target.value)} className="w-full rounded border px-2 py-1">
-                                      <option value="outdated">Outdated</option>
-                                      <option value="incorrect">Incorrect information</option>
-                                      <option value="policy">Policy violation</option>
-                                      <option value="other">Other</option>
-                                    </select>
-                                  </div>
-                                  <div className="mt-4">
-                                    <label className="text-sm block mb-1">Notes (optional)</label>
-                                    <Textarea value={deleteNewsNote} onChange={(e) => setDeleteNewsNote(e.target.value)} placeholder="Optional clarification for audit logs" />
-                                  </div>
-                                  <div className="mt-4 flex justify-end gap-2">
-                                    <Button variant="outline" onClick={() => { setDeleteNewsOpen(false); setConfirmDeleteNewsId(null); setDeleteNewsReason(''); setDeleteNewsNote(''); }}>Cancel</Button>
-                                    <Button variant="destructive" onClick={async () => {
-                                      if (!confirmDeleteNewsId) return;
-                                      setIsDeletingNews(true);
-                                      const ok = await deleteNews(confirmDeleteNewsId, deleteNewsReason, deleteNewsNote);
-                                      setIsDeletingNews(false);
-                                      setDeleteNewsOpen(false);
-                                      setConfirmDeleteNewsId(null);
-                                      setDeleteNewsReason('');
-                                      setDeleteNewsNote('');
-                                      if (ok) toast({ title: 'Deleted', description: 'News was removed.' });
-                                    }} disabled={isDeletingNews}>{isDeletingNews ? 'Deleting…' : 'Delete News'}</Button>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                              {isAdmin && (
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm">Edit Views</Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Edit View Count</DialogTitle>
-                                    </DialogHeader>
-                                    <EditViewsForm news={n} onDone={async () => { await refreshAllUsers(); /* just refresh admin data after edit, though news refreshed separately */ }} />
-                                  </DialogContent>
-                                </Dialog>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                {orders.filter(o => o.status !== 'Delivered').length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <ShoppingBag className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                    <p>No active orders</p>
                   </div>
                 )}
-        
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Moderation Stream</CardTitle>
-              <CardDescription>Real-time moderation actions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ModerationStream />
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Orders Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>All Orders</CardTitle>
+                <CardDescription>Complete order history and management</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order ID</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Items</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">#{order.id.slice(-6)}</TableCell>
+                        <TableCell>{order.user}</TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            {order.userPhone && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => window.open(`tel:${order.userPhone}`, '_self')}
+                                className="h-7 px-2 text-xs"
+                              >
+                                <Phone className="h-3 w-3 mr-1" />
+                                {order.userPhone}
+                              </Button>
+                            )}
+                            {order.userEmail && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => window.open(`mailto:${order.userEmail}`, '_blank')}
+                                className="h-7 px-2 text-xs"
+                              >
+                                <Mail className="h-3 w-3 mr-1" />
+                                Email
+                              </Button>
+                            )}
+                            {!order.userPhone && !order.userEmail && (
+                              <span className="text-xs text-muted-foreground">No contact</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{order.items.length} items</TableCell>
+                        <TableCell>{order.total} KSHS</TableCell>
+                        <TableCell>
+                          {order.location ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-sm">
+                                <MapPin className="h-3 w-3 text-primary" />
+                                <span className="truncate max-w-[200px]">{order.location.address}</span>
+                              </div>
+                              {order.location.instructions && (
+                                <div className="text-xs text-muted-foreground italic">
+                                  "{order.location.instructions}"
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">No location</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={order.status === "Delivered" ? "secondary" : "outline"}
+                            className={order.status === "Pending" ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}
+                          >
+                            {order.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Select 
+                            defaultValue={order.status} 
+                            onValueChange={(val: any) => updateOrderStatus(order.id, val)}
+                          >
+                            <SelectTrigger className="w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Pending">Pending</SelectItem>
+                              <SelectItem value="Preparing">Preparing</SelectItem>
+                              <SelectItem value="Ready">Ready</SelectItem>
+                              <SelectItem value="Delivered">Delivered</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="menu">
           <DragDropMenuManager />
+        </TabsContent>
+
+        <TabsContent value="location">
+          <BusinessLocationManager />
         </TabsContent>
 
         {isAdmin && (
@@ -590,38 +586,6 @@ function SupportPanel() {
   )
 }
 
-function ModerationStream() {
-  const [items, setItems] = React.useState<any[]>([]);
-  React.useEffect(() => {
-    const listener = (e: any) => {
-      const payload = e.detail;
-      setItems(prev => [payload, ...prev].slice(0, 20));
-    };
-    window.addEventListener('audit:review', listener);
-    window.addEventListener('audit:news', listener);
-    window.addEventListener('audit:user', listener);
-    return () => {
-      window.removeEventListener('audit:review', listener);
-      window.removeEventListener('audit:news', listener);
-      window.removeEventListener('audit:user', listener);
-    };
-  }, []);
-
-  if (!items.length) return <div className="text-sm text-muted-foreground">No moderation activity</div>;
-  return (
-    <div className="space-y-2 max-h-48 overflow-y-auto">
-      {items.map((i, idx) => (
-        <div key={i._id || i.id || idx} className="flex justify-between items-center p-2 rounded bg-background/50">
-          <div className="text-sm">
-            <div className="font-medium">{i.action} — {i.byName || i.byId || 'system'}</div>
-            <div className="text-xs text-muted-foreground">{i.note || i.reason || ''}</div>
-          </div>
-          <div className="text-xs text-muted-foreground">{new Date(i.timestamp || i.createdAt || Date.now()).toLocaleTimeString()}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function ChangePhoneForm({ user, onDone }: { user: any; onDone?: () => void }) {
   const { refreshAllUsers } = useAuth();
@@ -677,35 +641,6 @@ function ChangePhoneForm({ user, onDone }: { user: any; onDone?: () => void }) {
 
 
 
-function EditViewsForm({ news, onDone }: { news: any; onDone?: () => void }) {
-  const { updateNewsViews } = useData();
-  const [views, setViews] = React.useState(news.views ?? 0);
-  const [loading, setLoading] = React.useState(false);
-  const { toast } = useToast();
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="text-sm block mb-1">Views</label>
-        <input type="number" className="w-full rounded border px-2 py-1" value={views} onChange={(e) => setViews(Number(e.target.value))} />
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => onDone && onDone()}>Cancel</Button>
-        <Button onClick={async () => {
-          setLoading(true);
-          const ok = await updateNewsViews(news.id, views);
-          setLoading(false);
-          if (ok) {
-            toast({ title: 'Updated', description: 'View count updated.' });
-            if (onDone) onDone();
-          } else {
-            toast({ title: 'Error', description: 'Could not update view count', variant: 'destructive' });
-          }
-        }} disabled={loading}>{loading ? 'Saving…' : 'Save'}</Button>
-      </div>
-    </div>
-  );
-}
 
 function AuditViewer() {
   const { fetchReviewAudits, restoreReview } = useData();

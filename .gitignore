@@ -9,7 +9,12 @@ vite.config.ts.*
 .env
 .env.local
 .env.production
+.env.development
+.env.test
 *.env
+mongodb-config.env
+*-config.env
+config.env
 
 # Logs
 logs

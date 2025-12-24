@@ -47,7 +47,7 @@ export function ChristmasToggle() {
           {/* Animated background effect */}
           {isChristmasMode && (
             <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-red-400 to-green-400 opacity-30"
+              className="absolute inset-0 bg-linear-to-r from-red-400 to-green-400 opacity-30"
               animate={{
                 background: [
                   "linear-gradient(90deg, #ef4444 0%, #22c55e 50%, #ef4444 100%)",

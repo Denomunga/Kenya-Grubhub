@@ -1,45 +1,53 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import multer from "multer";
 import fs from "fs";
 import { resolve } from "node:path";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import nodemailer from "nodemailer";
-import { body, validationResult } from "express-validator";
-import { User } from "./models/User";
-import { UserAudit } from "./models/UserAudit";
-import { ChatMessage } from "./models/ChatMessage";
-import { Review } from "./models/Review";
-import { ReviewAudit } from "./models/ReviewAudit";
-import { Product } from "./models/Product";
-import { News } from "./models/News";
-import { Order } from "./models/Order";
+import { body } from "express-validator";
+import multer from "multer";
+import { Order } from './models/Order';
+import { User } from './models/User';
+import { News } from './models/News';
+import { Review } from './models/Review';
+import { BusinessLocation } from './models/BusinessLocation';
+import { Product } from './models/Product';
 import mongoose from "mongoose";
 import { NewsAudit } from "./models/NewsAudit";
+import { ReviewAudit } from "./models/ReviewAudit";
+import { UserAudit } from "./models/UserAudit";
+import { ChatMessage } from "./models/ChatMessage";
 import session from "express-session";
 import MongoStore from "connect-mongo";
 import newsletterRoutes from "./routes/newsletter";
 import adminNewsletterRoutes from "./routes/admin-newsletter";
-import { verifyEmail } from "./services/emailVerification";
+import { 
+  authLimiter, 
+  generalLimiter, 
+  uploadLimiter,
+  validateRegistration,
+  validateLogin,
+  handleValidationErrors,
+  xssProtection,
+  securityHeaders
+} from "./middleware/security";
+import { csrfProtection } from "./middleware/csrf";
 
 import cors from "cors";
 
-declare module "express-session" {
-  interface SessionData {
-    userId?: string;
-  }
-}
-
-// Remove the unused import
-// import connectPgSimple from "connect-pg-simple";
-
-// Extend Express Request type to include user
 declare global {
   namespace Express {
     interface Request {
       user?: any;
+      uploadedFile?: any;
     }
+  }
+}
+
+declare module "express-session" {
+  interface SessionData {
+    userId?: string;
   }
 }
 
@@ -54,6 +62,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             process.env.FRONTEND_URL || 
             'https://kenya-grubhub-gx7x.vercel.app',
             /^https:\/\/kenya-grubhub-gx7x.*\.vercel\.app$/,
+            /^https:\/\/.*-.*\.vercel\.app$/, // Allow all Vercel preview deployments
             /^https:\/\/.*\.onrender\.com$/ // Allow Render URLs
           ]
         : ['http://localhost:5173', 'http://localhost:3000'];
@@ -75,16 +84,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-    exposedHeaders: ['Set-Cookie']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-CSRF-Token'],
+    exposedHeaders: ['Set-Cookie', 'X-CSRF-Token']
   }));
+
+  // Enable preflight for all routes
+  app.options('*', cors());
 
   console.log('CORS configured for origin:', process.env.FRONTEND_URL || 'http://localhost:3000');
 
   // Session setup with secure MongoDB storage
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || "kenyan-bistro-secret-key-change-in-production",
+      secret: process.env.SESSION_SECRET || (() => {
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error('SESSION_SECRET environment variable is required in production');
+        }
+        return 'kenyan-bistro-secret-key-change-in-production';
+      })(),
       resave: false,
       saveUninitialized: false,
       store: MongoStore.create({
@@ -94,7 +111,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         autoRemove: 'native',
         touchAfter: 24 * 3600, // Only update session once per day
         crypto: {
-          secret: process.env.SESSION_CRYPTO_SECRET || process.env.SESSION_SECRET || "crypto-secret-change-in-production"
+          secret: process.env.SESSION_CRYPTO_SECRET || process.env.SESSION_SECRET || (() => {
+            if (process.env.NODE_ENV === 'production') {
+              throw new Error('SESSION_CRYPTO_SECRET environment variable is required in production');
+            }
+            return 'crypto-secret-change-in-production';
+          })()
         }
       }),
       cookie: {
@@ -110,7 +132,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
-  // Auth middleware - Fix the types here
+  // Apply security middleware
+  app.use(securityHeaders);
+  app.use(xssProtection);
+  
+  // Apply rate limiting
+  app.use(generalLimiter);
+  
+  // Apply CSRF protection
+  app.use(csrfProtection);
+
+  // Authentication middleware 
   const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.session.userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -127,9 +159,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // Register route - Fix parameter types
+  // Register route with validation and rate limiting
   app.post(
     "/api/auth/register",
+    authLimiter,
+    validateRegistration,
+    handleValidationErrors,
     [
       body("username").trim().isLength({ min: 2 }).withMessage("Username must be at least 2 characters"),
       body("email").isEmail().normalizeEmail().withMessage("Valid email is required"),
@@ -141,24 +176,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       body("phone").trim().isLength({ min: 7 }).withMessage("Phone is required and must be valid"),
     ],
     async (req: Request, res: Response) => {
-      console.log('Register request body:', req.body);
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        console.log('Validation errors:', errors.array());
-        return res.status(400).json({ errors: errors.array() });
-      }
-
       try {
         const { username, email, password, name, phone } = req.body;
-        console.log('Extracted values:', { username, email, name, phone });
-
-        // Additional password strength validation
-        const strongPasswordRegex = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}/;
-        if (!strongPasswordRegex.test(password)) {
-          return res.status(400).json({ 
-            message: "Password must be at least 8 characters and include uppercase, lowercase, and number" 
-          });
-        }
 
         // Verify email is real and deliverable
         // Temporarily disabled for testing
@@ -229,19 +248,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  // Login route - Fix parameter types
+  // Login route with validation and rate limiting
   app.post(
     "/api/auth/login",
+    authLimiter,
+    validateLogin,
+    handleValidationErrors,
     [
       body("username").trim().notEmpty().withMessage("Username is required"),
       body("password").notEmpty().withMessage("Password is required"),
     ],
     async (req: Request, res: Response) => {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
       try {
         const { username, password } = req.body;
 
@@ -694,7 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const multerStorage = multer.diskStorage({
     destination: uploadsDir,
-    filename: (_req, file, cb) => {
+    filename: (_req: any, file: any, cb: any) => {
       const safeName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, "-")}`;
       cb(null, safeName);
     },
@@ -704,7 +721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const upload = multer({ 
     storage: multerStorage,
     limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (_req, file, cb) => {
+    fileFilter: (_req: any, file: any, cb: any) => {
       // accept common image mime types
       const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
       console.log("File filter - Mimetype:", file.mimetype, "Original name:", file.originalname);
@@ -718,27 +735,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload endpoint - accepts field name 'image'
+  // Upload endpoints with rate limiting
   console.log("Registering /api/uploads endpoint...");
-  
-  // Test GET endpoint for uploads
   app.get("/api/uploads", requireAuth, (req, res) => {
-    console.log("Upload GET endpoint hit!");
     res.json({ message: "Upload endpoint is accessible", user: req.user?.role });
   });
-  
-  app.post("/api/uploads", requireAuth, upload.single("image"), async (req: Request, res: Response) => {
-    console.log("Upload endpoint hit!");
-    console.log("User:", req.user?.username, "Role:", req.user?.role);
-    console.log("File:", req.file ? req.file.originalname : "No file");
-    console.log("Body:", req.body);
+
+  app.post("/api/uploads", requireAuth, uploadLimiter, upload.single("image"), async (req: Request, res: Response) => {
     try {
+      if (!req.uploadedFile) return res.status(400).json({ message: "No file uploaded" });
+
       // Only allow admin or staff to upload assets
       if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
         return res.status(403).json({ message: "Admin/staff access required" });
       }
-
-      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
       // Return an absolute URL so the client (dev server) can load it directly
       const host = req.get("host") || "localhost:5000";
@@ -747,7 +757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Perform resizing/compression using sharp where possible
       try {
         const sharp = await import('sharp');
-        const filePath = resolve(uploadsDir, req.file.filename);
+        const filePath = resolve(uploadsDir, req.uploadedFile.filename);
         // generate two webp profiles: original (max width 1600) and thumbnail (400)
         await sharp.default(filePath)
           .rotate()
@@ -760,18 +770,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .toFormat('webp', { quality: 70 })
           .toFile(filePath + '.thumb.webp');
         // remove original file and reference the new webp original filename
-        fs.unlinkSync(resolve(uploadsDir, req.file.filename));
-        // return both the original-size webp and the thumbnail
-        req.file.filename = req.file.filename + '.webp';
-        // attach thumbnail name for consumer
-        (req.file as any).thumbnail = req.file.filename + '.thumb.webp';
+        fs.unlinkSync(resolve(uploadsDir, req.uploadedFile.filename));
+        req.uploadedFile.filename = req.uploadedFile.filename + '.webp';
+        (req.uploadedFile as any).thumbnail = req.uploadedFile.filename + '.thumb.webp';
       } catch (err) {
         // If sharp is not available or processing failed, continue with original file
         console.warn('Image processing failed or sharp not available:', err);
       }
 
-      const fileUrl = `${proto}://${host}/uploads/${req.file.filename}`;
-      const thumb = (req.file as any).thumbnail;
+      const fileUrl = `${proto}://${host}/uploads/${req.uploadedFile.filename}`;
+      const thumb = (req.uploadedFile as any).thumbnail;
       const thumbUrl = thumb ? `${proto}://${host}/uploads/${thumb}` : undefined;
       res.status(201).json({ url: fileUrl, thumbnailUrl: thumbUrl });
     } catch (err) {
@@ -1278,10 +1286,10 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   // Orders: Create, List, Update status — emits socket events for real-time dashboards
   app.post('/api/orders', async (req: Request, res: Response) => {
     try {
-      const { items, total, user, userId, eta } = req.body as any;
+      const { items, total, user, userId, userEmail, userPhone, eta, location } = req.body as any;
       if (!items || !Array.isArray(items) || typeof total !== 'number') return res.status(400).json({ message: 'items and total required' });
-      const o = await Order.create({ items, total, user, userId, eta });
-      try { (app as any).locals.io?.emit('orders:new', { id: o._id.toString(), items: o.items, total: o.total, status: o.status, user: o.user, createdAt: o.createdAt, eta: o.eta }); } catch (e) {}
+      const o = await Order.create({ items, total, user, userId, userEmail, userPhone, eta, location });
+      try { (app as any).locals.io?.emit('orders:new', { id: o._id.toString(), items: o.items, total: o.total, status: o.status, user: o.user, userEmail: o.userEmail, userPhone: o.userPhone, createdAt: o.createdAt, eta: o.eta, location: o.location }); } catch (e) {}
       // Emit KPIs update
       try {
         const totalRevenueAgg = await Order.aggregate([{ $group: { _id: null, revenue: { $sum: "$total" } } }]);
@@ -1291,7 +1299,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         const opm = await Order.countDocuments({ createdAt: { $gte: since } });
         (app as any).locals.io?.emit('kpi:update', { totalRevenue, activeOrders, ordersPerMinute: opm });
       } catch (err) {}
-      res.status(201).json({ order: { id: o._id.toString(), items: o.items, total: o.total, status: o.status, user: o.user, createdAt: o.createdAt, eta: o.eta } });
+      res.status(201).json({ order: { id: o._id.toString(), items: o.items, total: o.total, status: o.status, user: o.user, userEmail: o.userEmail, userPhone: o.userPhone, createdAt: o.createdAt, eta: o.eta, location: o.location } });
     } catch (err) {
       console.error('Create order error:', err);
       res.status(500).json({ message: 'Failed to create order' });
@@ -1338,6 +1346,120 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       res.status(500).json({ message: 'Failed to update order status' });
     }
   });
+
+  // Customer Order Cancellation
+  app.patch('/api/orders/:orderId/cancel', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { orderId } = req.params;
+      if (!orderId) return res.status(400).json({ message: 'orderId required' });
+      
+      const found = await Order.findById(orderId);
+      if (!found) return res.status(404).json({ message: 'Order not found' });
+      
+      // Check if user owns this order (for regular users) or admin/staff can cancel any
+      if (req.user!.role === 'user' && found.userId !== req.user!._id.toString()) {
+        return res.status(403).json({ message: 'You can only cancel your own orders' });
+      }
+      
+      // Only allow cancellation if order is in Pending or Preparing status
+      if (!['Pending', 'Preparing'].includes(found.status)) {
+        return res.status(400).json({ message: 'Order cannot be cancelled at this stage' });
+      }
+      
+      found.status = 'Cancelled';
+      await found.save();
+      
+      // Emit socket events for real-time updates
+      try { 
+        (app as any).locals.io?.emit('orders:update', { 
+          id: found._id.toString(), 
+          status: found.status, 
+          eta: found.eta, 
+          updatedAt: found.updatedAt,
+          cancelledBy: req.user!.role === 'user' ? 'customer' : 'staff'
+        }); 
+      } catch (e) {}
+      
+      // Emit KPIs update
+      try {
+        const totalRevenueAgg = await Order.aggregate([{ $group: { _id: null, revenue: { $sum: "$total" } } }]);
+        const totalRevenue = totalRevenueAgg.length ? totalRevenueAgg[0].revenue : 0;
+        const activeOrders = await Order.countDocuments({ status: { $ne: 'Delivered' } });
+        const since = new Date(Date.now() - 60_000);
+        const opm = await Order.countDocuments({ createdAt: { $gte: since } });
+        (app as any).locals.io?.emit('kpi:update', { totalRevenue, activeOrders, ordersPerMinute: opm });
+      } catch (err) {}
+      
+      res.json({ success: true, order: { id: found._id.toString(), status: found.status } });
+    } catch (err) {
+      console.error('Cancel order error:', err);
+      res.status(500).json({ message: 'Failed to cancel order' });
+    }
+  });
+
+  // Customer Order Modification
+  app.patch('/api/orders/:orderId/modify', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { orderId } = req.params;
+      const { items, total } = req.body as any;
+      
+      if (!orderId) return res.status(400).json({ message: 'orderId required' });
+      if (!items || !Array.isArray(items) || typeof total !== 'number') {
+        return res.status(400).json({ message: 'items array and total required' });
+      }
+      
+      const found = await Order.findById(orderId);
+      if (!found) return res.status(404).json({ message: 'Order not found' });
+      
+      // Check if user owns this order (for regular users)
+      if (req.user!.role === 'user' && found.userId !== req.user!._id.toString()) {
+        return res.status(403).json({ message: 'You can only modify your own orders' });
+      }
+      
+      // Only allow modification if order is in Pending status
+      if (found.status !== 'Pending') {
+        return res.status(400).json({ message: 'Order can only be modified while pending' });
+      }
+      
+      // Update order items and total
+      found.items = items;
+      found.total = total;
+      await found.save();
+      
+      // Emit socket events for real-time updates
+      try { 
+        (app as any).locals.io?.emit('orders:update', { 
+          id: found._id.toString(), 
+          items: found.items,
+          total: found.total,
+          status: found.status, 
+          eta: found.eta, 
+          updatedAt: found.updatedAt,
+          modifiedBy: req.user!.role === 'user' ? 'customer' : 'staff'
+        }); 
+      } catch (e) {}
+      
+      // Emit KPIs update
+      try {
+        const totalRevenueAgg = await Order.aggregate([{ $group: { _id: null, revenue: { $sum: "$total" } } }]);
+        const totalRevenue = totalRevenueAgg.length ? totalRevenueAgg[0].revenue : 0;
+        const activeOrders = await Order.countDocuments({ status: { $ne: 'Delivered' } });
+        const since = new Date(Date.now() - 60_000);
+        const opm = await Order.countDocuments({ createdAt: { $gte: since } });
+        (app as any).locals.io?.emit('kpi:update', { totalRevenue, activeOrders, ordersPerMinute: opm });
+      } catch (err) {}
+      
+      res.json({ success: true, order: { 
+        id: found._id.toString(), 
+        items: found.items,
+        total: found.total,
+        status: found.status 
+      }});
+    } catch (err) {
+      console.error('Modify order error:', err);
+      res.status(500).json({ message: 'Failed to modify order' });
+    }
+  });
   app.get("/api/chat/threads/:threadId/messages", requireAuth, async (req: Request, res: Response) => {
     try {
       const { threadId } = req.params;
@@ -1362,21 +1484,54 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     }
   });
 
-  // Send a message - Fix parameter types
+  // Get messages for a thread
+  app.get("/api/chat/messages", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { threadId } = req.query;
+      
+      if (!threadId || typeof threadId !== 'string') {
+        return res.status(400).json({ message: "Thread ID is required" });
+      }
+
+      const messages = await ChatMessage.find({ threadId })
+        .sort({ createdAt: 1 })
+        .limit(50); // Limit to last 50 messages
+
+      res.json({ messages });
+    } catch (error) {
+      console.error("Get messages error:", error);
+      res.status(500).json({ message: "Failed to get messages" });
+    }
+  });
+
+  // Send a message - Enhanced with validation and error handling
   app.post("/api/chat/messages", requireAuth, async (req: Request, res: Response) => {
     try {
       const { threadId, text } = req.body;
 
-      if (!text || !threadId) {
-        return res.status(400).json({ message: "Thread ID and text are required" });
+      // Enhanced validation
+      if (!text || typeof text !== 'string' || text.trim().length === 0) {
+        return res.status(400).json({ message: "Message text is required and cannot be empty" });
       }
+      
+      if (!threadId || typeof threadId !== 'string') {
+        return res.status(400).json({ message: "Valid thread ID is required" });
+      }
+
+      // Validate text length
+      if (text.trim().length > 1000) {
+        return res.status(400).json({ message: "Message cannot exceed 1000 characters" });
+      }
+
+      // Sanitize input
+      const sanitizedText = text.trim().substring(0, 1000);
 
       const message = await ChatMessage.create({
         threadId,
         senderId: req.user!._id.toString(),
-        senderName: req.user!.name,
-        senderRole: req.user!.role,
-        text,
+        senderName: req.user!.name || 'Unknown User',
+        senderRole: req.user!.role || 'user',
+        text: sanitizedText,
         isRead: false,
         encrypted: true,
       });
@@ -1393,19 +1548,29 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         timestamp: message.createdAt.toISOString(),
       };
 
+      console.log(`Chat message saved to MongoDB: Thread ${threadId}, Sender ${req.user!.name}`);
       res.status(201).json({ message: messageResponse });
-      try { (app as any).locals.io?.emit('chat:message', { threadId: message.threadId, message: messageResponse }); } catch (e) {}
     } catch (error) {
       console.error("Send message error:", error);
       res.status(500).json({ message: "Failed to send message" });
     }
   });
 
-  // Mark messages as read - Fix parameter types
+  // Mark messages as read - Enhanced with better error handling
   app.patch("/api/chat/threads/:threadId/read", requireAuth, async (req: Request, res: Response) => {
     try {
       const { threadId } = req.params;
       const { readerRole } = req.body;
+
+      // Validate threadId
+      if (!threadId || typeof threadId !== 'string') {
+        return res.status(400).json({ message: "Valid thread ID is required" });
+      }
+
+      // Validate readerRole
+      if (!readerRole || !["admin", "staff", "user"].includes(readerRole)) {
+        return res.status(400).json({ message: "Valid reader role is required" });
+      }
 
       // Mark messages as read based on who is reading
       let updateFilter: any = { threadId, isRead: false };
@@ -1414,20 +1579,28 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         // Admin/Staff marks user messages as read
         updateFilter.senderRole = "user";
       } else {
-        // Users mark admin/staff messages as read
+        // User marks admin/staff messages as read
         updateFilter.senderRole = { $in: ["admin", "staff"] };
       }
 
-      await ChatMessage.updateMany(updateFilter, { isRead: true });
+      const result = await ChatMessage.updateMany(
+        updateFilter,
+        { isRead: true }
+      );
 
-      res.json({ success: true });
+      console.log(`Marked ${result.modifiedCount} messages as read in thread ${threadId} by ${readerRole}`);
+      res.json({ 
+        message: "Messages marked as read", 
+        count: result.modifiedCount,
+        threadId 
+      });
     } catch (error) {
-      console.error("Mark read error:", error);
+      console.error("Mark as read error:", error);
       res.status(500).json({ message: "Failed to mark messages as read" });
     }
   });
 
-  // Get all threads (Admin/Staff only) - Fix parameter types
+  // Get chat threads - Enhanced with better error handling
   console.log("Registering /api/chat/threads endpoint...");
   app.get("/api/chat/threads", requireAuth, async (req: Request, res: Response) => {
     if (req.user!.role === "user") {
@@ -1489,8 +1662,131 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   // Admin newsletter routes (protected)
   app.use("/api/admin/newsletter", requireAuth, adminNewsletterRoutes);
 
+  // Business Location Management
+  app.get('/api/business-location', async (_req: Request, res: Response) => {
+    try {
+      const location = await BusinessLocation.findOne({ isActive: true });
+      if (!location) {
+        return res.status(404).json({ message: 'No active business location found' });
+      }
+      res.json({
+        id: location._id.toString(),
+        name: location.name,
+        address: location.address,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        placeId: location.placeId,
+        phone: location.phone,
+        email: location.email,
+        openingHours: location.openingHours,
+        description: location.description,
+        isActive: location.isActive
+      });
+    } catch (error) {
+      console.error('Get business location error:', error);
+      res.status(500).json({ message: 'Failed to fetch business location' });
+    }
+  });
+
+  app.post('/api/business-location', requireAuth, async (req: Request, res: Response) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'staff')) {
+      return res.status(403).json({ message: 'Admin or staff access required' });
+    }
+    
+    try {
+      const { name, address, latitude, longitude, placeId, phone, email, openingHours, description } = req.body;
+      
+      if (!name || !address || typeof latitude !== 'number' || typeof longitude !== 'number') {
+        return res.status(400).json({ message: 'Name, address, latitude, and longitude are required' });
+      }
+
+      // Deactivate existing locations
+      await BusinessLocation.updateMany({ isActive: true }, { isActive: false });
+
+      const location = await BusinessLocation.create({
+        name,
+        address,
+        latitude,
+        longitude,
+        placeId,
+        phone,
+        email,
+        openingHours: openingHours || {
+          monday: '11am - 10pm',
+          tuesday: '11am - 10pm',
+          wednesday: '11am - 10pm',
+          thursday: '11am - 10pm',
+          friday: '11am - 10pm',
+          saturday: '10am - 11pm',
+          sunday: '10am - 11pm'
+        },
+        description,
+        isActive: true
+      });
+
+      res.status(201).json({
+        id: location._id.toString(),
+        name: location.name,
+        address: location.address,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        placeId: location.placeId,
+        phone: location.phone,
+        email: location.email,
+        openingHours: location.openingHours,
+        description: location.description,
+        isActive: location.isActive
+      });
+    } catch (error) {
+      console.error('Create business location error:', error);
+      res.status(500).json({ message: 'Failed to create business location' });
+    }
+  });
+
+  app.patch('/api/business-location/:id', requireAuth, async (req: Request, res: Response) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'staff')) {
+      return res.status(403).json({ message: 'Admin or staff access required' });
+    }
+    
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({ message: 'Invalid location ID' });
+      }
+
+      const location = await BusinessLocation.findByIdAndUpdate(
+        id,
+        updates,
+        { new: true }
+      );
+
+      if (!location) {
+        return res.status(404).json({ message: 'Business location not found' });
+      }
+
+      res.json({
+        id: location._id.toString(),
+        name: location.name,
+        address: location.address,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        placeId: location.placeId,
+        phone: location.phone,
+        email: location.email,
+        openingHours: location.openingHours,
+        description: location.description,
+        isActive: location.isActive
+      });
+    } catch (error) {
+      console.error('Update business location error:', error);
+      res.status(500).json({ message: 'Failed to update business location' });
+    }
+  });
+
   // Test endpoint to verify routes are registering
-  app.get("/api/test", (req, res) => {
+  app.get("/api/test", (_req, res) => {
     console.log("Test endpoint hit!");
     res.json({ message: "Routes are working!", timestamp: new Date().toISOString() });
   });

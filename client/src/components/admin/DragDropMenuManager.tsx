@@ -342,7 +342,7 @@ const DragDropMenuManager: React.FC = () => {
               {newItem.imageFiles.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-foreground">Selected Images:</p>
-                  <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
                     {newItem.imageFiles.map((file, index) => (
                       <div key={index} className="relative group">
                         <img
@@ -466,7 +466,7 @@ const DragDropMenuManager: React.FC = () => {
                 {editingItem.images && editingItem.images.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-foreground">Current Images:</p>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {editingItem.images.map((image, index) => (
                         <div key={index} className="relative group">
                           <img
@@ -494,7 +494,7 @@ const DragDropMenuManager: React.FC = () => {
                 {editingImageFiles.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-foreground">New Images to Upload:</p>
-                    <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-32 overflow-y-auto">
                       {editingImageFiles.map((file, index) => (
                         <div key={index} className="relative group">
                           <img
