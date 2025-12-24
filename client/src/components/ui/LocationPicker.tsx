@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { MapPin, Navigation, Search, X } from 'lucide-react';
 
@@ -220,6 +219,7 @@ export default function LocationPicker({
         handleLocationSelect(latitude, longitude);
       },
       (error) => {
+        console.error('Geolocation error:', error);
         setError('Failed to get your location');
         setLoading(false);
       }
