@@ -59,7 +59,10 @@ export default function LocationPicker({
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
     script.async = true;
     script.defer = true;
-    script.onload = () => setIsScriptLoaded(true);
+    script.onload = () => {
+      console.log('LocationPicker: Google Maps script loaded successfully');
+      setIsScriptLoaded(true);
+    };
     script.onerror = () => {
       setError('Failed to load Google Maps. Please check your internet connection.');
       console.error('Google Maps script failed to load');
@@ -82,6 +85,8 @@ export default function LocationPicker({
   useEffect(() => {
     if (!isScriptLoaded || !mapRef.current) return;
 
+    console.log('LocationPicker: Initializing map...', { isScriptLoaded, mapRef: !!mapRef.current });
+
     const map = new window.google.maps.Map(mapRef.current, {
       center: { lat: -1.2921, lng: 36.8219 }, // Nairobi, Kenya
       zoom: 13,
@@ -94,6 +99,7 @@ export default function LocationPicker({
       ]
     });
 
+    console.log('LocationPicker: Map created successfully');
     mapInstanceRef.current = map;
 
     // Add initial location marker if provided
