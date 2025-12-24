@@ -98,16 +98,16 @@ export default function BusinessLocationManager() {
           }
         });
       } else if (response.status === 404) {
-        // No location set yet, that's okay
-        setLocation(null);
+        // No existing business location - this is expected for new setup
+        console.log('BusinessLocationManager: No existing location found (404), ready to create new one');
+        // Keep default form data for creating first location
+      } else {
+        throw new Error(`Failed to fetch business location: ${response.status}`);
       }
     } catch (error) {
-      console.error('Failed to fetch business location:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load business location",
-        variant: "destructive"
-      });
+      console.error('BusinessLocationManager: Error fetching location:', error);
+      // Don't throw error - allow user to create new location
+      console.log('BusinessLocationManager: Allowing new location creation despite fetch error');
     } finally {
       setIsLoading(false);
     }
