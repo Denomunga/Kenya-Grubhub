@@ -428,7 +428,11 @@ export default function BusinessLocationManager() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setLocationDialogOpen(true)}
+                  onClick={() => {
+                    console.log('BusinessLocationManager: Select Location button clicked');
+                    console.log('BusinessLocationManager: Opening location dialog');
+                    setLocationDialogOpen(true);
+                  }}
                   className="w-full"
                 >
                   <MapPin className="h-4 w-4 mr-2" />
@@ -499,15 +503,18 @@ export default function BusinessLocationManager() {
 
       {/* Location Picker Dialog */}
       {locationDialogOpen && (
-        <LocationPicker
-          onLocationSelect={handleLocationSelect}
-          initialLocation={{
-            address: formData.address,
-            latitude: formData.latitude,
-            longitude: formData.longitude
-          }}
-          placeholder="Search for business address..."
-        />
+        <>
+          {console.log('BusinessLocationManager: Rendering LocationPicker dialog')}
+          <LocationPicker
+            onLocationSelect={handleLocationSelect}
+            initialLocation={{
+              address: formData.address,
+              latitude: formData.latitude,
+              longitude: formData.longitude
+            }}
+            placeholder="Search for business address..."
+          />
+        </>
       )}
     </div>
   );
