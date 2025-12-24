@@ -106,7 +106,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
   const displayActions = actions.length > 0 ? actions : defaultActions;
 
   return (
-    <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-9999 flex flex-col items-end gap-3 pointer-events-none">
+    <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-9999 flex flex-col items-end gap-3">
       {/* Backdrop overlay when open */}
       <AnimatePresence>
         {isOpen && (
@@ -114,7 +114,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm pointer-events-auto"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm"
             onClick={() => {
               console.log('FAB: Backdrop clicked');
               setIsOpen(false);
@@ -152,7 +152,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
             <motion.div
               whileHover={{ scale: 1.1, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
-              className="relative pointer-events-auto"
+              className="relative"
             >
               <Button
                 size="icon"
@@ -172,7 +172,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
       {/* Main FAB */}
       <motion.div
         id="fab-main"
-        className="relative pointer-events-auto"
+        className="relative"
         animate={{
           x: magneticPosition.x,
           y: magneticPosition.y,
