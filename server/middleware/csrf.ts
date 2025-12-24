@@ -75,7 +75,7 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
   // For state-changing requests, validate CSRF token
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
     // Skip CSRF for API endpoints that don't need it
-    const skipCSRFRoutes = ['/api/uploads', '/api/webhooks', '/api/health'];
+    const skipCSRFRoutes = ['/api/uploads', '/api/webhooks', '/api/health', '/api/auth/login', '/api/auth/register'];
     if (skipCSRFRoutes.some(route => req.path.startsWith(route))) {
       return next();
     }
