@@ -49,6 +49,12 @@ export default function LocationPicker({
     }
 
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    console.log('LocationPicker: Checking API key...', { 
+      hasApiKey: !!apiKey, 
+      apiKeyLength: apiKey?.length,
+      envVars: Object.keys(import.meta.env).filter(k => k.includes('GOOGLE') || k.includes('MAP'))
+    });
+    
     if (!apiKey) {
       setError('Google Maps API key is not configured. Please contact support.');
       return;
