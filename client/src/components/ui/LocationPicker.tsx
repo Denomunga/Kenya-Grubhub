@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { MapPin, Navigation, Search, X } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
 
 interface OrderLocation {
   address: string;
@@ -48,42 +49,53 @@ export default function LocationPicker({
       return;
     }
 
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    console.log('LocationPicker: Checking API key...', { 
-      hasApiKey: !!apiKey, 
-      apiKeyLength: apiKey?.length,
-      envVars: Object.keys(import.meta.env).filter(k => k.includes('GOOGLE') || k.includes('MAP'))
-    });
-    
-    if (!apiKey) {
-      setError('Google Maps API key is not configured. Please contact support.');
-      return;
-    }
+    // Fetch Google Maps API key from backend
+    const fetchApiKey = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/config/maps`);
+        if (response.ok) {
+          const data = await response.json();
+          const apiKey = data.apiKey;
+          
+          console.log('LocationPicker: API key fetched from backend:', { 
+            hasApiKey: !!apiKey, 
+            apiKeyLength: apiKey?.length
+          });
+          
+          if (!apiKey) {
+            setError('Google Maps API key is not configured. Please contact support.');
+            return;
+          }
 
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      console.log('LocationPicker: Google Maps script loaded successfully');
-      setIsScriptLoaded(true);
-    };
-    script.onerror = () => {
-      setError('Failed to load Google Maps. Please check your internet connection.');
-      console.error('Google Maps script failed to load');
-    };
-    script.onabort = () => {
-      setError('Google Maps loading was interrupted.');
-      console.warn('Google Maps script loading was aborted');
-    };
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+          script.async = true;
+          script.defer = true;
+          script.onload = () => {
+            console.log('LocationPicker: Google Maps script loaded successfully');
+            setIsScriptLoaded(true);
+          };
+          script.onerror = () => {
+            setError('Failed to load Google Maps. Please check your internet connection.');
+            console.error('Google Maps script failed to load');
+          };
+          script.onabort = () => {
+            setError('Google Maps loading was interrupted.');
+            console.warn('Google Maps script loading was aborted');
+          };
 
-    document.head.appendChild(script);
-
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
+          document.head.appendChild(script);
+        } else {
+          setError('Google Maps API key is not configured. Please contact support.');
+          console.error('Failed to fetch Google Maps API key:', response.status);
+        }
+      } catch (error) {
+        setError('Failed to load Google Maps. Please check your internet connection.');
+        console.error('Error fetching Google Maps API key:', error);
       }
     };
+
+    fetchApiKey();
   }, []);
 
   // Initialize map when script is loaded

@@ -1662,6 +1662,20 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   // Admin newsletter routes (protected)
   app.use("/api/admin/newsletter", requireAuth, adminNewsletterRoutes);
 
+  // Google Maps API key endpoint
+  app.get('/api/config/maps', (_req: Request, res: Response) => {
+    try {
+      const googleMapsApiKey = process.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!googleMapsApiKey) {
+        return res.status(404).json({ message: 'Google Maps API key not configured' });
+      }
+      res.json({ apiKey: googleMapsApiKey });
+    } catch (error) {
+      console.error('Get Google Maps API key error:', error);
+      res.status(500).json({ message: 'Failed to get Google Maps API key' });
+    }
+  });
+
   // Business Location Management
   app.get('/api/business-location', async (_req: Request, res: Response) => {
     try {
