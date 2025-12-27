@@ -65,6 +65,17 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Add this at the beginning of the component for debugging
+  useEffect(() => {
+    console.log('FAB: Component mounted');
+    const fabElement = document.getElementById('fab-main');
+    if (fabElement) {
+      console.log('FAB: Found FAB element:', fabElement);
+      console.log('FAB: Computed styles:', window.getComputedStyle(fabElement));
+      console.log('FAB: Pointer events:', window.getComputedStyle(fabElement).pointerEvents);
+    }
+  }, []);
+
   const defaultActions = [
     {
       icon: <ShoppingBag className="h-5 w-5" />,
@@ -106,7 +117,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
   const displayActions = actions.length > 0 ? actions : defaultActions;
 
   return (
-    <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col-reverse items-end gap-3">
       {/* Backdrop overlay when open */}
       <AnimatePresence>
         {isOpen && (
@@ -204,10 +215,19 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
             isChristmasMode 
               ? 'from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' 
               : 'from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
-          } text-white shadow-2xl hover:shadow-3xl border-2 border-white/30 backdrop-blur-sm transition-all duration-300 relative overflow-hidden group`}
-          onClick={() => {
-            console.log('FAB: Main button clicked, isOpen:', isOpen);
+          } text-white shadow-2xl hover:shadow-3xl border-2 border-white/30 backdrop-blur-sm transition-all duration-300 relative overflow-hidden group pointer-events-auto`}
+          onMouseDown={(e) => {
+            console.log('FAB: Mouse down event');
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            console.log('FAB: Click event fired!');
+            console.log('FAB: Current isOpen:', isOpen);
+            e.preventDefault();
+            e.stopPropagation();
             setIsOpen(!isOpen);
+            console.log('FAB: New isOpen:', !isOpen);
           }}
         >
           <AnimatePresence mode="wait">
