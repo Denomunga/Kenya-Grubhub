@@ -106,7 +106,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
   const displayActions = actions.length > 0 ? actions : defaultActions;
 
   return (
-    <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-9999 flex flex-col items-end gap-3">
+    <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end gap-3">
       {/* Backdrop overlay when open */}
       <AnimatePresence>
         {isOpen && (
@@ -114,7 +114,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-9998"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
             onClick={() => {
               console.log('FAB: Backdrop clicked');
               setIsOpen(false);
@@ -134,39 +134,35 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.5, y: 50 }}
               transition={{
-                duration: 0.4,
+                duration: 0.3,
                 delay: index * 0.1,
                 type: "spring",
                 stiffness: 400,
                 damping: 25
               }}
-              className="flex items-center gap-3 relative z-10000"
+              className="flex items-center gap-3 relative z-50"
             >
-            <motion.span
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ delay: index * 0.1 + 0.1 }}
-              className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-full text-sm font-medium shadow-xl whitespace-nowrap"
-            >
-              {action.label}
-            </motion.span>
-            <motion.div
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              whileTap={{ scale: 0.95 }}
-              className="relative"
-            >
-              <Button
-                size="icon"
-                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-linear-to-r ${action.color} text-white shadow-xl hover:shadow-2xl border-2 border-white/20 backdrop-blur-sm transition-all duration-300`}
-                onClick={action.onClick}
+              <span
+                className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-full text-sm font-medium shadow-xl whitespace-nowrap"
               >
-                {action.icon}
-              </Button>
-              
-              {/* Glow effect */}
-              <div className={`absolute inset-0 rounded-full bg-linear-to-r ${action.color} opacity-30 blur-xl animate-pulse`} />
-            </motion.div>
+                {action.label}
+              </span>
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                whileTap={{ scale: 0.95 }}
+                className="relative"
+              >
+                <Button
+                  size="icon"
+                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-linear-to-r ${action.color} text-white shadow-xl hover:shadow-2xl border-2 border-white/20 backdrop-blur-sm transition-all duration-300`}
+                  onClick={action.onClick}
+                >
+                  {action.icon}
+                </Button>
+                
+                {/* Glow effect */}
+                <div className={`absolute inset-0 rounded-full bg-linear-to-r ${action.color} opacity-30 blur-xl animate-pulse`} />
+              </motion.div>
             </motion.div>
           );
         })}
