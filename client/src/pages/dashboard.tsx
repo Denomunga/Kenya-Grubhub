@@ -149,18 +149,18 @@ export default function Dashboard() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-2 p-1 bg-muted/50 rounded-lg border">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Overview</TabsTrigger>
-          <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Analytics</TabsTrigger>
-          <TabsTrigger value="orders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Orders</TabsTrigger>
-          <TabsTrigger value="menu" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Menu</TabsTrigger>
-          <TabsTrigger value="location" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Location</TabsTrigger>
-          <TabsTrigger value="news" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">News</TabsTrigger>
-          <TabsTrigger value="newsletter" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Newsletter</TabsTrigger>
-          {isAdmin && <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Users</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Review Audit</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="user-audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">User Audit</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="support" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Support</TabsTrigger>}
+        <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-10 gap-2 p-1 bg-muted/50 rounded-lg border overflow-x-auto">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Overview</TabsTrigger>
+          <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Analytics</TabsTrigger>
+          <TabsTrigger value="orders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Orders</TabsTrigger>
+          <TabsTrigger value="menu" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Menu</TabsTrigger>
+          <TabsTrigger value="location" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Location</TabsTrigger>
+          <TabsTrigger value="news" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">News</TabsTrigger>
+          <TabsTrigger value="newsletter" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Newsletter</TabsTrigger>
+          {isAdmin && <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Users</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Audit</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="user-audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">User Audit</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="support" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Support</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview">
