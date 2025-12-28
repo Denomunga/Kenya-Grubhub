@@ -76,7 +76,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
   const displayActions = actions.length > 0 ? actions : defaultActions;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-4">
+    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col-reverse items-center gap-4">
       {/* Action Items */}
       {isOpen && displayActions.map((action, index) => {
         return (
@@ -89,7 +89,11 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
             }}
           >
             <span
-              className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 px-4 py-2 rounded-2xl text-sm font-semibold shadow-2xl whitespace-nowrap hover:shadow-3xl transition-all duration-300 hover:scale-105"
+              className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 px-4 py-2 rounded-2xl text-sm font-semibold shadow-2xl whitespace-nowrap hover:shadow-3xl transition-all duration-300 hover:scale-105 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                action.onClick();
+              }}
             >
               {action.label}
             </span>
@@ -113,10 +117,10 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
         );
       })}
 
-      {/* Main FAB */}
+      {/* Main FAB - SIZE & POSITION CONTROLS */}
       <div id="fab-main" className="relative">
         <button
-          className={`w-16 h-16 rounded-2xl bg-linear-to-r ${
+          className={`w-12 h-12 rounded-2xl bg-linear-to-r ${
             isChristmasMode 
               ? 'from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800' 
               : 'from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800'
@@ -131,12 +135,12 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
           {/* Icon with rotation */}
           <div className={`relative z-10 transition-transform duration-300 ${isOpen ? 'rotate-45' : 'rotate-0'}`}>
             {isOpen ? (
-              <X className="h-7 w-7" />
+              <X className="h-6 w-6" />
             ) : (
               isChristmasMode ? (
-                <Sparkles className="h-7 w-7" />
+                <Sparkles className="h-6 w-6" />
               ) : (
-                <Plus className="h-7 w-7" />
+                <Plus className="h-6 w-6" />
               )
             )}
           </div>
