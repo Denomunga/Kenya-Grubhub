@@ -149,7 +149,7 @@ export default function Dashboard() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-10 gap-2 p-1 bg-muted/50 rounded-lg border overflow-x-auto">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-9 gap-2 p-1 bg-muted/50 rounded-lg border overflow-x-auto">
           <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Overview</TabsTrigger>
           <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Analytics</TabsTrigger>
           <TabsTrigger value="orders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Orders</TabsTrigger>
@@ -160,7 +160,6 @@ export default function Dashboard() {
           {isAdmin && <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Users</TabsTrigger>}
           {isAdmin && <TabsTrigger value="audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Audit</TabsTrigger>}
           {isAdmin && <TabsTrigger value="user-audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">User Audit</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="support" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Support</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview">
@@ -531,81 +530,9 @@ export default function Dashboard() {
             </Card>
           </TabsContent>
         )}
-        {isAdmin && (
-          <TabsContent value="support">
-            <Card>
-              <CardHeader>
-                <CardTitle>Support Chat</CardTitle>
-                <CardDescription>Live customer support chat (real-time)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SupportPanel />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );
-}
-
-function SupportPanel() {
-  const { getThreads, messages, sendMessage, markThreadAsRead } = useData();
-  const threads = getThreads();
-  const [selectedThreadId, setSelectedThreadId] = React.useState<string>('');
-  const [messageText, setMessageText] = React.useState('');
-  
-  // Initialize with first thread or create default thread
-  React.useEffect(() => {
-    if (threads.length > 0 && !selectedThreadId) {
-      setSelectedThreadId(threads[0].id);
-    } else if (!selectedThreadId) {
-      //; // No threads available
-    }
-  }, [threads, selectedThreadId]);
-  
-  const currentMessages = selectedThreadId ? messages.filter(m => m.threadId === selectedThreadId) : [];
-
-  const handleSendMessage = () => {
-    if (!selectedThreadId || !messageText.trim()) {
-      console.error('Cannot send message: missing threadId or message text', { selectedThreadId, messageText: messageText.trim() });
-      return;
-    }
-    
-    console.log('Sending message with threadId:', selectedThreadId);
-    sendMessage(selectedThreadId, { id: 'admin', name: 'Admin', role: 'admin' }, messageText.trim());
-    setMessageText('');
-  };
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="md:col-span-1">
-        <div className="space-y-2">
-          {(threads || []).map(t => (
-            <div key={t.id} className={`p-2 rounded cursor-pointer ${selectedThreadId === t.id ? 'bg-accent/10' : 'bg-background/50'}`} onClick={() => { setSelectedThreadId(t.id); markThreadAsRead(t.id, 'admin'); }}>
-              <div className="font-medium">{t.userName}</div>
-              <div className="text-xs text-muted-foreground">{t.lastMessage?.text || 'No messages yet'}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="md:col-span-2 flex flex-col gap-2">
-        <div className="flex-1 overflow-y-auto rounded border p-2 space-y-3">
-          {!currentMessages.length && <div className="text-sm text-muted-foreground">No messages</div>}
-          {(currentMessages || []).map(m => (
-            <div key={m.id} className={`p-2 rounded ${m.senderRole === 'user' ? 'bg-white/5 self-start' : 'bg-accent/20 self-end'}`}>
-              <div className="text-xs text-muted-foreground">{m.senderName}</div>
-              <div className="text-sm">{m.text}</div>
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-2 items-center">
-          <input value={messageText} onChange={(e) => setMessageText(e.target.value)} className="flex-1 rounded border px-3 py-2" placeholder="Type a message..." />
-          <Button onClick={handleSendMessage}>Send</Button>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 
