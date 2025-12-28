@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { useUnreadMessages } from "@/hooks/use-unread-messages";
 import { useChristmas } from "@/lib/christmas";
 import { Button } from "@/components/ui/button";
 import { 
@@ -24,10 +25,11 @@ import "@/styles/design-system.css";
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout, isAuthenticated, isAdmin, isStaff } = useAuth();
   const { isChristmasMode } = useChristmas();
+  const { hasUnread, unreadCount, markAsRead } = useUnreadMessages();
   const [location] = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
+  const NavLink = ({ href, children, onClick }: { href: string; children: React.ReactNode; onClick?: () => void }) => {
     const isActive = location === href;
     return (
       <Link href={href}>
@@ -43,6 +45,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           }`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          onClick={onClick}
         >
           {children}
           {isActive && (
@@ -167,7 +170,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <nav className="hidden md:flex items-center gap-6">
             <NavLink href="/">Home</NavLink>
             <NavLink href="/menu">Products</NavLink>
-            <NavLink href="/chat">Chat with Staff</NavLink>
+            <NavLink href="/chat" onClick={markAsRead}>
+              Chat with Staff
+              {hasUnread && (
+                <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </NavLink>
             
             {(isAdmin || isStaff) && (
               <Link href="/dashboard">
@@ -341,7 +351,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                             ? "bg-blue-100 border border-blue-300 shadow-lg shadow-blue-100" 
                             : "hover:bg-blue-50 border border-gray-200 hover:border-blue-200"
                         }`}
-                        onClick={() => setMobileMenuOpen(false)}
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          if (item.href === "/chat") markAsRead();
+                        }}
                         whileHover={{ boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)" }}
                       >
                         {/* Hover Effect Background */}
@@ -375,6 +388,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </motion.div>
+                        
+                        {/* Unread Badge for Chat */}
+                        {item.href === "/chat" && hasUnread && (
+                          <span className="absolute top-2 right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
                       </motion.span>
                     </Link>
                   </motion.div>

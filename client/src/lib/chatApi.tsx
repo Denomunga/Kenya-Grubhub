@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useAuth } from "./auth";
 import { apiFetch } from "./api";
+import { toast } from "sonner";
 
 export interface ChatMessage {
   id: string;
@@ -39,6 +40,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [typingStatus, setTypingStatusState] = useState<Record<string, boolean>>({});
+  const [lastMessageCount, setLastMessageCount] = useState(0); // Track message count for notifications
 
   // Refresh messages for a specific thread
   const refreshMessages = useCallback(async (threadId: string) => {
@@ -50,12 +52,34 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       
       if (response.ok) {
         const data = await response.json();
-        setMessages(data.messages);
+        const newMessages = data.messages || [];
+        
+        // Check for new messages and show notification
+        if (newMessages.length > lastMessageCount && lastMessageCount > 0) {
+          const latestMessage = newMessages[newMessages.length - 1];
+          
+          // Only show notification for messages from other users
+          if (latestMessage.senderId !== user.id) {
+            toast(`${latestMessage.senderName}: ${latestMessage.text}`, {
+              description: "New message received",
+              action: {
+                label: "View Chat",
+                onClick: () => {
+                  // Navigate to chat if not already there
+                  window.location.href = '/chat';
+                }
+              }
+            });
+          }
+        }
+        
+        setMessages(newMessages);
+        setLastMessageCount(newMessages.length);
       }
     } catch (error) {
-      console.error("Failed to fetch messages:", error);
+      console.error("Failed to refresh messages:", error);
     }
-  }, [user]);
+  }, [user, lastMessageCount]);
 
   // Refresh threads (admin/staff only)
   const refreshThreads = useCallback(async () => {
@@ -67,7 +91,26 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       
       if (response.ok) {
         const data = await response.json();
-        setThreads(data.threads);
+        setThreads(data.threads || []);
+        
+        // Check for new messages in any thread and show notification for admins
+        if (data.threads && data.threads.length > 0) {
+          const threadWithNewMessages = data.threads.find((thread: ChatThread) => 
+            thread.unreadCount > 0 && thread.lastMessage?.senderRole === "user"
+          );
+          
+          if (threadWithNewMessages) {
+            toast(`New message from ${threadWithNewMessages.userName}`, {
+              description: threadWithNewMessages.lastMessage?.text || "New customer message",
+              action: {
+                label: "View Chat",
+                onClick: () => {
+                  window.location.href = '/chat';
+                }
+              }
+            });
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to fetch threads:", error);

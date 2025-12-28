@@ -69,7 +69,6 @@ function CSRFInitializer() {
   
   useEffect(() => {
     if (isAuthenticated && user) {
-      console.log('User authenticated, initializing CSRF token...');
       CSRFTokenManager.initializeToken();
     }
   }, [isAuthenticated, user]);

@@ -33,6 +33,7 @@ export default function Chat() {
     if ((isAdmin || isManager) && !activeThreadId && threads.length > 0) {
       setActiveThreadId(threads[0].id);
       refreshMessages(threads[0].id);
+      setIsInitialLoad(true); // Reset initial load for new thread
     }
   }, [isAdmin, isManager, threads.length, activeThreadId]);
 
@@ -40,6 +41,7 @@ export default function Chat() {
   useEffect(() => {
     if (activeThreadId && (isAdmin || isManager)) {
       refreshMessages(activeThreadId);
+      setIsInitialLoad(true); // Reset initial load for new thread
     }
   }, [activeThreadId, isAdmin, isManager]);
 
@@ -56,11 +58,18 @@ export default function Chat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentThreadId, currentMessages.length, user?.role]);
 
+  // State to track if this is initial load
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Scroll to bottom when messages change (but not on initial load)
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && !isInitialLoad) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [currentMessages]);
+    if (isInitialLoad && currentMessages.length > 0) {
+      setIsInitialLoad(false);
+    }
+  }, [currentMessages, isInitialLoad]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || !user || !currentThreadId) return;

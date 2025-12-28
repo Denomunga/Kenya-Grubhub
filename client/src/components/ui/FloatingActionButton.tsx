@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { ShoppingBag, MessageCircle, User, Plus, X, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { useUnreadMessages } from '@/hooks/use-unread-messages';
 import { useChristmas } from '@/lib/christmas';
 
 interface FABProps {
@@ -16,6 +17,7 @@ interface FABProps {
 const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
   const { isAuthenticated } = useAuth();
   const { isChristmasMode } = useChristmas();
+  const { hasUnread, unreadCount, markAsRead } = useUnreadMessages();
   const [, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -29,9 +31,19 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
       color: 'from-blue-500 to-blue-600'
     },
     {
-      icon: <MessageCircle className="h-5 w-5" />,
+      icon: (
+        <div className="relative">
+          <MessageCircle className="h-5 w-5" />
+          {hasUnread && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center animate-pulse">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </div>
+      ),
       label: 'Live Chat',
       onClick: () => {
+        markAsRead();
         setLocation('/chat');
       },
       color: 'from-green-500 to-green-600'
