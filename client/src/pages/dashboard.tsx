@@ -581,7 +581,7 @@ function SupportPanel() {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div className="md:col-span-1">
         <div className="space-y-2">
-          {threads.map(t => (
+          {(threads || []).map(t => (
             <div key={t.id} className={`p-2 rounded cursor-pointer ${selectedThreadId === t.id ? 'bg-accent/10' : 'bg-background/50'}`} onClick={() => { setSelectedThreadId(t.id); markThreadAsRead(t.id, 'admin'); }}>
               <div className="font-medium">{t.userName}</div>
               <div className="text-xs text-muted-foreground">{t.lastMessage?.text || 'No messages yet'}</div>
@@ -592,7 +592,7 @@ function SupportPanel() {
       <div className="md:col-span-2 flex flex-col gap-2">
         <div className="flex-1 overflow-y-auto rounded border p-2 space-y-3">
           {!currentMessages.length && <div className="text-sm text-muted-foreground">No messages</div>}
-          {currentMessages.map(m => (
+          {(currentMessages || []).map(m => (
             <div key={m.id} className={`p-2 rounded ${m.senderRole === 'user' ? 'bg-white/5 self-start' : 'bg-accent/20 self-end'}`}>
               <div className="text-xs text-muted-foreground">{m.senderName}</div>
               <div className="text-sm">{m.text}</div>

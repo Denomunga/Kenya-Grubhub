@@ -863,13 +863,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const getThreads = (): ChatThread[] => {
     // Group messages by threadId
     const threadsMap = new Map<string, ChatMessage[]>();
-    messages.forEach(m => {
+    (messages || []).forEach(m => {
       if (!threadsMap.has(m.threadId)) threadsMap.set(m.threadId, []);
       threadsMap.get(m.threadId)?.push(m);
     });
 
     const threads: ChatThread[] = [];
-    threadsMap.forEach((msgs, threadId) => {
+    (threadsMap || new Map()).forEach((msgs, threadId) => {
       // Sort by time
       msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
       const lastMsg = msgs[msgs.length - 1];
