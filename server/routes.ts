@@ -802,7 +802,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (req.file as any).thumbnail = req.file.filename + '.thumb.webp';
       } catch (err) {
         // If sharp is not available or processing failed, continue with original file
-        console.warn('Image processing failed or sharp not available:', err);
+        console.warn('Image processing failed or sharp not available, using original file:', err);
+        // Keep the original file - don't delete it
       }
 
       const fileUrl = `${proto}://${host}/uploads/${req.file.filename}`;

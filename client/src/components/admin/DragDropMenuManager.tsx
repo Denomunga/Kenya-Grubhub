@@ -199,6 +199,7 @@ const DragDropMenuManager: React.FC = () => {
       images: uploadedImages.length > 0 ? uploadedImages : ["https://placehold.co/400x300?text=Food"]
     };
 
+    try {
     await addMenuItem(item);
     setNewItem({ 
       name: '', 
@@ -219,6 +220,9 @@ const DragDropMenuManager: React.FC = () => {
       tags: []
     });
     toast({ title: 'Success', description: `${item.name} added to menu with ${uploadedImages.length} image(s)` });
+  } catch (error) {
+    toast({ title: 'Error', description: `Failed to add product: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: 'destructive' });
+  }
   };
 
   const handleDeleteItem = (id: string) => {
