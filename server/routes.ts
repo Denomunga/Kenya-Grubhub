@@ -1664,7 +1664,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         };
       }));
 
-      res.json(threadsResponse);
+      res.json({ threads: threadsResponse });
     } catch (error) {
       console.error('Failed to fetch threads:', error);
       res.status(500).json({ message: "Failed to fetch threads" });
