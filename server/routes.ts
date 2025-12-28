@@ -1809,6 +1809,73 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     }
   });
 
+  // Chat API Routes
+  app.get('/api/chat/threads', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const threads = await ChatMessage.aggregate([
+        { $match: { $or: [{ senderRole: 'user'}, { senderRole: 'admin'}] } },
+        { $sort: { createdAt: -1 } },
+        { $group: { 
+          _id: '$threadId', 
+          lastMessage: { $first: '$$ROOT' },
+          userName: { $first: '$senderName' }
+        }},
+        { $sort: { 'lastMessage.createdAt': -1 } }
+      ]);
+      res.json(threads);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch threads' });
+    }
+  });
+
+  app.get('/api/chat/messages', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const messages = await ChatMessage.find().sort({ createdAt: 1 });
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch messages' });
+    }
+  });
+
+  app.post('/api/chat/messages', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { threadId, sender, message } = req.body;
+      const chatMessage = await ChatMessage.create({
+        threadId,
+        senderId: sender.id,
+        senderName: sender.name,
+        senderRole: sender.role,
+        text: message.text,
+        createdAt: new Date()
+      });
+      
+      // Emit real-time message via Socket.IO
+      const io = (req.app as any).locals.io;
+      if (io) {
+        io.emit('chat:message', {
+          threadId,
+          message: chatMessage
+        });
+      }
+      
+      res.json(chatMessage);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to send message' });
+    }
+  });
+
+  app.patch('/api/chat/threads/:id/read', requireAuth, async (req: Request, res: Response) => {
+    try {
+      await ChatMessage.updateMany(
+        { threadId: req.params.id, senderRole: 'user' },
+        { readByAdmin: true }
+      );
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to mark as read' });
+    }
+  });
+
   // Test endpoint to verify routes are registering
   app.get("/api/test", (_req, res) => {
     console.log("Test endpoint hit!");
