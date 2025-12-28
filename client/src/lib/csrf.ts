@@ -78,6 +78,23 @@ export class CSRFTokenManager {
 
     return response;
   }
+
+  // Initialize CSRF token by making a request to get it
+  static async initializeToken(): Promise<void> {
+    try {
+      const response = await fetch('/api/csrf-token', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      const token = response.headers.get('X-CSRF-Token');
+      if (token) {
+        this.setToken(token);
+      }
+    } catch (error) {
+      console.warn('Failed to initialize CSRF token:', error);
+    }
+  }
 }
 
 // Hook for React components

@@ -1809,6 +1809,13 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     }
   });
 
+  // CSRF token endpoint
+  app.get("/api/csrf-token", async (_req: Request, res: Response) => {
+    const token = require('crypto').randomBytes(32).toString('hex');
+    res.setHeader('X-CSRF-Token', token);
+    res.json({ csrfToken: token });
+  });
+
   // Test endpoint to verify routes are registering
   app.get("/api/test", (_req, res) => {
     console.log("Test endpoint hit!");
