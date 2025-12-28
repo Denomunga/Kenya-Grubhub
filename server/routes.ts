@@ -20,8 +20,6 @@ import { UserAudit } from "./models/UserAudit";
 import { ChatMessage } from "./models/ChatMessage";
 import session from "express-session";
 import MongoStore from "connect-mongo";
-import newsletterRoutes from "./routes/newsletter";
-import adminNewsletterRoutes from "./routes/admin-newsletter";
 import { 
   authLimiter, 
   generalLimiter, 
@@ -1515,6 +1513,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       }
       
       if (!threadId || typeof threadId !== 'string') {
+        console.error('Thread ID validation failed:', { threadId, type: typeof threadId });
         return res.status(400).json({ message: "Valid thread ID is required" });
       }
 
@@ -1525,6 +1524,17 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
 
       // Sanitize input
       const sanitizedText = text.trim().substring(0, 1000);
+
+      // Ensure MongoDB indexes exist for performance and uniqueness
+      try {
+        await ChatMessage.collection.createIndexes([
+          { key: { threadId: 1, createdAt: -1 } },
+          { key: { senderId: 1 } },
+          { key: { senderRole: 1 } }
+        ]);
+      } catch (indexError) {
+        console.warn('Index creation warning:', indexError);
+      }
 
       const message = await ChatMessage.create({
         threadId,
@@ -1608,7 +1618,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     }
 
     try {
-      // Get all unique thread IDs
+      // Get all unique thread IDs with proper indexing
       const threads = await ChatMessage.aggregate([
         {
           $group: {
@@ -1628,12 +1638,12 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         { $sort: { "lastMessage.createdAt": -1 } }
       ]);
 
-      const threadsResponse = await Promise.all(threads.map(async (t) => {
+      const threadsResponse = await Promise.all(threads.map(async (t: any) => {
         // Get user name for the thread
         const userMsg = await ChatMessage.findOne({ 
           threadId: t._id, 
           senderRole: "user" 
-        });
+        }).sort({ createdAt: 1 });
         
         return {
           id: t._id,
@@ -1649,19 +1659,12 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         };
       }));
 
-      res.json({ threads: threadsResponse });
+      res.json(threadsResponse);
     } catch (error) {
-      console.error("Get threads error:", error);
+      console.error('Failed to fetch threads:', error);
       res.status(500).json({ message: "Failed to fetch threads" });
     }
   });
-
-  // Newsletter routes
-  app.use("/api/newsletter", newsletterRoutes);
-
-  // Admin newsletter routes (protected)
-  app.use("/api/admin/newsletter", requireAuth, adminNewsletterRoutes);
-
   // Google Maps API key endpoint
   app.get('/api/config/maps', (_req: Request, res: Response) => {
     try {

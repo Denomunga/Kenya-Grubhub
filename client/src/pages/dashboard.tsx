@@ -552,10 +552,30 @@ export default function Dashboard() {
 function SupportPanel() {
   const { getThreads, messages, sendMessage, markThreadAsRead } = useData();
   const threads = getThreads();
-  const [selectedThreadId, setSelectedThreadId] = React.useState<string | null>(threads?.[0]?.id ?? null);
+  const [selectedThreadId, setSelectedThreadId] = React.useState<string>('');
   const [messageText, setMessageText] = React.useState('');
-  React.useEffect(() => { if (threads.length && !selectedThreadId) setSelectedThreadId(threads[0].id); }, [threads]);
+  
+  // Initialize with first thread or create default thread
+  React.useEffect(() => {
+    if (threads.length > 0 && !selectedThreadId) {
+      setSelectedThreadId(threads[0].id);
+    } else if (!selectedThreadId) {
+      //; // No threads available
+    }
+  }, [threads, selectedThreadId]);
+  
   const currentMessages = selectedThreadId ? messages.filter(m => m.threadId === selectedThreadId) : [];
+
+  const handleSendMessage = () => {
+    if (!selectedThreadId || !messageText.trim()) {
+      console.error('Cannot send message: missing threadId or message text', { selectedThreadId, messageText: messageText.trim() });
+      return;
+    }
+    
+    console.log('Sending message with threadId:', selectedThreadId);
+    sendMessage(selectedThreadId, { id: 'admin', name: 'Admin', role: 'admin' }, messageText.trim());
+    setMessageText('');
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -581,7 +601,7 @@ function SupportPanel() {
         </div>
         <div className="flex gap-2 items-center">
           <input value={messageText} onChange={(e) => setMessageText(e.target.value)} className="flex-1 rounded border px-3 py-2" placeholder="Type a message..." />
-          <Button onClick={() => { if (!selectedThreadId || !messageText.trim()) return; sendMessage(selectedThreadId, { id: 'admin', name: 'Admin', role: 'admin' }, messageText.trim()); setMessageText(''); }}>Send</Button>
+          <Button onClick={handleSendMessage}>Send</Button>
         </div>
       </div>
     </div>

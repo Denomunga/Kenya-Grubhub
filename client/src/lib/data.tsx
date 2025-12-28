@@ -760,6 +760,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Chat Methods - Real API Implementation
   const sendMessage = async (threadId: string, _sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => {
     try {
+      console.log('useData sendMessage called:', { threadId, text: text.substring(0, 50) });
+      
       const response = await apiFetch('/api/chat/messages', {
         method: 'POST',
         body: JSON.stringify({ threadId, text })
@@ -781,7 +783,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setMessages(prev => [...prev, newMessage]);
         return true;
       } else {
-        console.error('Failed to send message:', response.statusText);
+        const errorData = await response.json();
+        console.error('Failed to send message:', errorData);
         return false;
       }
     } catch (error) {
