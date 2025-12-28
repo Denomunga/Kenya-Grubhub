@@ -730,44 +730,6 @@ export default function Menu() {
                 </div>
               )}
 
-              {/* Reviews Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Customer Reviews</h3>
-                <div className="space-y-4">
-                  {getReviewsForProduct(selectedProductForDetail.id).length > 0 ? (
-                    getReviewsForProduct(selectedProductForDetail.id).map((review) => (
-                      <div key={review.id} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <p className="font-medium">{review.user}</p>
-                            <div className="flex items-center gap-1">
-                              {[...Array(5)].map((_, i) => (
-                                <span key={i} className={i < review.rating ? "text-yellow-500" : "text-gray-300"}>
-                                  ★
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-500">
-                            {new Date(review.date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <p className="text-gray-700">{review.comment}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500">No reviews yet. Be the first to review this product!</p>
-                  )}
-                </div>
-
-                {/* Add Review Form */}
-                {isAuthenticated && (
-                  <div className="mt-6">
-                    <ReviewForm itemId={selectedProductForDetail.id} />
-                  </div>
-                )}
-              </div>
-
               {/* Action Buttons */}
               <div className="flex gap-4 pt-4 border-t">
                 <Button
