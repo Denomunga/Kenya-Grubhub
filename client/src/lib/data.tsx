@@ -657,11 +657,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return serverItem;
       } else {
         const errorData = await resp.json();
-        console.error('Server error creating menu item:', errorData);
         throw new Error(errorData.message || 'Failed to create menu item');
       }
     } catch (err) {
-      console.error('Could not persist menu item to server:', err);
       throw err; // Don't fallback to local storage - show the error
     }
   };
@@ -833,25 +831,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return serverReview;
       } else {
         const errorData = await resp.json();
-        console.error('Server error creating review:', errorData);
         throw new Error(errorData.message || 'Failed to create review');
       }
     } catch (err) {
-      console.debug("Server review submit failed, falling back to local-only storage", err);
+      throw err; // Don't fallback to local storage - show the error
     }
-
-    // Fallback: local-only
-    const newReview: Review = {
-      id: Date.now().toString(),
-      productId,
-      userId: review.userId,
-      user: review.user,
-      rating: review.rating,
-      comment: review.comment,
-      date: new Date().toISOString(),
-    };
-    setReviews(prev => [newReview, ...prev]);
-    return newReview;
   };
 
   const fetchReviewAudits = async (opts: any = {}) => {
