@@ -599,37 +599,73 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [news]);
 
   const addMenuItem = async (item: MenuItem) => {
-    // Optimistic update locally
-    setMenu(prev => [...prev, item]);
-
-    // Try to persist server-side so other clients can see the product
+    // Try to persist server-side first
     try {
       const resp = await apiFetch('/api/menu', {
         method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: item.name,
           description: item.description,
           price: item.price,
           category: item.category,
+          subcategory: item.subcategory,
+          brand: item.brand,
+          condition: item.condition,
+          specifications: item.specifications,
           images: item.images || [],
-          available: item.available
+          available: item.available,
+          stock: item.stock,
+          location: item.location,
+          tags: item.tags,
+          size: item.size,
+          color: item.color,
+          year: item.year,
+          material: item.material,
+          weight: item.weight,
+          dimensions: item.dimensions
         }),
       });
 
       if (resp.ok) {
         const data = await resp.json();
         const p = data.product;
-        // replace temporary item with server item id (optional)
-        setMenu(prev => prev.map(i => i.id === item.id ? ({ ...i, id: p.id, images: p.images || i.images }) : i));
-        return p;
+        // Add the server-created item to local state
+        const serverItem: MenuItem = {
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          price: p.price,
+          category: p.category,
+          subcategory: p.subcategory,
+          brand: p.brand,
+          condition: p.condition,
+          specifications: p.specifications,
+          images: p.images || [],
+          available: p.available,
+          stock: p.stock,
+          location: p.location,
+          tags: p.tags,
+          size: p.size,
+          color: p.color,
+          year: p.year,
+          material: p.material,
+          weight: p.weight,
+          dimensions: p.dimensions
+        };
+        setMenu(prev => [...prev, serverItem]);
+        return serverItem;
+      } else {
+        const errorData = await resp.json();
+        console.error('Server error creating menu item:', errorData);
+        throw new Error(errorData.message || 'Failed to create menu item');
       }
     } catch (err) {
-      console.debug('Could not persist menu item to server, saved locally', err);
+      console.error('Could not persist menu item to server, saving locally. Error:', err);
+      // Fallback - save locally
+      setMenu(prev => [...prev, item]);
+      return item;
     }
-
-    // fallback - remain local-only
-    return item;
   };
   const deleteMenuItem = async (id: string) => {
   // Try server delete first

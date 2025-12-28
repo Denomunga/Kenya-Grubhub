@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import nodemailer from "nodemailer";
-import { body, validationResult } from 'express-validator';
+import { body } from 'express-validator';
 import multer from "multer";
 import { Order } from './models/Order';
 import { User } from './models/User';
@@ -27,6 +27,7 @@ import {
   validateRegistration,
   validateLogin,
   validateMenuItem,
+  validateNews,
   handleValidationErrors,
   xssProtection,
   securityHeaders
@@ -1403,7 +1404,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     }
   });
 
-  app.post("/api/news", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/news", requireAuth, validateNews, handleValidationErrors, async (req: Request, res: Response) => {
     try {
       if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
         return res.status(403).json({ message: "Admin/staff access required" });
