@@ -18,7 +18,6 @@ import { NewsAudit } from "./models/NewsAudit";
 import { ReviewAudit } from "./models/ReviewAudit";
 import { UserAudit } from "./models/UserAudit";
 import { ChatMessage } from "./models/ChatMessage";
-import { randomBytes } from 'crypto';
 import session from "express-session";
 import MongoStore from "connect-mongo";
 import { 
@@ -131,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       rolling: true, // Reset expiration on every request
       genid: (_req) => {
         // Generate consistent session ID
-        return crypto.randomBytes(16).toString('hex');
+        return randomBytes(16).toString('hex');
       }
     })
   );
