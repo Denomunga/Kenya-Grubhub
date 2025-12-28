@@ -128,7 +128,7 @@ export function PageLoader() {
             />
           </div>
           <p className="text-sm text-muted-foreground">
-            I LOVE YOU WALI..... {Math.round(loadingProgress)}%
+            LOADING ASSETS..... {Math.round(loadingProgress)}%
           </p>
         </div>
 
