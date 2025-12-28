@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { ShoppingBag, MessageCircle, User, Plus, X, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
@@ -19,28 +19,11 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
   const [, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Add this at the beginning of the component for debugging
-  useEffect(() => {
-    console.log('FAB: Component mounted');
-    const fabElement = document.getElementById('fab-main');
-    if (fabElement) {
-      console.log('FAB: Found FAB element:', fabElement);
-      console.log('FAB: Computed styles:', window.getComputedStyle(fabElement));
-      console.log('FAB: Pointer events:', window.getComputedStyle(fabElement).pointerEvents);
-      
-      // Check if there are any overlays
-      const rect = fabElement.getBoundingClientRect();
-      const elementsAtPoint = document.elementsFromPoint(rect.left + rect.width/2, rect.top + rect.height/2);
-      console.log('FAB: Elements at click point:', elementsAtPoint);
-    }
-  }, []);
-
   const defaultActions = [
     {
       icon: <ShoppingBag className="h-5 w-5" />,
       label: 'Browse Menu',
       onClick: () => {
-        console.log('FAB: Navigating to menu');
         setLocation('/menu');
       },
       color: 'from-blue-500 to-blue-600'
@@ -49,7 +32,6 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
       icon: <MessageCircle className="h-5 w-5" />,
       label: 'Live Chat',
       onClick: () => {
-        console.log('FAB: Navigating to chat');
         setLocation('/chat');
       },
       color: 'from-green-500 to-green-600'
@@ -58,7 +40,6 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
       icon: <User className="h-5 w-5" />,
       label: 'Profile',
       onClick: () => {
-        console.log('FAB: Navigating to profile');
         setLocation('/profile');
       },
       color: 'from-purple-500 to-purple-600'
@@ -66,7 +47,6 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
       icon: <User className="h-5 w-5" />,
       label: 'Login',
       onClick: () => {
-        console.log('FAB: Navigating to login');
         setLocation('/login');
       },
       color: 'from-orange-500 to-orange-600'
@@ -99,7 +79,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
             </span>
             <div className="relative group">
               <button
-                className={`w-14 h-14 rounded-2xl bg-linear-to-r ${action.color} text-white shadow-2xl hover:shadow-3xl border-2 border-white/30 backdrop-blur-sm transition-all duration-300 hover:scale-110 active:scale-95 relative overflow-hidden`}
+                className={`w-14 h-14 rounded-full bg-linear-to-r ${action.color} text-white shadow-2xl hover:shadow-3xl border-2 border-white/30 backdrop-blur-sm transition-all duration-300 hover:scale-110 active:scale-95 relative overflow-hidden flex items-center justify-center`}
                 onClick={(e) => {
                   e.stopPropagation();
                   action.onClick();
@@ -120,7 +100,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
       {/* Main FAB - SIZE & POSITION CONTROLS */}
       <div id="fab-main" className="relative">
         <button
-          className={`w-12 h-12 rounded-2xl bg-linear-to-r ${
+          className={`w-12 h-12 rounded-full bg-linear-to-r ${
             isChristmasMode 
               ? 'from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800' 
               : 'from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800'
