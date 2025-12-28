@@ -655,17 +655,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
         setMenu(prev => [...prev, serverItem]);
         return serverItem;
-      } else {
-        const errorData = await resp.json();
-        console.error('Server error creating menu item:', errorData);
-        throw new Error(errorData.message || 'Failed to create menu item');
       }
     } catch (err) {
-      console.error('Could not persist menu item to server, saving locally. Error:', err);
-      // Fallback - save locally
-      setMenu(prev => [...prev, item]);
-      return item;
+      console.debug('Could not persist menu item to server, saved locally', err);
     }
+
+    // Fallback - save locally
+    setMenu(prev => [...prev, item]);
+    return item;
   };
   const deleteMenuItem = async (id: string) => {
   // Try server delete first

@@ -199,7 +199,7 @@ const DragDropMenuManager: React.FC = () => {
       images: uploadedImages.length > 0 ? uploadedImages : ["https://placehold.co/400x300?text=Food"]
     };
 
-    addMenuItem(item);
+    await addMenuItem(item);
     setNewItem({ 
       name: '', 
       category: 'Food', 

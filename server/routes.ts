@@ -380,6 +380,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CSRF token endpoint
+  app.get("/api/csrf-token", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Generate a new CSRF token
+      const token = randomBytes(32).toString('hex');
+      
+      // Set token in response header and cookie
+      res.setHeader('X-CSRF-Token', token);
+      res.cookie('csrf-token', token, {
+        httpOnly: false, // Allow JavaScript access
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+        maxAge: 1000 * 60 * 60 // 1 hour
+      });
+      
+      res.json({ csrfToken: token });
+    } catch (error) {
+      console.error("CSRF token error:", error);
+      res.status(500).json({ message: "Failed to generate CSRF token" });
+    }
+  });
+
   // Request a password change — generate a token and email a confirmation link to user
   app.post("/api/auth/password-change-request", requireAuth, async (req: Request, res: Response) => {
     try {
@@ -1107,6 +1129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dimensions
       });
 
+      console.log(`Product saved to MongoDB: ${name} by ${req.user!.name}`);
       res.status(201).json({ 
         message: "Product created successfully", 
         product: {
