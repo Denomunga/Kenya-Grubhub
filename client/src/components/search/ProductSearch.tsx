@@ -222,7 +222,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {/* Category Filter */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <label className="text-sm font-semibold focus:border-blue-500 flex items-center gap-2">
                       <Package className="h-4 w-4 text-blue-500" />
                       Category
                     </label>
@@ -242,7 +242,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
 
                   {/* Price Range */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <label className="text-sm font-semibold focus:border-blue-500 flex items-center gap-2">
                       <DollarSign className="h-4 w-4 text-green-500" />
                       Price Range (KSH)
                     </label>
@@ -272,7 +272,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
 
                   {/* Condition Filter */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <label className="text-sm font-semibold focus:border-blue-500 flex items-center gap-2">
                       <Star className="h-4 w-4 text-purple-500" />
                       Condition
                     </label>
@@ -337,7 +337,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                       onChange={(e) => updateFilter('inStock', e.target.checked)}
                       className="rounded text-blue-500 focus:ring-2 focus:ring-blue-500/20"
                     />
-                    <label htmlFor="inStock" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    <label htmlFor="inStock" className="text-sm font-medium focus:border-blue-500 cursor-pointer">
                       In Stock Only
                     </label>
                   </div>
