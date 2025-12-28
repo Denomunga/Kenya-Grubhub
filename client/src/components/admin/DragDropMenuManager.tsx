@@ -106,12 +106,22 @@ const DragDropMenuManager: React.FC = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>(menu);
   const [newItem, setNewItem] = useState<{ 
     name: string; 
-    category: "Main" | "Starter" | "Drinks" | "Dessert"; 
+    category: string; 
     price: number; 
     images: string[];
     description: string;
     imageFiles: File[];
-  }>({ name: '', category: 'Main', price: 0, images: [], description: '', imageFiles: [] });
+    subcategory?: string;
+    brand?: string;
+    condition?: "new" | "used" | "refurbished";
+    size?: string;
+    color?: string;
+    year?: number;
+    material?: string;
+    location?: string;
+    stock?: number;
+    tags?: string[];
+  }>({ name: '', category: 'Food', price: 0, images: [], description: '', imageFiles: [] });
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingImageFiles, setEditingImageFiles] = useState<File[]>([]);
@@ -190,7 +200,24 @@ const DragDropMenuManager: React.FC = () => {
     };
 
     addMenuItem(item);
-    setNewItem({ name: '', category: 'Main', price: 0, images: [], description: '', imageFiles: [] });
+    setNewItem({ 
+      name: '', 
+      category: 'Food', 
+      price: 0, 
+      images: [], 
+      description: '', 
+      imageFiles: [],
+      subcategory: '',
+      brand: '',
+      condition: undefined,
+      size: '',
+      color: '',
+      year: undefined,
+      material: '',
+      location: '',
+      stock: undefined,
+      tags: []
+    });
     toast({ title: 'Success', description: `${item.name} added to menu with ${uploadedImages.length} image(s)` });
   };
 
@@ -298,7 +325,7 @@ const DragDropMenuManager: React.FC = () => {
             />
             <Select
               value={newItem.category}
-              onValueChange={(value: "Main" | "Starter" | "Drinks" | "Dessert") => 
+              onValueChange={(value: string) => 
                 setNewItem({ ...newItem, category: value })
               }
             >
@@ -306,12 +333,87 @@ const DragDropMenuManager: React.FC = () => {
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Main">Main Course</SelectItem>
-                <SelectItem value="Starter">Starter</SelectItem>
-                <SelectItem value="Drinks">Drinks</SelectItem>
-                <SelectItem value="Dessert">Dessert</SelectItem>
+                <SelectItem value="Food">Food</SelectItem>
+                <SelectItem value="Electronics">Electronics</SelectItem>
+                <SelectItem value="Vehicles">Vehicles</SelectItem>
+                <SelectItem value="Real Estate">Real Estate</SelectItem>
+                <SelectItem value="Fashion">Fashion</SelectItem>
+                <SelectItem value="Furniture">Furniture</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
+            <Input
+              placeholder="Subcategory (optional)"
+              value={newItem.subcategory || ''}
+              onChange={(e) => setNewItem({ ...newItem, subcategory: e.target.value })}
+              className="liquid-transition"
+            />
+            <Input
+              placeholder="Brand (optional)"
+              value={newItem.brand || ''}
+              onChange={(e) => setNewItem({ ...newItem, brand: e.target.value })}
+              className="liquid-transition"
+            />
+            <Select
+              value={newItem.condition || ''}
+              onValueChange={(value: "new" | "used" | "refurbished" | "") => 
+                setNewItem({ ...newItem, condition: value || undefined })
+              }
+            >
+              <SelectTrigger className="liquid-transition">
+                <SelectValue placeholder="Condition (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No condition</SelectItem>
+                <SelectItem value="new">New</SelectItem>
+                <SelectItem value="used">Used</SelectItem>
+                <SelectItem value="refurbished">Refurbished</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Size (optional)"
+              value={newItem.size || ''}
+              onChange={(e) => setNewItem({ ...newItem, size: e.target.value })}
+              className="liquid-transition"
+            />
+            <Input
+              placeholder="Color (optional)"
+              value={newItem.color || ''}
+              onChange={(e) => setNewItem({ ...newItem, color: e.target.value })}
+              className="liquid-transition"
+            />
+            <Input
+              type="number"
+              placeholder="Year (optional)"
+              value={newItem.year || ''}
+              onChange={(e) => setNewItem({ ...newItem, year: parseInt(e.target.value) || undefined })}
+              className="liquid-transition"
+            />
+            <Input
+              placeholder="Material (optional)"
+              value={newItem.material || ''}
+              onChange={(e) => setNewItem({ ...newItem, material: e.target.value })}
+              className="liquid-transition"
+            />
+            <Input
+              placeholder="Location (optional)"
+              value={newItem.location || ''}
+              onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
+              className="liquid-transition"
+            />
+            <Input
+              type="number"
+              placeholder="Stock (optional)"
+              value={newItem.stock || ''}
+              onChange={(e) => setNewItem({ ...newItem, stock: parseInt(e.target.value) || undefined })}
+              className="liquid-transition"
+            />
+            <Input
+              placeholder="Tags (comma separated, optional)"
+              value={newItem.tags?.join(', ') || ''}
+              onChange={(e) => setNewItem({ ...newItem, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) })}
+              className="liquid-transition"
+            />
             <Input
               placeholder="Description"
               value={newItem.description}

@@ -1,12 +1,15 @@
 import { Button } from "@/components/ui/button";
-import { Coffee, Utensils, Wine, Salad } from "lucide-react";
+import { Coffee, Utensils, Laptop, Car, Home, Shirt, Package } from "lucide-react";
 
-const foodCategories = [
-  { id: 'all', name: 'All', icon: <Utensils className="w-4 h-4 mr-2" /> },
-  { id: 'main', name: 'Main', icon: <Utensils className="w-4 h-4 mr-2" /> },
-  { id: 'starter', name: 'Starter', icon: <Coffee className="w-4 h-4 mr-2" /> },
-  { id: 'drinks', name: 'Drinks', icon: <Wine className="w-4 h-4 mr-2" /> },
-  { id: 'dessert', name: 'Dessert', icon: <Salad className="w-4 h-4 mr-2" /> },
+const productCategories = [
+  { id: 'all', name: 'All', icon: <Package className="w-4 h-4 mr-2" /> },
+  { id: 'food', name: 'Food', icon: <Utensils className="w-4 h-4 mr-2" /> },
+  { id: 'electronics', name: 'Electronics', icon: <Laptop className="w-4 h-4 mr-2" /> },
+  { id: 'vehicles', name: 'Vehicles', icon: <Car className="w-4 h-4 mr-2" /> },
+  { id: 'real estate', name: 'Real Estate', icon: <Home className="w-4 h-4 mr-2" /> },
+  { id: 'fashion', name: 'Fashion', icon: <Shirt className="w-4 h-4 mr-2" /> },
+  { id: 'furniture', name: 'Furniture', icon: <Coffee className="w-4 h-4 mr-2" /> },
+  { id: 'other', name: 'Other', icon: <Package className="w-4 h-4 mr-2" /> },
 ];
 
 interface CategoryFilterProps {
@@ -18,7 +21,7 @@ const CategoryFilter = ({ activeCategory, onCategoryChange }: CategoryFilterProp
   return (
     <div className="mb-12">
       <div className="flex flex-wrap gap-2 justify-center">
-        {foodCategories.map((category) => (
+        {productCategories.map((category) => (
           <Button
             key={category.id}
             variant={activeCategory === category.id ? 'default' : 'outline'}

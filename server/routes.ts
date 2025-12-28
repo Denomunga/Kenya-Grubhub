@@ -26,6 +26,7 @@ import {
   uploadLimiter,
   validateRegistration,
   validateLogin,
+  validateMenuItem,
   handleValidationErrors,
   xssProtection,
   securityHeaders
@@ -1030,8 +1031,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: p.description,
         price: p.price,
         category: p.category,
+        subcategory: p.subcategory,
+        brand: p.brand,
+        condition: p.condition,
+        specifications: p.specifications,
         images: p.images || [],
         available: p.available,
+        stock: p.stock,
+        location: p.location,
+        tags: p.tags,
+        size: p.size,
+        color: p.color,
+        year: p.year,
+        material: p.material,
+        weight: p.weight,
+        dimensions: p.dimensions,
         createdAt: p.createdAt.toISOString(),
       }));
       res.json({ menu: response });
@@ -1041,13 +1055,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/menu", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/menu", requireAuth, validateMenuItem, handleValidationErrors, async (req: Request, res: Response) => {
     try {
       if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
         return res.status(403).json({ message: "Admin/staff access required" });
       }
 
-      const { name, description, price, category, images, available } = req.body;
+      const { 
+        name, 
+        description, 
+        price, 
+        category, 
+        subcategory,
+        brand,
+        condition,
+        specifications,
+        images, 
+        available,
+        stock,
+        location,
+        tags,
+        size,
+        color,
+        year,
+        material,
+        weight,
+        dimensions
+      } = req.body;
+      
       if (!name || !description || !price || !category) {
         return res.status(400).json({ message: "name, description, price and category are required" });
       }
@@ -1056,9 +1091,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name, 
         description, 
         price, 
-        category, 
+        category,
+        subcategory,
+        brand,
+        condition,
+        specifications,
         images: images || [], 
-        available: available ?? true 
+        available: available ?? true,
+        stock,
+        location,
+        tags,
+        size,
+        color,
+        year,
+        material,
+        weight,
+        dimensions
       });
 
       res.status(201).json({ 
@@ -1067,9 +1115,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: created.name, 
           description: created.description, 
           price: created.price, 
-          category: created.category, 
+          category: created.category,
+          subcategory: created.subcategory,
+          brand: created.brand,
+          condition: created.condition,
+          specifications: created.specifications,
           images: created.images, 
-          available: created.available 
+          available: created.available,
+          stock: created.stock,
+          location: created.location,
+          tags: created.tags,
+          size: created.size,
+          color: created.color,
+          year: created.year,
+          material: created.material,
+          weight: created.weight,
+          dimensions: created.dimensions
         } 
       });
     } catch (err) {
@@ -1078,22 +1139,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/menu/:id", requireAuth, async (req: Request, res: Response) => {
+  app.put("/api/menu/:id", requireAuth, validateMenuItem, handleValidationErrors, async (req: Request, res: Response) => {
     try {
       if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
         return res.status(403).json({ message: "Admin/staff access required" });
       }
 
       const { id } = req.params;
-      const { name, description, price, category, images, available } = req.body;
+      const { 
+        name, 
+        description, 
+        price, 
+        category,
+        subcategory,
+        brand,
+        condition,
+        specifications,
+        images, 
+        available,
+        stock,
+        location,
+        tags,
+        size,
+        color,
+        year,
+        material,
+        weight,
+        dimensions
+      } = req.body;
       
       if (!name || !description || !price || !category) {
         return res.status(400).json({ message: "name, description, price and category are required" });
       }
 
+      const updateData: any = { 
+        name, 
+        description, 
+        price, 
+        category,
+        subcategory,
+        brand,
+        condition,
+        specifications,
+        images, 
+        available,
+        stock,
+        location,
+        tags,
+        size,
+        color,
+        year,
+        material,
+        weight,
+        dimensions
+      };
+
+      // Remove undefined fields to avoid overwriting with undefined
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+
       const updated = await Product.findByIdAndUpdate(
         id, 
-        { name, description, price, category, images, available }, 
+        updateData, 
         { new: true, runValidators: true }
       );
 
@@ -1101,7 +1211,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Menu item not found" });
       }
 
-      res.json({ product: { id: updated._id.toString(), name: updated.name, description: updated.description, price: updated.price, category: updated.category, images: updated.images, available: updated.available } });
+      res.json({ 
+        product: { 
+          id: updated._id.toString(), 
+          name: updated.name, 
+          description: updated.description, 
+          price: updated.price, 
+          category: updated.category,
+          subcategory: updated.subcategory,
+          brand: updated.brand,
+          condition: updated.condition,
+          specifications: updated.specifications,
+          images: updated.images, 
+          available: updated.available,
+          stock: updated.stock,
+          location: updated.location,
+          tags: updated.tags,
+          size: updated.size,
+          color: updated.color,
+          year: updated.year,
+          material: updated.material,
+          weight: updated.weight,
+          dimensions: updated.dimensions
+        } 
+      });
     } catch (err) {
       console.error("Update menu item error:", err);
       res.status(500).json({ message: "Failed to update menu item" });

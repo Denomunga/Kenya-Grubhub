@@ -127,7 +127,7 @@ const FeaturedDishes = ({ items, isLoading }: FeaturedDishesProps) => {
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            Featured Dishes
+            Featured Products
           </motion.h2>
           <motion.p 
             className="text-muted-foreground max-w-2xl mx-auto text-lg leading-relaxed"
@@ -135,7 +135,7 @@ const FeaturedDishes = ({ items, isLoading }: FeaturedDishesProps) => {
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            Handpicked selection of our most popular and delicious dishes, prepared with love and authentic Kenyan flavors.
+            Handpicked selection of our most popular products, from delicious food to electronics, vehicles, and more.
           </motion.p>
         </motion.div>
         
