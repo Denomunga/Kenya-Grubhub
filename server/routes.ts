@@ -1810,10 +1810,32 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   });
 
   // CSRF token endpoint
-  app.get("/api/csrf-token", async (_req: Request, res: Response) => {
-    const token = require('crypto').randomBytes(32).toString('hex');
-    res.setHeader('X-CSRF-Token', token);
-    res.json({ csrfToken: token });
+  app.get("/api/csrf-token", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const sessionId = req.sessionID;
+      const token = require('crypto').randomBytes(32).toString('hex');
+      
+      // Store token for session
+      const { CSRFProtection } = await import("./middleware/csrf");
+      CSRFProtection.storeToken(sessionId, token);
+      
+      // Set token as cookie (accessible across origins)
+      res.cookie('csrf-token', token, {
+        httpOnly: false, // JavaScript needs to read this
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none', // Required for cross-origin
+        maxAge: 60 * 60 * 1000 // 1 hour
+      });
+      
+      // Set token in response header
+      res.setHeader('X-CSRF-Token', token);
+      
+      // Also return in response body for maximum compatibility
+      res.json({ csrfToken: token });
+    } catch (error) {
+      console.error('CSRF token generation error:', error);
+      res.status(500).json({ message: 'Failed to generate CSRF token' });
+    }
   });
 
   // Test endpoint to verify routes are registering

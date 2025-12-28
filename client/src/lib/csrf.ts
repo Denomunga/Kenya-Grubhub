@@ -84,17 +84,53 @@ export class CSRFTokenManager {
   // Initialize CSRF token by making a request to get it
   static async initializeToken(): Promise<void> {
     try {
-      // Make a request to any protected endpoint to get CSRF token
-      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      // First check if user is authenticated
+      const authResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
         method: 'GET',
         credentials: 'include'
       });
       
-      // The CSRF token will be set in the response headers and cookie
-      const token = response.headers.get('X-CSRF-Token');
-      if (token) {
-        this.setToken(token);
+      if (!authResponse.ok) {
+        console.warn('User not authenticated, skipping CSRF initialization');
+        return;
       }
+      
+      // Now get CSRF token from dedicated endpoint
+      const csrfResponse = await fetch(`${API_BASE_URL}/api/csrf-token`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (csrfResponse.ok) {
+        // Try to get token from header first
+        const headerToken = csrfResponse.headers.get('X-CSRF-Token');
+        if (headerToken) {
+          this.setToken(headerToken);
+          console.log('CSRF token initialized from header');
+          return;
+        }
+        
+        // Try to get token from response body
+        const data = await csrfResponse.json();
+        if (data.csrfToken) {
+          this.setToken(data.csrfToken);
+          console.log('CSRF token initialized from response body');
+          return;
+        }
+        
+        // Try to get from cookie (fallback)
+        const cookies = document.cookie.split(';');
+        for (const cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === 'csrf-token') {
+            this.setToken(value);
+            console.log('CSRF token initialized from cookie');
+            return;
+          }
+        }
+      }
+      
+      console.warn('Could not obtain CSRF token');
     } catch (error) {
       console.warn('Failed to initialize CSRF token:', error);
     }

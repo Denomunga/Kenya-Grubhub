@@ -12,6 +12,7 @@ import { Suspense, lazy, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PageLoader } from "@/components/ui/LoadingStates";
 import { CSRFTokenManager } from "@/lib/csrf";
+import { useAuth } from "@/lib/auth";
 
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -62,12 +63,21 @@ function Router() {
   );
 }
 
-function App() {
+// Component to initialize CSRF after authentication
+function CSRFInitializer() {
+  const { user, isAuthenticated } = useAuth();
+  
   useEffect(() => {
-    // Initialize CSRF token when app starts
-    CSRFTokenManager.initializeToken();
-  }, []);
+    if (isAuthenticated && user) {
+      console.log('User authenticated, initializing CSRF token...');
+      CSRFTokenManager.initializeToken();
+    }
+  }, [isAuthenticated, user]);
+  
+  return null;
+}
 
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <DndProvider backend={HTML5Backend}>
@@ -75,6 +85,7 @@ function App() {
           <ChristmasProvider>
             <ChatProvider>
               <DataProvider>
+                <CSRFInitializer />
                 <Router />
                 <Toaster />
               </DataProvider>
