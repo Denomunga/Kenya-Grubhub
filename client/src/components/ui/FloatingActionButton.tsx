@@ -102,7 +102,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
               </button>
               
               {/* Glow effect */}
-              <div className={`absolute inset-0 rounded-full bg-linear-to-r ${action.color} opacity-30 blur-xl animate-pulse`} />
+              <div className={`absolute inset-0 rounded-full bg-linear-to-r ${action.color} opacity-30 blur-xl animate-pulse pointer-events-none`} />
             </div>
           </div>
         );
