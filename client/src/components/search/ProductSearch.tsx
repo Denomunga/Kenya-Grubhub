@@ -298,7 +298,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                           <SelectValue placeholder="All brands" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Brands</SelectItem>
+                          <SelectItem value="all">All Brands</SelectItem>
                           {allBrands.map(brand => (
                             <SelectItem key={brand} value={brand}>{brand}</SelectItem>
                           ))}
@@ -319,7 +319,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                           <SelectValue placeholder="All locations" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Locations</SelectItem>
+                          <SelectItem value="all">All Locations</SelectItem>
                           {allLocations.map(location => (
                             <SelectItem key={location} value={location}>{location}</SelectItem>
                           ))}
