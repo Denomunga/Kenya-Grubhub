@@ -76,7 +76,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
   const displayActions = actions.length > 0 ? actions : defaultActions;
 
   return (
-    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col-reverse items-center gap-4">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-4">
       {/* Action Items */}
       {isOpen && displayActions.map((action, index) => {
         return (
@@ -124,7 +124,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
             isChristmasMode 
               ? 'from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800' 
               : 'from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800'
-          } text-white shadow-3xl hover:shadow-4xl border-2 border-white/30 backdrop-blur-xl transition-all duration-300 relative overflow-hidden group hover:scale-105 active:scale-95`}
+          } text-white shadow-3xl hover:shadow-4xl border-2 border-white/30 backdrop-blur-xl transition-all duration-300 relative overflow-hidden group hover:scale-105 active:scale-95 flex items-center justify-center`}
           onClick={() => {
             setIsOpen(!isOpen);
           }}
@@ -133,7 +133,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
           <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
           
           {/* Icon with rotation */}
-          <div className={`relative z-10 transition-transform duration-300 ${isOpen ? 'rotate-45' : 'rotate-0'}`}>
+          <div className={`relative z-10 transition-transform duration-300 ${isOpen ? 'rotate-45' : 'rotate-0'} flex items-center justify-center`}>
             {isOpen ? (
               <X className="h-6 w-6" />
             ) : (
