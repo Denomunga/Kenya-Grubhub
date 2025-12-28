@@ -661,12 +661,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData.message || 'Failed to create menu item');
       }
     } catch (err) {
-      console.debug('Could not persist menu item to server, saved locally', err);
+      console.error('Could not persist menu item to server:', err);
+      throw err; // Don't fallback to local storage - show the error
     }
-
-    // Fallback - save locally
-    setMenu(prev => [...prev, item]);
-    return item;
   };
   const deleteMenuItem = async (id: string) => {
   // Try server delete first
