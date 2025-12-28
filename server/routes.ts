@@ -747,7 +747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/uploads", requireAuth, uploadLimiter, upload.single("image"), async (req: Request, res: Response) => {
     try {
-      if (!req.uploadedFile) return res.status(400).json({ message: "No file uploaded" });
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
       // Only allow admin or staff to upload assets
       if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
@@ -761,7 +761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Perform resizing/compression using sharp where possible
       try {
         const sharp = await import('sharp');
-        const filePath = resolve(uploadsDir, req.uploadedFile.filename);
+        const filePath = resolve(uploadsDir, req.file.filename);
         // generate two webp profiles: original (max width 1600) and thumbnail (400)
         await sharp.default(filePath)
           .rotate()
@@ -774,16 +774,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .toFormat('webp', { quality: 70 })
           .toFile(filePath + '.thumb.webp');
         // remove original file and reference the new webp original filename
-        fs.unlinkSync(resolve(uploadsDir, req.uploadedFile.filename));
-        req.uploadedFile.filename = req.uploadedFile.filename + '.webp';
-        (req.uploadedFile as any).thumbnail = req.uploadedFile.filename + '.thumb.webp';
+        fs.unlinkSync(resolve(uploadsDir, req.file.filename));
+        req.file.filename = req.file.filename + '.webp';
+        (req.file as any).thumbnail = req.file.filename + '.thumb.webp';
       } catch (err) {
         // If sharp is not available or processing failed, continue with original file
         console.warn('Image processing failed or sharp not available:', err);
       }
 
-      const fileUrl = `${proto}://${host}/uploads/${req.uploadedFile.filename}`;
-      const thumb = (req.uploadedFile as any).thumbnail;
+      const fileUrl = `${proto}://${host}/uploads/${req.file.filename}`;
+      const thumb = (req.file as any).thumbnail;
       const thumbUrl = thumb ? `${proto}://${host}/uploads/${thumb}` : undefined;
       res.status(201).json({ url: fileUrl, thumbnailUrl: thumbUrl });
     } catch (err) {
