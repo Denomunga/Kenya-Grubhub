@@ -8,20 +8,18 @@ export class CSRFTokenManager {
   // Get CSRF token from cookie or header
   static getToken(): string | null {
     if (this.token) {
-      console.log('Using stored CSRF token:', this.token.substring(0, 8) + '...');
       return this.token;
     }
 
-    // Try to get from localStorage first (most reliable)
+    // Try to get from localStorage first
     try {
       const localToken = localStorage.getItem('csrf-token');
       if (localToken) {
         this.token = localToken;
-        console.log('Found CSRF token in localStorage:', localToken.substring(0, 8) + '...');
         return localToken;
       }
     } catch (error) {
-      console.warn('Failed to read CSRF token from localStorage:', error);
+      // Failed to read CSRF token from localStorage
     }
 
     // Try to get from cookie (cross-origin might be blocked)
@@ -31,12 +29,11 @@ export class CSRFTokenManager {
         const [name, value] = cookie.trim().split('=');
         if (name === 'csrf-token') {
           this.token = value;
-          console.log('Found CSRF token in cookie:', value.substring(0, 8) + '...');
           return value;
         }
       }
     } catch (error) {
-      console.warn('Failed to read CSRF token from cookies:', error);
+      // Failed to read CSRF token from cookies
     }
 
     // Try to get from meta tag (server can set this)
@@ -44,28 +41,24 @@ export class CSRFTokenManager {
       const metaTag = document.querySelector('meta[name="csrf-token"]');
       if (metaTag) {
         this.token = metaTag.getAttribute('content');
-        console.log('Found CSRF token in meta tag:', this.token?.substring(0, 8) + '...');
         return this.token;
       }
     } catch (error) {
-      console.warn('Failed to read CSRF token from meta tag:', error);
+      // Failed to read CSRF token from meta tag
     }
 
-    console.warn('No CSRF token found in any location');
     return null;
   }
 
   // Set CSRF token (for when server sends it in response headers)
   static setToken(token: string): void {
     this.token = token;
-    console.log('CSRF token stored in memory:', token.substring(0, 8) + '...');
     
     // Also store in localStorage as backup
     try {
       localStorage.setItem('csrf-token', token);
-      console.log('CSRF token backed up to localStorage');
     } catch (error) {
-      console.warn('Failed to backup CSRF token to localStorage:', error);
+      // Failed to backup CSRF token to localStorage
     }
   }
 
@@ -75,7 +68,7 @@ export class CSRFTokenManager {
     try {
       localStorage.removeItem('csrf-token');
     } catch (error) {
-      console.warn('Failed to clear CSRF token from localStorage:', error);
+      // Failed to clear CSRF token from localStorage
     }
   }
 
@@ -102,9 +95,6 @@ export class CSRFTokenManager {
     // Add CSRF token for state-changing requests
     if (token && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method?.toUpperCase() || 'GET')) {
       defaultHeaders['X-CSRF-Token'] = token;
-      console.log(`Adding CSRF token to ${options.method} request:`, token.substring(0, 8) + '...');
-    } else if (!token && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method?.toUpperCase() || 'GET')) {
-      console.warn(`No CSRF token available for ${options.method} request to ${url}`);
     }
 
     const config: RequestInit = {
@@ -119,7 +109,6 @@ export class CSRFTokenManager {
     const newToken = response.headers.get('X-CSRF-Token');
     if (newToken) {
       this.setToken(newToken);
-      console.log('Updated CSRF token from response header');
     }
 
     return response;
@@ -135,7 +124,6 @@ export class CSRFTokenManager {
       });
       
       if (!authResponse.ok) {
-        console.warn('User not authenticated, skipping CSRF initialization');
         return;
       }
       
@@ -150,7 +138,6 @@ export class CSRFTokenManager {
         const headerToken = csrfResponse.headers.get('X-CSRF-Token');
         if (headerToken) {
           this.setToken(headerToken);
-          console.log('CSRF token initialized from header:', headerToken.substring(0, 8) + '...');
           return;
         }
         
@@ -158,7 +145,6 @@ export class CSRFTokenManager {
         const data = await csrfResponse.json();
         if (data.csrfToken) {
           this.setToken(data.csrfToken);
-          console.log('CSRF token initialized from response body:', data.csrfToken.substring(0, 8) + '...');
           return;
         }
         
@@ -168,15 +154,13 @@ export class CSRFTokenManager {
           const [name, value] = cookie.trim().split('=');
           if (name === 'csrf-token') {
             this.setToken(value);
-            console.log('CSRF token initialized from cookie:', value.substring(0, 8) + '...');
             return;
           }
         }
       }
       
-      console.warn('Could not obtain CSRF token');
     } catch (error) {
-      console.warn('Failed to initialize CSRF token:', error);
+      // Failed to initialize CSRF token
     }
   }
 }
