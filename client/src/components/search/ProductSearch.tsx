@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Search, Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { Search, Filter, X, ChevronDown, ChevronUp, Sparkles, DollarSign, MapPin, Package, Star } from 'lucide-react';
 import { MenuItem } from '@/lib/data';
 
 interface SearchFilters {
@@ -148,179 +148,243 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
   }, [filters]);
 
   return (
-    <Card className={`${className}`}>
-      <CardContent className="p-6">
-        <div className="space-y-4">
-          {/* Main Search Bar */}
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search products by name, description, brand, or tags..."
-                value={filters.query}
-                onChange={(e) => updateFilter('query', e.target.value)}
-                className="pl-10"
-              />
+    <Card className={`${className} border-0 shadow-xl bg-linear-to-br from-white/90 to-blue-50/90 backdrop-blur-lg`}>
+      <CardContent className="p-8">
+        <div className="space-y-6">
+          {/* Header with icon */}
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-linear-to-r from-blue-500 to-purple-600 text-white mb-3">
+              <Sparkles className="h-6 w-6" />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-              className="flex items-center gap-2"
-            >
-              <Filter className="h-4 w-4" />
-              Filters
-              {activeFiltersCount > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {activeFiltersCount}
-                </Badge>
-              )}
-              {isAdvancedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-            {activeFiltersCount > 0 && (
-              <Button variant="ghost" onClick={clearFilters}>
-                <X className="h-4 w-4" />
-                Clear
+            <h2 className="text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Discover Products
+            </h2>
+            <p className="text-muted-foreground text-sm">Find exactly what you're looking for</p>
+          </div>
+
+          {/* Main Search Bar */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-purple-600 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity"></div>
+            <div className="relative flex gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
+                <Input
+                  placeholder="Search for products, brands, or tags..."
+                  value={filters.query}
+                  onChange={(e) => updateFilter('query', e.target.value)}
+                  className="pl-12 h-14 text-base border-0 shadow-lg bg-white/80 backdrop-blur focus:ring-4 focus:ring-blue-500/20 transition-all"
+                />
+                {filters.query && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => updateFilter('query', '')}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <Button
+                onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                className={`h-14 px-6 shadow-lg transition-all ${
+                  isAdvancedOpen 
+                    ? 'bg-linear-to-r from-blue-500 to-purple-600 text-white' 
+                    : 'bg-white/80 backdrop-blur hover:bg-white text-gray-700'
+                }`}
+              >
+                <Filter className="h-5 w-5 mr-2" />
+                Filters
+                {activeFiltersCount > 0 && (
+                  <Badge className="ml-2 bg-linear-to-r from-orange-400 to-pink-500 text-white border-0">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+                {isAdvancedOpen ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
               </Button>
-            )}
+              {activeFiltersCount > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={clearFilters}
+                  className="h-14 px-6 shadow-lg bg-white/80 backdrop-blur hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Advanced Filters */}
           <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
-            <CollapsibleContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Category Filter */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Category</label>
-                  <Select value={filters.category} onValueChange={(value) => updateFilter('category', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map(cat => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat === 'all' ? 'All Categories' : cat}
-                        </SelectItem>
+            <CollapsibleContent className="space-y-6">
+              <div className="bg-white/60 backdrop-blur rounded-xl p-6 border border-white/20">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Category Filter */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <Package className="h-4 w-4 text-blue-500" />
+                      Category
+                    </label>
+                    <Select value={filters.category} onValueChange={(value) => updateFilter('category', value)}>
+                      <SelectTrigger className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                        <SelectValue placeholder="All categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map(cat => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat === 'all' ? 'All Categories' : cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Price Range */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-green-500" />
+                      Price Range (KSH)
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        value={filters.priceRange.min}
+                        onChange={(e) => updateFilter('priceRange', { 
+                          ...filters.priceRange, 
+                          min: parseInt(e.target.value) || 0 
+                        })}
+                        className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        value={filters.priceRange.max}
+                        onChange={(e) => updateFilter('priceRange', { 
+                          ...filters.priceRange, 
+                          max: parseInt(e.target.value) || 100000 
+                        })}
+                        className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Condition Filter */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <Star className="h-4 w-4 text-purple-500" />
+                      Condition
+                    </label>
+                    <Select value={filters.condition} onValueChange={(value) => updateFilter('condition', value)}>
+                      <SelectTrigger className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20">
+                        <SelectValue placeholder="All conditions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Conditions</SelectItem>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="used">Used</SelectItem>
+                        <SelectItem value="refurbished">Refurbished</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Brand Filter */}
+                  {allBrands.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Brand</label>
+                      <Select value={filters.brand} onValueChange={(value) => updateFilter('brand', value)}>
+                        <SelectTrigger className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                          <SelectValue placeholder="All brands" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">All Brands</SelectItem>
+                          {allBrands.map(brand => (
+                            <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Location Filter */}
+                  {allLocations.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-red-500" />
+                        Location
+                      </label>
+                      <Select value={filters.location} onValueChange={(value) => updateFilter('location', value)}>
+                        <SelectTrigger className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20">
+                          <SelectValue placeholder="All locations" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">All Locations</SelectItem>
+                          {allLocations.map(location => (
+                            <SelectItem key={location} value={location}>{location}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* In Stock Filter */}
+                  <div className="flex items-center space-x-3 bg-white/60 backdrop-blur rounded-lg p-4 border border-gray-200">
+                    <input
+                      type="checkbox"
+                      id="inStock"
+                      checked={filters.inStock}
+                      onChange={(e) => updateFilter('inStock', e.target.checked)}
+                      className="rounded text-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    <label htmlFor="inStock" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      In Stock Only
+                    </label>
+                  </div>
+                </div>
+
+                {/* Tags Filter */}
+                {allTags.length > 0 && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-gray-700">Popular Tags</label>
+                    <div className="flex flex-wrap gap-2">
+                      {allTags.map(tag => (
+                        <Badge
+                          key={tag}
+                          variant={filters.tags.includes(tag) ? "default" : "outline"}
+                          className={`cursor-pointer transition-all ${
+                            filters.tags.includes(tag)
+                              ? 'bg-linear-to-r from-blue-500 to-purple-600 text-white border-0 hover:shadow-lg'
+                              : 'bg-white/80 backdrop-blur border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                          }`}
+                          onClick={() => toggleTag(tag)}
+                        >
+                          {tag}
+                        </Badge>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Price Range */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Price Range (KSH)</label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      placeholder="Min"
-                      value={filters.priceRange.min}
-                      onChange={(e) => updateFilter('priceRange', { 
-                        ...filters.priceRange, 
-                        min: parseInt(e.target.value) || 0 
-                      })}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Max"
-                      value={filters.priceRange.max}
-                      onChange={(e) => updateFilter('priceRange', { 
-                        ...filters.priceRange, 
-                        max: parseInt(e.target.value) || 100000 
-                      })}
-                    />
-                  </div>
-                </div>
-
-                {/* Condition Filter */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Condition</label>
-                  <Select value={filters.condition} onValueChange={(value) => updateFilter('condition', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All conditions" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Conditions</SelectItem>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="used">Used</SelectItem>
-                      <SelectItem value="refurbished">Refurbished</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Brand Filter */}
-                {allBrands.length > 0 && (
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Brand</label>
-                    <Select value={filters.brand} onValueChange={(value) => updateFilter('brand', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All brands" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Brands</SelectItem>
-                        {allBrands.map(brand => (
-                          <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    </div>
                   </div>
                 )}
-
-                {/* Location Filter */}
-                {allLocations.length > 0 && (
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Location</label>
-                    <Select value={filters.location} onValueChange={(value) => updateFilter('location', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All locations" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Locations</SelectItem>
-                        {allLocations.map(location => (
-                          <SelectItem key={location} value={location}>{location}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* In Stock Filter */}
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="inStock"
-                    checked={filters.inStock}
-                    onChange={(e) => updateFilter('inStock', e.target.checked)}
-                    className="rounded"
-                  />
-                  <label htmlFor="inStock" className="text-sm font-medium">
-                    In Stock Only
-                  </label>
-                </div>
               </div>
-
-              {/* Tags Filter */}
-              {allTags.length > 0 && (
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Tags</label>
-                  <div className="flex flex-wrap gap-2">
-                    {allTags.map(tag => (
-                      <Badge
-                        key={tag}
-                        variant={filters.tags.includes(tag) ? "default" : "outline"}
-                        className="cursor-pointer"
-                        onClick={() => toggleTag(tag)}
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
             </CollapsibleContent>
           </Collapsible>
 
           {/* Results Summary */}
-          <div className="text-sm text-muted-foreground">
-            {filteredProducts.length} of {products.length} products found
+          <div className="flex items-center justify-between p-4 bg-linear-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+              <span className="text-sm font-medium text-gray-700">
+                <span className="text-lg font-bold text-blue-600">{filteredProducts.length}</span>
+                <span className="text-gray-500"> of </span>
+                <span className="text-lg font-bold text-purple-600">{products.length}</span>
+                <span className="text-gray-500"> products found</span>
+              </span>
+            </div>
+            {filteredProducts.length === 0 && (
+              <div className="text-sm text-gray-500 italic">
+                Try adjusting your filters or search terms
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
