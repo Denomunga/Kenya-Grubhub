@@ -153,8 +153,8 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
         <div className="space-y-6">
           {/* Header with icon */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-linear-to-r from-blue-500 to-purple-600 text-white mb-3">
-              <Sparkles className="h-6 w-6" />
+            <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-linear-to-r from-blue-500 to-purple-600 text-white mb-3">
+              <Sparkles className="h-4 w-4" />
             </div>
             <h2 className="text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Discover Products
@@ -167,19 +167,19 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
             <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-purple-600 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity"></div>
             <div className="relative flex gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-4 w-4" />
                 <Input
                   placeholder="Search for products, brands, or tags..."
                   value={filters.query}
                   onChange={(e) => updateFilter('query', e.target.value)}
-                  className="pl-12 h-14 text-base border-0 shadow-lg bg-white/80 backdrop-blur focus:ring-4 focus:ring-blue-500/20 transition-all"
+                  className="pl-12 h-10 text-base border-0 shadow-lg bg-white/80 backdrop-blur focus:ring-4 focus:ring-blue-500/20 transition-all"
                 />
                 {filters.query && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => updateFilter('query', '')}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-gray-100"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -187,7 +187,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
               </div>
               <Button
                 onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                className={`h-14 px-6 shadow-lg transition-all ${
+                className={`h-10 px-4 shadow-lg transition-all ${
                   isAdvancedOpen 
                     ? 'bg-linear-to-r from-blue-500 to-purple-600 text-white' 
                     : 'bg-white/80 backdrop-blur hover:bg-white text-gray-700'
@@ -206,7 +206,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                 <Button
                   variant="outline"
                   onClick={clearFilters}
-                  className="h-14 px-6 shadow-lg bg-white/80 backdrop-blur hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+                  className="h-10 px-4 shadow-lg bg-white/80 backdrop-blur hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Clear
@@ -227,7 +227,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                       Category
                     </label>
                     <Select value={filters.category} onValueChange={(value) => updateFilter('category', value)}>
-                      <SelectTrigger className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                      <SelectTrigger className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
                         <SelectValue placeholder="All categories" />
                       </SelectTrigger>
                       <SelectContent>
@@ -255,7 +255,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                           ...filters.priceRange, 
                           min: parseInt(e.target.value) || 0 
                         })}
-                        className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                        className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                       />
                       <Input
                         type="number"
@@ -265,7 +265,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                           ...filters.priceRange, 
                           max: parseInt(e.target.value) || 100000 
                         })}
-                        className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                        className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                       />
                     </div>
                   </div>
@@ -277,7 +277,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                       Condition
                     </label>
                     <Select value={filters.condition} onValueChange={(value) => updateFilter('condition', value)}>
-                      <SelectTrigger className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20">
+                      <SelectTrigger className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20">
                         <SelectValue placeholder="All conditions" />
                       </SelectTrigger>
                       <SelectContent>
@@ -294,7 +294,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                     <div className="space-y-2">
                       <label className="text-sm font-semibold text-gray-700">Brand</label>
                       <Select value={filters.brand} onValueChange={(value) => updateFilter('brand', value)}>
-                        <SelectTrigger className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                        <SelectTrigger className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
                           <SelectValue placeholder="All brands" />
                         </SelectTrigger>
                         <SelectContent>
@@ -315,7 +315,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                         Location
                       </label>
                       <Select value={filters.location} onValueChange={(value) => updateFilter('location', value)}>
-                        <SelectTrigger className="h-12 bg-white/80 backdrop-blur border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20">
+                        <SelectTrigger className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20">
                           <SelectValue placeholder="All locations" />
                         </SelectTrigger>
                         <SelectContent>
