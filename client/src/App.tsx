@@ -8,9 +8,10 @@ import { ChatProvider } from "@/lib/chatApi";
 import { ChristmasProvider } from "@/lib/christmas";
 import { Layout } from "@/components/layout";
 import NotFound from "@/pages/not-found";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PageLoader } from "@/components/ui/LoadingStates";
+import { CSRFTokenManager } from "@/lib/csrf";
 
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -62,6 +63,11 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    // Initialize CSRF token when app starts
+    CSRFTokenManager.initializeToken();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <DndProvider backend={HTML5Backend}>
