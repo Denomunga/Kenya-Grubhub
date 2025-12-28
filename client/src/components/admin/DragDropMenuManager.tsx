@@ -364,7 +364,7 @@ const DragDropMenuManager: React.FC = () => {
                 <SelectValue placeholder="Condition (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No condition</SelectItem>
+                <SelectItem value="none">No condition</SelectItem>
                 <SelectItem value="new">New</SelectItem>
                 <SelectItem value="used">Used</SelectItem>
                 <SelectItem value="refurbished">Refurbished</SelectItem>
