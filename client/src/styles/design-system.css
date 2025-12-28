@@ -169,7 +169,7 @@
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --transition-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
   /* Breakpoints */
   --breakpoint-sm: 640px;
@@ -386,6 +386,22 @@ body {
 @keyframes scaleIn {
   from { transform: scale(0.9); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+/* FAB Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.4s ease-out;
 }
 
 @keyframes shimmer {

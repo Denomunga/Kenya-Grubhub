@@ -76,33 +76,38 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
   const displayActions = actions.length > 0 ? actions : defaultActions;
 
   return (
-    <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col-reverse items-end gap-3">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-4">
       {/* Action Items */}
       {isOpen && displayActions.map((action, index) => {
-        console.log(`FAB: Rendering action ${index}: ${action.label}`);
         return (
           <div
             key={action.label}
-            className="flex items-center gap-3 relative z-50"
+            className="flex items-center gap-3 relative z-50 opacity-0 transform translate-y-4 scale-95 animate-fadeInUp"
+            style={{
+              animationDelay: `${index * 50}ms`,
+              animationFillMode: 'forwards'
+            }}
           >
             <span
-              className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-full text-sm font-medium shadow-xl whitespace-nowrap"
+              className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 px-4 py-2 rounded-2xl text-sm font-semibold shadow-2xl whitespace-nowrap hover:shadow-3xl transition-all duration-300 hover:scale-105"
             >
               {action.label}
             </span>
-            <div className="relative">
+            <div className="relative group">
               <button
-                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-linear-to-r ${action.color} text-white shadow-xl hover:shadow-2xl border-2 border-white/20 backdrop-blur-sm transition-all duration-300`}
+                className={`w-14 h-14 rounded-2xl bg-linear-to-r ${action.color} text-white shadow-2xl hover:shadow-3xl border-2 border-white/30 backdrop-blur-sm transition-all duration-300 hover:scale-110 active:scale-95 relative overflow-hidden`}
                 onClick={(e) => {
                   e.stopPropagation();
                   action.onClick();
                 }}
               >
+                <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                 {action.icon}
               </button>
               
-              {/* Glow effect */}
-              <div className={`absolute inset-0 rounded-full bg-linear-to-r ${action.color} opacity-30 blur-xl animate-pulse pointer-events-none`} />
+              {/* Enhanced glow effect */}
+              <div className={`absolute -inset-1 rounded-2xl bg-linear-to-r ${action.color} opacity-40 blur-xl group-hover:opacity-60 transition-opacity duration-300 pointer-events-none`} />
+              <div className={`absolute inset-0 rounded-2xl bg-linear-to-r ${action.color} opacity-20 blur-lg animate-pulse pointer-events-none`} />
             </div>
           </div>
         );
@@ -111,28 +116,38 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
       {/* Main FAB */}
       <div id="fab-main" className="relative">
         <button
-          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-linear-to-r ${
+          className={`w-16 h-16 rounded-2xl bg-linear-to-r ${
             isChristmasMode 
-              ? 'from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' 
-              : 'from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
-          } text-white shadow-2xl hover:shadow-3xl border-2 border-white/30 backdrop-blur-sm transition-all duration-300 relative overflow-hidden group pointer-events-auto`}
+              ? 'from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800' 
+              : 'from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800'
+          } text-white shadow-3xl hover:shadow-4xl border-2 border-white/30 backdrop-blur-xl transition-all duration-300 relative overflow-hidden group hover:scale-105 active:scale-95`}
           onClick={() => {
-            console.log('FAB: Click event fired!');
-            console.log('FAB: Current isOpen:', isOpen);
             setIsOpen(!isOpen);
-            console.log('FAB: New isOpen:', !isOpen);
           }}
         >
-          {isOpen ? (
-            <X className="h-6 w-6 sm:h-7 sm:w-7" />
-          ) : (
-            isChristmasMode ? (
-              <Sparkles className="h-6 w-6 sm:h-7 sm:w-7" />
+          {/* Shimmer effect */}
+          <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+          
+          {/* Icon with rotation */}
+          <div className={`relative z-10 transition-transform duration-300 ${isOpen ? 'rotate-45' : 'rotate-0'}`}>
+            {isOpen ? (
+              <X className="h-7 w-7" />
             ) : (
-              <Plus className="h-6 w-6 sm:h-7 sm:w-7" />
-            )
-          )}
+              isChristmasMode ? (
+                <Sparkles className="h-7 w-7" />
+              ) : (
+                <Plus className="h-7 w-7" />
+              )
+            )}
+          </div>
         </button>
+        
+        {/* Enhanced main button glow */}
+        <div className={`absolute -inset-2 rounded-2xl bg-linear-to-r ${
+          isChristmasMode 
+            ? 'from-red-500 to-red-700' 
+            : 'from-blue-500 to-blue-700'
+        } opacity-30 blur-2xl animate-pulse pointer-events-none`} />
       </div>
     </div>
   );
