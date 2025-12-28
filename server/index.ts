@@ -43,8 +43,8 @@ app.use(cors({
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token']
 }));
 
 // Don't parse JSON for multipart/form-data requests
@@ -169,7 +169,8 @@ async function startServer() {
         cors: { 
           origin: allowedOrigins, 
           credentials: true,
-          methods: ['GET', 'POST']
+          methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+          allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token']
         } 
       });
       console.log('🔧 Socket.io CORS Configuration:', {
