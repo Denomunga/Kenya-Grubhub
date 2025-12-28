@@ -1,17 +1,13 @@
-import { API_BASE_URL } from './api';
-
 // CSRF token management for client-side
 
 export class CSRFTokenManager {
-  private static token: string | null = null;
-
   // Get CSRF token (disabled - returns null)
   static getToken(): string | null {
     return null; // CSRF protection disabled
   }
 
   // Set CSRF token (disabled)
-  static setToken(token: string): void {
+  static setToken(_token: string): void {
     // No-op - CSRF protection disabled
   }
 

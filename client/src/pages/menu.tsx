@@ -20,7 +20,7 @@ import {
   SheetTrigger,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import ProductImageViewer, { ProductImage } from "@/components/ui/ProductImageViewer";
 import LocationPicker from '@/components/ui/LocationPicker';
@@ -457,54 +457,6 @@ export default function Menu() {
 
                   <div className="w-44 text-right">
                     <div className="text-xs text-muted-foreground mb-1">{getReviewsForProduct(item.id).length} reviews</div>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="w-full">View Reviews</Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>{item.name} — Reviews</DialogTitle>
-                          <DialogDescription>Read what customers are saying and add your own review.</DialogDescription>
-                        </DialogHeader>
-
-                        <div className="mt-4 space-y-4 max-h-[40vh] overflow-y-auto">
-                          {getReviewsForProduct(item.id).length === 0 ? (
-                            <div className="text-center text-muted-foreground py-8">No reviews yet — be the first!</div>
-                          ) : (
-                            getReviewsForProduct(item.id).map((r: Review) => (
-                              <div key={r.id} className="border-b pb-3">
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="font-medium">{r.user}</div>
-                                  <div className="text-xs text-muted-foreground flex items-center gap-2">
-                                    <span>{new Date(r.date).toLocaleDateString()}</span>
-                                    {(isAdmin || isStaff) && (
-                                      <button
-                                        className="text-destructive hover:text-destructive/90 ml-2 text-xs"
-                                        onClick={() => {
-                                          setConfirmDeleteReviewId(r.id);
-                                          setDeleteOpen(true);
-                                        }}
-                                        title="Delete review"
-                                      >
-                                        <Trash className="h-4 w-4" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="text-sm text-yellow-400 mt-1">{Array(r.rating).fill("★").join("")}</div>
-                                <div className="text-sm text-muted-foreground mt-2">{r.comment}</div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-
-                        <ReviewForm itemId={item.id} />
-
-                        <DialogFooter className="mt-4 text-right">
-                          <div className="text-xs text-muted-foreground mr-2">Reviews are moderated</div>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
                   </div>
                 </CardFooter>
               </Card>
@@ -729,6 +681,52 @@ export default function Menu() {
                   </div>
                 </div>
               )}
+
+              {/* Reviews Section */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Customer Reviews</h3>
+                <div className="space-y-4">
+                  {getReviewsForProduct(selectedProductForDetail.id).length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">No reviews yet — be the first!</div>
+                  ) : (
+                    getReviewsForProduct(selectedProductForDetail.id).map((r: Review) => (
+                      <div key={r.id} className="border-b pb-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-medium">{r.user}</div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <span>{new Date(r.date).toLocaleDateString()}</span>
+                            {(isAdmin || isStaff) && (
+                              <button
+                                className="text-destructive hover:text-destructive/90 ml-2 text-xs"
+                                onClick={() => {
+                                  setConfirmDeleteReviewId(r.id);
+                                  setDeleteOpen(true);
+                                }}
+                                title="Delete review"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-sm text-yellow-400 mt-1">{Array(r.rating).fill("★").join("")}</div>
+                        <div className="text-sm text-muted-foreground mt-2">{r.comment}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Add Review Form */}
+                {isAuthenticated && (
+                  <div className="mt-6">
+                    <ReviewForm itemId={selectedProductForDetail.id} />
+                  </div>
+                )}
+
+                <div className="mt-4 text-right">
+                  <div className="text-xs text-muted-foreground">Reviews are moderated</div>
+                </div>
+              </div>
 
               {/* Action Buttons */}
               <div className="flex gap-4 pt-4 border-t">
