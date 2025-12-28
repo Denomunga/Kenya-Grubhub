@@ -140,7 +140,8 @@ export default function Menu() {
     setCart(prev => prev.filter(i => i.item.id !== itemId));
   };
 
-  const handleImageClick = (item: MenuItem) => {
+  const handleImageClick = (item: MenuItem, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     const images = item.images || (item.image ? [item.image] : []);
     if (images.length > 0) {
       setSelectedProduct({ images, name: item.name });
@@ -254,7 +255,7 @@ export default function Menu() {
                         images={item.images || (item.image ? [item.image] : [])}
                         productName={item.name}
                         className="h-16 w-16 rounded-md object-cover cursor-pointer"
-                        onImageClick={() => handleImageClick(item)}
+                        onImageClick={(e) => handleImageClick(item, e)}
                         enableSlideshow={false}
                       />
                       <div className="flex-1">
@@ -348,7 +349,7 @@ export default function Menu() {
                     images={item.images || (item.image ? [item.image] : [])}
                     productName={item.name}
                     className="w-full h-full"
-                    onImageClick={() => handleImageClick(item)}
+                    onImageClick={(e) => handleImageClick(item, e)}
                     enableSlideshow={true}
                   />
                   {!item.available && (
@@ -619,7 +620,8 @@ export default function Menu() {
                       src={image}
                       alt={`${selectedProductForDetail.name} ${index + 1}`}
                       className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedProduct({
                           images: selectedProductForDetail.images || [],
                           name: selectedProductForDetail.name

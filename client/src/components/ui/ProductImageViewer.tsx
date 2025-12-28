@@ -161,7 +161,7 @@ interface ProductImageProps {
   images: string[];
   productName: string;
   className?: string;
-  onImageClick?: () => void;
+  onImageClick?: (e?: React.MouseEvent) => void;
   enableSlideshow?: boolean;
 }
 
@@ -196,7 +196,7 @@ export function ProductImage({
   return (
     <div 
       className={`relative overflow-hidden cursor-pointer ${className}`}
-      onClick={onImageClick}
+      onClick={(e) => onImageClick?.(e)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
