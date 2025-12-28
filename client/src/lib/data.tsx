@@ -116,10 +116,12 @@ interface DataContextType {
 
   // Chat Methods
   messages: ChatMessage[];
-  sendMessage: (threadId: string, sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => void;
-  markThreadAsRead: (threadId: string, readerRole: "admin" | "staff" | "user") => void;
+  sendMessage: (threadId: string, sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => Promise<boolean>;
+  markThreadAsRead: (threadId: string, readerRole: "admin" | "staff" | "user") => Promise<boolean>;
   setTypingStatus: (threadId: string, isTyping: boolean) => void;
   getThreads: () => ChatThread[];
+  fetchThreads: () => Promise<any[]>;
+  fetchMessages: (threadId: string) => Promise<any[]>;
   // Review audit methods (admin)
   fetchReviewAudits: (opts?: { action?: string; byName?: string; reviewId?: string; start?: string; end?: string; page?: number; pageSize?: number; exportCsv?: boolean; sort?: 'asc' | 'desc'; exportAll?: boolean }) => Promise<{ audits: any[]; total?: number; page?: number; pageSize?: number; csv?: string }>;
   restoreReview: (reviewId: string) => Promise<boolean>;
@@ -755,42 +757,106 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const addStaff = (newStaff: Staff) => setStaff([...staff, newStaff]);
   const removeStaff = (id: string) => setStaff(staff.filter(s => s.id !== id));
 
-  // Chat Methods
-  const sendMessage = (threadId: string, sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => {
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      threadId,
-      senderId: sender.id,
-      senderName: sender.name,
-      senderRole: sender.role,
-      text,
-      timestamp: new Date().toISOString(),
-      isRead: false,
-      encrypted: true,
-    };
-    setMessages(prev => [...prev, newMessage]);
+  // Chat Methods - Real API Implementation
+  const sendMessage = async (threadId: string, _sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => {
+    try {
+      const response = await apiFetch('/api/chat/messages', {
+        method: 'POST',
+        body: JSON.stringify({ threadId, text })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newMessage: ChatMessage = {
+          id: data.message.id,
+          threadId: data.message.threadId,
+          senderId: data.message.senderId,
+          senderName: data.message.senderName,
+          senderRole: data.message.senderRole,
+          text: data.message.text,
+          timestamp: data.message.timestamp,
+          isRead: data.message.isRead,
+          encrypted: data.message.encrypted,
+        };
+        setMessages(prev => [...prev, newMessage]);
+        return true;
+      } else {
+        console.error('Failed to send message:', response.statusText);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      return false;
+    }
   };
 
-  const markThreadAsRead = (threadId: string, readerRole: "admin" | "staff" | "user") => {
-    setMessages(prev => prev.map(m => {
-      if (m.threadId !== threadId) return m;
+  const markThreadAsRead = async (threadId: string, readerRole: "admin" | "staff" | "user") => {
+    try {
+      const response = await apiFetch(`/api/chat/threads/${threadId}/read`, {
+        method: 'PATCH',
+        body: JSON.stringify({ readerRole })
+      });
 
-      // If Admin/Staff is reading, mark USER messages as read
-      if (readerRole === "admin" || readerRole === "staff") {
-        return m.senderRole === "user" ? { ...m, isRead: true } : m;
+      if (response.ok) {
+        // Update local state optimistically
+        setMessages(prev => prev.map(m => {
+          if (m.threadId !== threadId) return m;
+
+          // If Admin/Staff is reading, mark USER messages as read
+          if (readerRole === "admin" || readerRole === "staff") {
+            return m.senderRole === "user" ? { ...m, isRead: true } : m;
+          }
+
+          // If User is reading, mark ADMIN/STAFF messages as read
+          if (readerRole === "user") {
+            return (m.senderRole === "admin" || m.senderRole === "staff") ? { ...m, isRead: true } : m;
+          }
+
+          return m;
+        }));
+        return true;
+      } else {
+        console.error('Failed to mark as read:', response.statusText);
+        return false;
       }
-
-      // If User is reading, mark ADMIN/STAFF messages as read
-      if (readerRole === "user") {
-        return (m.senderRole === "admin" || m.senderRole === "staff") ? { ...m, isRead: true } : m;
-      }
-
-      return m;
-    }));
+    } catch (error) {
+      console.error('Error marking as read:', error);
+      return false;
+    }
   };
 
   const setTypingStatus = (threadId: string, isTyping: boolean) => {
     setTypingStatusState(prev => ({ ...prev, [threadId]: isTyping }));
+  };
+
+  // Real API calls for chat
+  const fetchThreads = async () => {
+    try {
+      const response = await apiFetch('/api/chat/threads');
+      if (response.ok) {
+        const data = await response.json();
+        // The backend returns an array of threads directly
+        return data;
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch threads:', error);
+      return [];
+    }
+  };
+
+  const fetchMessages = async (threadId: string) => {
+    try {
+      const response = await apiFetch(`/api/chat/messages?threadId=${threadId}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.messages || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch messages:', error);
+      return [];
+    }
   };
 
   const getThreads = (): ChatThread[] => {
@@ -834,7 +900,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       reviews, getReviewsForProduct, addReviewForProduct, removeReview,
       orders, placeOrder, updateOrderStatus, cancelOrder, modifyOrder,
       staff, addStaff, removeStaff,
-      messages, sendMessage, markThreadAsRead, setTypingStatus, getThreads,
+      messages, sendMessage, markThreadAsRead, setTypingStatus, getThreads, fetchThreads, fetchMessages,
       fetchReviewAudits, restoreReview,
       serverHealth,
       kpis
