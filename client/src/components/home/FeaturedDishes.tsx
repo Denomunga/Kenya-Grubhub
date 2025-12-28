@@ -151,7 +151,7 @@ const FeaturedDishes = ({ items, isLoading }: FeaturedDishesProps) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 whileHover={{ scale: 1.02 }}
-                onClick={() => setLocation("/menu")}
+                onClick={() => setLocation(`/menu?product=${item.id}`)}
               >
                 <div className="relative overflow-hidden h-48">
                   <ProductImageSlideshow
@@ -193,7 +193,7 @@ const FeaturedDishes = ({ items, isLoading }: FeaturedDishesProps) => {
                         variant="default"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setLocation("/menu");
+                          setLocation(`/menu?product=${item.id}`);
                         }}
                       >
                         Add to Order

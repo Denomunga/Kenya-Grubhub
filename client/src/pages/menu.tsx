@@ -1,9 +1,8 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { DataContext } from "../lib/data";
 import type { MenuItem, Review } from "../lib/data";
-import { useData } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
-import { useLocation } from "wouter";
+import { useLocation, useSearchParams } from "wouter";
 import ProductSearch from "@/components/search/ProductSearch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -31,6 +30,8 @@ export default function Menu() {
   const { menu, placeOrder, getReviewsForProduct, addReviewForProduct, removeReview, reviews } = useContext(DataContext)!;
   const { user, isAuthenticated, isAdmin, isStaff } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [searchParams] = useSearchParams();
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchedProducts, setSearchedProducts] = useState<MenuItem[]>([]);
   const [cart, setCart] = useState<{ item: MenuItem; quantity: number }[]>([]);
@@ -46,6 +47,27 @@ export default function Menu() {
   const [deleteNote, setDeleteNote] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<{ images: string[]; name: string } | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [productDetailOpen, setProductDetailOpen] = useState(false);
+  const [selectedProductForDetail, setSelectedProductForDetail] = useState<MenuItem | null>(null);
+
+  // Handle product ID from URL parameter
+  useEffect(() => {
+    const productId = searchParams.get('product');
+    if (productId && menu.length > 0) {
+      const product = menu.find(item => item.id === productId);
+      if (product) {
+        setSelectedProductForDetail(product);
+        setProductDetailOpen(true);
+        // Clear the URL parameter after opening the modal
+        setLocation('/menu');
+      }
+    }
+  }, [searchParams, menu, setLocation]);
+
+  const handleProductClick = (product: MenuItem) => {
+    setSelectedProductForDetail(product);
+    setProductDetailOpen(true);
+  };
 
   // Helper small form component to post a review for the currently open product
   function ReviewForm({ itemId }: { itemId: string }) {
@@ -315,7 +337,8 @@ export default function Menu() {
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.2 }}
             >
-              <Card className="h-full flex flex-col overflow-hidden card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow">
+              <Card className="h-full flex flex-col overflow-hidden card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow cursor-pointer"
+                  onClick={() => handleProductClick(item)}>
                 <div className="h-48 overflow-hidden relative">
                   <ProductImage
                     images={item.images || (item.image ? [item.image] : [])}
@@ -418,7 +441,10 @@ export default function Menu() {
                     <Button 
                       className="w-full group" 
                       disabled={!item.available}
-                      onClick={() => addToCart(item)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToCart(item);
+                      }}
                     >
                       Add to Order
                       <ShoppingBag className="ml-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
@@ -601,6 +627,162 @@ export default function Menu() {
             initialLocation={selectedLocation}
             placeholder="Search for delivery address..."
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Detail Modal */}
+      <Dialog open={productDetailOpen} onOpenChange={setProductDetailOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">
+              {selectedProductForDetail?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedProductForDetail?.description}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProductForDetail && (
+            <div className="space-y-6">
+              {/* Product Images */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {selectedProductForDetail.images?.slice(0, 4).map((image, index) => (
+                  <div key={index} className="relative overflow-hidden rounded-lg">
+                    <img
+                      src={image}
+                      alt={`${selectedProductForDetail.name} ${index + 1}`}
+                      className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                      onClick={() => {
+                        setSelectedProduct({
+                          images: selectedProductForDetail.images || [],
+                          name: selectedProductForDetail.name
+                        });
+                        setIsViewerOpen(true);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Product Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Product Information</h3>
+                  <div className="space-y-2">
+                    <p><span className="font-medium">Price:</span> KSH {selectedProductForDetail.price}</p>
+                    <p><span className="font-medium">Category:</span> {selectedProductForDetail.category}</p>
+                    {selectedProductForDetail.subcategory && (
+                      <p><span className="font-medium">Subcategory:</span> {selectedProductForDetail.subcategory}</p>
+                    )}
+                    {selectedProductForDetail.brand && (
+                      <p><span className="font-medium">Brand:</span> {selectedProductForDetail.brand}</p>
+                    )}
+                    {selectedProductForDetail.condition && (
+                      <p><span className="font-medium">Condition:</span> {selectedProductForDetail.condition}</p>
+                    )}
+                    {selectedProductForDetail.stock !== undefined && (
+                      <p><span className="font-medium">Stock:</span> {selectedProductForDetail.stock} units</p>
+                    )}
+                    {selectedProductForDetail.location && (
+                      <p><span className="font-medium">Location:</span> {selectedProductForDetail.location}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Additional Details</h3>
+                  <div className="space-y-2">
+                    {selectedProductForDetail.size && (
+                      <p><span className="font-medium">Size:</span> {selectedProductForDetail.size}</p>
+                    )}
+                    {selectedProductForDetail.color && (
+                      <p><span className="font-medium">Color:</span> {selectedProductForDetail.color}</p>
+                    )}
+                    {selectedProductForDetail.year && (
+                      <p><span className="font-medium">Year:</span> {selectedProductForDetail.year}</p>
+                    )}
+                    {selectedProductForDetail.material && (
+                      <p><span className="font-medium">Material:</span> {selectedProductForDetail.material}</p>
+                    )}
+                    {selectedProductForDetail.weight && (
+                      <p><span className="font-medium">Weight:</span> {selectedProductForDetail.weight} kg</p>
+                    )}
+                    {selectedProductForDetail.dimensions && (
+                      <p><span className="font-medium">Dimensions:</span> {selectedProductForDetail.dimensions.length}L × {selectedProductForDetail.dimensions.width}W × {selectedProductForDetail.dimensions.height}H cm</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tags */}
+              {selectedProductForDetail.tags && selectedProductForDetail.tags.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProductForDetail.tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary">{tag}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Reviews Section */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Customer Reviews</h3>
+                <div className="space-y-4">
+                  {getReviewsForProduct(selectedProductForDetail.id).length > 0 ? (
+                    getReviewsForProduct(selectedProductForDetail.id).map((review) => (
+                      <div key={review.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-medium">{review.user}</p>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <span key={i} className={i < review.rating ? "text-yellow-500" : "text-gray-300"}>
+                                  ★
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            {new Date(review.date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <p className="text-gray-700">{review.comment}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500">No reviews yet. Be the first to review this product!</p>
+                  )}
+                </div>
+
+                {/* Add Review Form */}
+                {isAuthenticated && (
+                  <div className="mt-6">
+                    <ReviewForm itemId={selectedProductForDetail.id} />
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4 border-t">
+                <Button
+                  onClick={() => {
+                    addToCart(selectedProductForDetail);
+                    toast({ title: "Added to cart", description: `${selectedProductForDetail.name} added to cart.` });
+                  }}
+                  disabled={!selectedProductForDetail.available}
+                  className="flex-1"
+                >
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Add to Cart
+                </Button>
+                <Button variant="outline" onClick={() => setProductDetailOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
