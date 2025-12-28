@@ -84,11 +84,12 @@ export default function Menu() {
     );
   }
 
-  const categories = ["All", "Main", "Starter", "Drinks", "Dessert"];
+  // Get unique categories from menu items
+  const categories = ["All", ...Array.from(new Set(menu.map(item => item.category)))];
 
   const filteredMenu = activeCategory === "All" 
     ? menu 
-    : menu.filter((item: MenuItem) => item.category === activeCategory);
+    : menu.filter(item => item.category === activeCategory);
 
   const addToCart = (item: MenuItem) => {
     if (!isAuthenticated) {
@@ -325,7 +326,82 @@ export default function Menu() {
                     <span className="font-bold text-primary whitespace-nowrap">{item.price} KSHS</span>
                   </div>
                   <p className="text-muted-foreground text-sm mb-4">{item.description}</p>
-                  <Badge variant="outline" className="bg-muted/50">{item.category}</Badge>
+                  
+                  {/* Additional Product Information */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <Badge variant="outline" className="bg-muted/50">{item.category}</Badge>
+                    {item.subcategory && (
+                      <Badge variant="secondary" className="text-xs">{item.subcategory}</Badge>
+                    )}
+                    {item.brand && (
+                      <Badge variant="outline" className="text-xs">{item.brand}</Badge>
+                    )}
+                    {item.condition && (
+                      <Badge 
+                        variant={item.condition === 'new' ? 'default' : 'secondary'} 
+                        className="text-xs"
+                      >
+                        {item.condition}
+                      </Badge>
+                    )}
+                    {item.year && (
+                      <Badge variant="outline" className="text-xs">{item.year}</Badge>
+                    )}
+                    {item.size && (
+                      <Badge variant="outline" className="text-xs">{item.size}</Badge>
+                    )}
+                    {item.color && (
+                      <Badge variant="outline" className="text-xs">{item.color}</Badge>
+                    )}
+                    {item.stock !== undefined && item.stock <= 5 && (
+                      <Badge variant="destructive" className="text-xs">
+                        Only {item.stock} left
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {/* Location for vehicles and real estate */}
+                  {item.location && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                      <MapPin className="h-3 w-3" />
+                      {item.location}
+                    </div>
+                  )}
+                  
+                  {/* Material for fashion/furniture */}
+                  {item.material && (
+                    <div className="text-xs text-muted-foreground mb-2">
+                      Material: {item.material}
+                    </div>
+                  )}
+                  
+                  {/* Dimensions for shipping/furniture */}
+                  {item.dimensions && (
+                    <div className="text-xs text-muted-foreground mb-2">
+                      Dimensions: {item.dimensions.length}L × {item.dimensions.width}W × {item.dimensions.height}H cm
+                    </div>
+                  )}
+                  
+                  {/* Weight for shipping */}
+                  {item.weight && (
+                    <div className="text-xs text-muted-foreground mb-2">
+                      Weight: {item.weight} kg
+                    </div>
+                  )}
+                  
+                  {/* Tags */}
+                  {item.tags && item.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {item.tags.slice(0, 3).map((tag, index) => (
+                        <span key={index} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                          {tag}
+                        </span>
+                      ))}
+                      {item.tags.length > 3 && (
+                        <span className="text-xs text-gray-500">+{item.tags.length - 3} more</span>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter className="p-6 pt-0 flex gap-3 items-center">
                   <div className="flex-1">

@@ -103,6 +103,73 @@ export const validateMenuItem = [
   body('price')
     .isFloat({ min: 0 })
     .withMessage('Price must be a positive number'),
+  body('category')
+    .notEmpty()
+    .withMessage('Category is required')
+    .trim(),
+  // All other fields are optional based on product type
+  body('subcategory')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('Subcategory must be less than 50 characters')
+    .trim(),
+  body('brand')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('Brand must be less than 50 characters')
+    .trim(),
+  body('condition')
+    .optional()
+    .isIn(['new', 'used', 'refurbished'])
+    .withMessage('Condition must be new, used, or refurbished'),
+  body('stock')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Stock must be a non-negative integer'),
+  body('location')
+    .optional()
+    .isLength({ max: 200 })
+    .withMessage('Location must be less than 200 characters')
+    .trim(),
+  body('tags')
+    .optional()
+    .isArray()
+    .withMessage('Tags must be an array'),
+  body('size')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('Size must be less than 50 characters')
+    .trim(),
+  body('color')
+    .optional()
+    .isLength({ max: 30 })
+    .withMessage('Color must be less than 30 characters')
+    .trim(),
+  body('year')
+    .optional()
+    .isInt({ min: 1900, max: new Date().getFullYear() + 1 })
+    .withMessage('Year must be valid'),
+  body('material')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('Material must be less than 50 characters')
+    .trim(),
+  body('weight')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Weight must be a positive number'),
+  body('dimensions.length')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Length must be a positive number'),
+  body('dimensions.width')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Width must be a positive number'),
+  body('dimensions.height')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Height must be a positive number'),
 ];
 
 export const validateReview = [
