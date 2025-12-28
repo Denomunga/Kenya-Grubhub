@@ -373,15 +373,15 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
           <div className="flex items-center justify-between p-4 bg-linear-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-              <span className="text-sm font-medium text-gray-700">
-                <span className="text-lg font-bold text-blue-600">{filteredProducts.length}</span>
+              <span className="text-xs font-medium text-gray-700">
+                <span className="text-base font-bold text-blue-600">{filteredProducts.length}</span>
                 <span className="text-gray-500"> of </span>
-                <span className="text-lg font-bold text-purple-600">{products.length}</span>
+                <span className="text-base font-bold text-purple-600">{products.length}</span>
                 <span className="text-gray-500"> products found</span>
               </span>
             </div>
             {filteredProducts.length === 0 && (
-              <div className="text-sm text-gray-500 italic">
+              <div className="text-xs text-gray-500 italic">
                 Try adjusting your filters or search terms
               </div>
             )}
