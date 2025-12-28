@@ -111,8 +111,11 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
                          req.body?._csrf || 
                          req.cookies?.['csrf-token'];
 
+    console.log(`CSRF validation attempt: session=${sessionId}, token=${providedToken?.substring(0, 8)}...`);
+
     // Session-based validation: accept session ID or stored token
     if (!sessionId) {
+      console.log('No session found for CSRF validation');
       return res.status(403).json({ 
         message: 'No session found',
         error: 'CSRF_VALIDATION_FAILED'
@@ -127,6 +130,7 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
 
     // Fallback to traditional token validation
     if (!providedToken) {
+      console.log('No CSRF token provided');
       return res.status(403).json({ 
         message: 'CSRF token missing',
         error: 'CSRF_VALIDATION_FAILED'
@@ -134,6 +138,7 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
     }
 
     if (!CSRFProtection.validateToken(sessionId, providedToken)) {
+      console.log(`CSRF token validation failed for session: ${sessionId}`);
       return res.status(403).json({ 
         message: 'Invalid CSRF token',
         error: 'CSRF_VALIDATION_FAILED'

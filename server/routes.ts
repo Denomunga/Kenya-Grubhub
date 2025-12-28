@@ -18,6 +18,7 @@ import { NewsAudit } from "./models/NewsAudit";
 import { ReviewAudit } from "./models/ReviewAudit";
 import { UserAudit } from "./models/UserAudit";
 import { ChatMessage } from "./models/ChatMessage";
+import { randomBytes } from 'crypto';
 import session from "express-session";
 import MongoStore from "connect-mongo";
 import { 
@@ -127,6 +128,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
       name: 'kenya-grubhub-session', // Explicit session name
       proxy: true, // Trust proxy for secure cookies behind load balancer
+      rolling: true, // Reset expiration on every request
+      genid: (_req) => {
+        // Generate consistent session ID
+        return crypto.randomBytes(16).toString('hex');
+      }
     })
   );
 
