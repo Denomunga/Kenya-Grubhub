@@ -46,12 +46,12 @@ export default function InteractiveMap() {
         const data = await response.json();
         setLocation(data);
       } else if (response.status === 404) {
-        // No location set yet
-        setMapError('Business location not set. Please contact administrator.');
+        // No location set yet - don't show error
+        setLocation(null);
       }
     } catch (error) {
-      console.error('Failed to fetch business location:', error);
-      setMapError('Failed to load business location');
+      // Business location is optional - don't show error
+      setLocation(null);
     } finally {
       setIsLoading(false);
     }

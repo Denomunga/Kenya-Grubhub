@@ -90,9 +90,13 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json();
           setBusinessLocation(data);
+        } else {
+          // Business location is optional - don't show error
+          setBusinessLocation(null);
         }
       } catch (error) {
-        console.error('Failed to fetch business location:', error);
+        // Business location is optional - don't show error
+        setBusinessLocation(null);
       } finally {
         setLocationLoading(false);
       }
