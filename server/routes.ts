@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import nodemailer from "nodemailer";
-import { body } from "express-validator";
+import { body, validationResult } from 'express-validator';
 import multer from "multer";
 import { Order } from './models/Order';
 import { User } from './models/User';
@@ -1055,6 +1055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // JSON route for menu creation (with validation middleware)
   app.post("/api/menu", requireAuth, validateMenuItem, handleValidationErrors, async (req: Request, res: Response) => {
     try {
       if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
@@ -1082,9 +1083,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weight,
         dimensions
       } = req.body;
-      
-      if (!name || !description || !price || !category) {
-        return res.status(400).json({ message: "name, description, price and category are required" });
+
+      const created = await Product.create({ 
+        name, 
+        description, 
+        price, 
+        category,
+        subcategory,
+        brand,
+        condition,
+        specifications,
+        images: images || [], 
+        available: available ?? true,
+        stock,
+        location,
+        tags,
+        size,
+        color,
+        year,
+        material,
+        weight,
+        dimensions
+      });
+
+      res.status(201).json({ 
+        message: "Product created successfully", 
+        product: {
+          id: created._id.toString(),
+          name: created.name,
+          description: created.description,
+          price: created.price,
+          category: created.category,
+          subcategory: created.subcategory,
+          brand: created.brand,
+          condition: created.condition,
+          specifications: created.specifications,
+          images: created.images,
+          available: created.available,
+          stock: created.stock,
+          location: created.location,
+          tags: created.tags,
+          size: created.size,
+          color: created.color,
+          year: created.year,
+          material: created.material,
+          weight: created.weight,
+          dimensions: created.dimensions,
+          createdAt: created.createdAt.toISOString(),
+        }
+      });
+    } catch (err) {
+      console.error("Create menu item error:", err);
+      res.status(500).json({ message: "Failed to create menu item" });
+    }
+  });
+
+  // Multipart route for menu creation with file uploads
+  app.post("/api/menu/upload", requireAuth, uploadLimiter, upload.array('images', 5), async (req: Request, res: Response) => {
+    try {
+      if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
+        return res.status(403).json({ message: "Admin/staff access required" });
+      }
+
+      let name, description, price, category, subcategory, brand, condition, specifications, images, available, stock, location, tags, size, color, year, material, weight, dimensions;
+
+      // Handle multipart form data (with file upload)
+      if (req.is('multipart/form-data')) {
+        name = req.body.name;
+        description = req.body.description;
+        price = parseFloat(req.body.price);
+        category = req.body.category;
+        subcategory = req.body.subcategory;
+        brand = req.body.brand;
+        condition = req.body.condition;
+        specifications = req.body.specifications ? JSON.parse(req.body.specifications) : undefined;
+        available = req.body.available === 'true' || req.body.available === true;
+        stock = req.body.stock ? parseInt(req.body.stock) : undefined;
+        location = req.body.location;
+        tags = req.body.tags ? JSON.parse(req.body.tags) : [];
+        size = req.body.size;
+        color = req.body.color;
+        year = req.body.year ? parseInt(req.body.year) : undefined;
+        material = req.body.material;
+        weight = req.body.weight ? parseFloat(req.body.weight) : undefined;
+        dimensions = req.body.dimensions ? JSON.parse(req.body.dimensions) : undefined;
+        
+        // Handle uploaded files
+        images = [];
+        if (req.files && Array.isArray(req.files)) {
+          const host = req.get("host") || "localhost:5000";
+          const proto = req.protocol || "http";
+          for (const file of req.files) {
+            const imageUrl = `${proto}://${host}/uploads/${file.filename}`;
+            images.push(imageUrl);
+          }
+        }
+        
+        // Also include any existing images from form data
+        if (req.body.existingImages) {
+          const existingImages = JSON.parse(req.body.existingImages);
+          images = [...existingImages, ...images];
+        }
+        
+        // Manual validation for multipart data
+        if (!name || typeof name !== 'string' || name.length < 2 || name.length > 100) {
+          return res.status(400).json({ message: "Item name must be 2-100 characters" });
+        }
+        if (!description || typeof description !== 'string' || description.length < 5 || description.length > 500) {
+          return res.status(400).json({ message: "Description must be 5-500 characters" });
+        }
+        if (!price || isNaN(price) || price < 0) {
+          return res.status(400).json({ message: "Price must be a positive number" });
+        }
+        if (!category || typeof category !== 'string' || category.trim().length === 0) {
+          return res.status(400).json({ message: "Category is required" });
+        }
+        if (condition && !['new', 'used', 'refurbished'].includes(condition)) {
+          return res.status(400).json({ message: "Condition must be new, used, or refurbished" });
+        }
+        if (stock !== undefined && (isNaN(stock) || stock < 0)) {
+          return res.status(400).json({ message: "Stock must be a non-negative integer" });
+        }
+        if (year !== undefined && (isNaN(year) || year < 1900 || year > new Date().getFullYear() + 1)) {
+          return res.status(400).json({ message: "Year must be valid" });
+        }
+        if (weight !== undefined && (isNaN(weight) || weight < 0)) {
+          return res.status(400).json({ message: "Weight must be a positive number" });
+        }
       }
 
       const created = await Product.create({ 
