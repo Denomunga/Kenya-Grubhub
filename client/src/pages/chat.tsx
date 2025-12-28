@@ -35,7 +35,7 @@ export default function Chat() {
       refreshMessages(threads[0].id);
       setIsInitialLoad(true); // Reset initial load for new thread
     }
-  }, [isAdmin, isManager, threads.length, activeThreadId]);
+  }, [isAdmin, isManager, threads.length, activeThreadId, refreshMessages]);
 
   // Refresh messages when thread changes
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function Chat() {
       refreshMessages(activeThreadId);
       setIsInitialLoad(true); // Reset initial load for new thread
     }
-  }, [activeThreadId, isAdmin, isManager]);
+  }, [activeThreadId, isAdmin, isManager, refreshMessages]);
 
   // Filter messages for the active view
   const currentMessages = messages
@@ -60,6 +60,7 @@ export default function Chat() {
 
   // State to track if this is initial load
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when messages change (but not on initial load)
   useEffect(() => {
@@ -70,6 +71,16 @@ export default function Chat() {
       setIsInitialLoad(false);
     }
   }, [currentMessages, isInitialLoad]);
+
+  // Force scroll to top on initial load
+  useEffect(() => {
+    if (scrollAreaRef.current && isInitialLoad) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = 0;
+      }
+    }
+  }, [isInitialLoad, currentThreadId]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || !user || !currentThreadId) return;
@@ -202,7 +213,7 @@ export default function Chat() {
                 
                 <CardContent className="flex-1 p-0 bg-muted/10 relative">
                   <div className="absolute inset-0 flex flex-col">
-                    <ScrollArea className="flex-1 p-4">
+                    <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
                       <div className="flex flex-col gap-4 pb-4">
                         <div className="text-center my-4">
                           <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full border border-yellow-200">
@@ -285,7 +296,7 @@ export default function Chat() {
         
         <CardContent className="flex-1 p-0 bg-muted/10 relative">
           <div className="absolute inset-0 flex flex-col">
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
               <div className="flex flex-col gap-4 pb-4">
                 <div className="text-center my-6">
                   <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-background shadow-sm text-xs text-muted-foreground border">
