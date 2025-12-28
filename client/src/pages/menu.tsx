@@ -457,6 +457,17 @@ export default function Menu() {
 
                   <div className="w-44 text-right">
                     <div className="text-xs text-muted-foreground mb-1">{getReviewsForProduct(item.id).length} reviews</div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => {
+                        setSelectedProductForDetail(item);
+                        setProductDetailOpen(true);
+                      }}
+                    >
+                      View Reviews
+                    </Button>
                   </div>
                 </CardFooter>
               </Card>
@@ -586,17 +597,17 @@ export default function Menu() {
         </DialogContent>
       </Dialog>
 
-      {/* Product Detail Modal */}
-      <Dialog open={productDetailOpen} onOpenChange={setProductDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">
+      {/* Product Detail Sheet */}
+      <Sheet open={productDetailOpen} onOpenChange={setProductDetailOpen}>
+        <SheetContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-2xl font-bold">
               {selectedProductForDetail?.name}
-            </DialogTitle>
-            <DialogDescription>
+            </SheetTitle>
+            <SheetDescription>
               {selectedProductForDetail?.description}
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
           
           {selectedProductForDetail && (
             <div className="space-y-6">
@@ -747,8 +758,8 @@ export default function Menu() {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
