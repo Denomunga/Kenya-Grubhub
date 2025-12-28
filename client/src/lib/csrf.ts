@@ -88,9 +88,10 @@ export class CSRFTokenManager {
   static async fetchWithCSRF(url: string, options: RequestInit = {}): Promise<Response> {
     const token = this.getToken();
     
-    const defaultHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    // Don't set Content-Type for FormData - let browser set it with boundary
+    const defaultHeaders: Record<string, string> = options.body instanceof FormData 
+      ? {} 
+      : { 'Content-Type': 'application/json' };
 
     // Add CSRF token for state-changing requests
     if (token && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method?.toUpperCase() || 'GET')) {
