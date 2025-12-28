@@ -150,7 +150,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   };
 
   const getThreads = (): ChatThread[] => {
-    return threads.map(t => ({
+    return (threads || []).map(t => ({
       ...t,
       typing: typingStatus[t.id] || false,
     }));
