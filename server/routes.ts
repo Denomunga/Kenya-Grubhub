@@ -1813,7 +1813,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   app.get("/api/csrf-token", requireAuth, async (req: Request, res: Response) => {
     try {
       const sessionId = req.sessionID;
-      const token = require('crypto').randomBytes(32).toString('hex');
+      const token = randomBytes(32).toString('hex');
       
       // Store token for session
       const { CSRFProtection } = await import("./middleware/csrf");
