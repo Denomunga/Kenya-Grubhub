@@ -94,10 +94,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     text: string
   ) => {
     try {
-      const response = await fetch("/api/chat/messages", {
+      const response = await apiFetch("/api/chat/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ threadId, text }),
       });
 
