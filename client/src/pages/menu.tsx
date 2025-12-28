@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { DataContext } from "../lib/data";
 import type { MenuItem, Review } from "../lib/data";
-import { useContext } from "react";
+import { useData } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
+import { useLocation } from "wouter";
+import ProductSearch from "@/components/search/ProductSearch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,6 +32,7 @@ export default function Menu() {
   const { user, isAuthenticated, isAdmin, isStaff } = useAuth();
   const { toast } = useToast();
   const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [searchedProducts, setSearchedProducts] = useState<MenuItem[]>([]);
   const [cart, setCart] = useState<{ item: MenuItem; quantity: number }[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
@@ -85,11 +88,11 @@ export default function Menu() {
   }
 
   // Get unique categories from menu items
-  const categories = ["All", ...Array.from(new Set(menu.map(item => item.category)))];
+  const categories = ["All", ...Array.from(new Set(menu.map((item: MenuItem) => item.category)))];
 
-  const filteredMenu = activeCategory === "All" 
-    ? menu 
-    : menu.filter(item => item.category === activeCategory);
+  // Use searched products if available, otherwise use category filtering
+  const displayProducts = searchedProducts.length > 0 ? searchedProducts : 
+    (activeCategory === "All" ? menu : menu.filter((item: MenuItem) => item.category === activeCategory));
 
   const addToCart = (item: MenuItem) => {
     if (!isAuthenticated) {
@@ -175,6 +178,13 @@ export default function Menu() {
           <h1 className="text-4xl font-heading font-bold text-primary mb-2">Our Products</h1>
           <p className="text-muted-foreground">Explore our wide selection of Comfy Wears.</p>
         </div>
+
+        {/* Search Component */}
+        <ProductSearch 
+          products={menu}
+          onFilteredProducts={setSearchedProducts}
+          className="mb-6"
+        />
 
         <div className="flex items-center gap-4">
           <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
@@ -296,7 +306,7 @@ export default function Menu() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <AnimatePresence mode="popLayout">
-          {filteredMenu.map((item: MenuItem) => (
+          {displayProducts.map((item: MenuItem) => (
             <motion.div
               key={item.id}
               layout

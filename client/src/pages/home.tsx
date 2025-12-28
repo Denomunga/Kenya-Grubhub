@@ -6,6 +6,7 @@ import HeroSection from "@/components/home/HeroSection";
 import CategoryFilter from "@/components/home/CategoryFilter";
 import FeaturedDishes from "@/components/home/FeaturedDishes";
 import InteractiveMap from "@/components/home/InteractiveMap";
+import ProductSearch from "@/components/search/ProductSearch";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, MapPin, CheckCircle, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,6 +27,7 @@ export default function Home() {
   const { menu, reviews } = useData();
   const [, setLocation] = useLocation();
   const [activeCategory, setActiveCategory] = useState('all');
+  const [searchedProducts, setSearchedProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [, setLoadingNews] = useState(false);
   const [, setSelectedNews] = useState<NewsItem | null>(null);
@@ -127,11 +129,12 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, []);
   
-  // Filter menu items based on active category - memoized
+  // Filter menu items based on active category and search - memoized
   const filteredItems = useMemo(() => {
-    if (activeCategory === 'all') return menu;
-    return menu.filter(item => item.category?.toLowerCase() === activeCategory.toLowerCase());
-  }, [menu, activeCategory]);
+    const baseItems = searchedProducts.length > 0 ? searchedProducts : menu;
+    if (activeCategory === 'all') return baseItems;
+    return baseItems.filter(item => item.category?.toLowerCase() === activeCategory.toLowerCase());
+  }, [menu, activeCategory, searchedProducts]);
     
   const featuredItems = useMemo(() => filteredItems.slice(0, 6), [filteredItems]);
 
@@ -315,6 +318,13 @@ export default function Home() {
       
       <main className="container mx-auto px-4 py-16 relative z-10">
         <div className="relative z-32">
+          {/* Search Component */}
+          <ProductSearch 
+            products={menu}
+            onFilteredProducts={setSearchedProducts}
+            className="mb-8"
+          />
+          
           <CategoryFilter 
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
