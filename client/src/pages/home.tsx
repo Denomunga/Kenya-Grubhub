@@ -348,11 +348,6 @@ export default function Home() {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-full max-w-4xl h-px bg-linear-to-r from-transparent via-blue-200 to-transparent"></div>
           </div>
-          <div className="relative flex justify-center">
-            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
-              <div className="w-8 h-8 bg-background rounded-full"></div>
-            </div>
-          </div>
         </div>
         
         {/* Testimonials Section */}
