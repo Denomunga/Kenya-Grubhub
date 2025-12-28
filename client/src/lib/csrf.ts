@@ -139,7 +139,7 @@ export class CSRFTokenManager {
         return;
       }
       
-      // Now get CSRF token from dedicated endpoint
+      // Get session-based CSRF token
       const csrfResponse = await fetch(`${API_BASE_URL}/api/csrf-token`, {
         method: 'GET',
         credentials: 'include'
@@ -150,7 +150,7 @@ export class CSRFTokenManager {
         const headerToken = csrfResponse.headers.get('X-CSRF-Token');
         if (headerToken) {
           this.setToken(headerToken);
-          console.log('CSRF token initialized from header');
+          console.log('CSRF token initialized from header:', headerToken.substring(0, 8) + '...');
           return;
         }
         
@@ -158,7 +158,7 @@ export class CSRFTokenManager {
         const data = await csrfResponse.json();
         if (data.csrfToken) {
           this.setToken(data.csrfToken);
-          console.log('CSRF token initialized from response body');
+          console.log('CSRF token initialized from response body:', data.csrfToken.substring(0, 8) + '...');
           return;
         }
         
@@ -168,7 +168,7 @@ export class CSRFTokenManager {
           const [name, value] = cookie.trim().split('=');
           if (name === 'csrf-token') {
             this.setToken(value);
-            console.log('CSRF token initialized from cookie');
+            console.log('CSRF token initialized from cookie:', value.substring(0, 8) + '...');
             return;
           }
         }
