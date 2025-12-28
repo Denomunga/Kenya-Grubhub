@@ -13,6 +13,9 @@ import type { Request, Response, NextFunction } from "express";
 
 const app = express();
 
+// Trust proxy for Render deployment
+app.set('trust proxy', true);
+
 // Security: Express middleware setup
 // allow requests from the frontend dev server during development
 const allowedOrigins = process.env.NODE_ENV === 'production' 

@@ -86,10 +86,14 @@ export default function Menu() {
         return;
       }
 
-      await addReviewForProduct(itemId, { userId: user.id, user: user.name, rating, comment });
-      setComment("");
-      setRating(5);
-      toast({ title: "Thank you", description: "Your review has been submitted." });
+      try {
+        await addReviewForProduct(itemId, { userId: user.id, user: user.name, rating, comment });
+        setComment("");
+        setRating(5);
+        toast({ title: "Thank you", description: "Your review has been submitted." });
+      } catch (error) {
+        toast({ title: "Error", description: `Failed to submit review: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: 'destructive' });
+      }
     };
 
     return (

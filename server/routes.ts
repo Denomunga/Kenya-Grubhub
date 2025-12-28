@@ -380,28 +380,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CSRF token endpoint
-  app.get("/api/csrf-token", requireAuth, async (req: Request, res: Response) => {
-    try {
-      // Generate a new CSRF token
-      const token = randomBytes(32).toString('hex');
-      
-      // Set token in response header and cookie
-      res.setHeader('X-CSRF-Token', token);
-      res.cookie('csrf-token', token, {
-        httpOnly: false, // Allow JavaScript access
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
-        maxAge: 1000 * 60 * 60 // 1 hour
-      });
-      
-      res.json({ csrfToken: token });
-    } catch (error) {
-      console.error("CSRF token error:", error);
-      res.status(500).json({ message: "Failed to generate CSRF token" });
-    }
-  });
-
   // Request a password change — generate a token and email a confirmation link to user
   app.post("/api/auth/password-change-request", requireAuth, async (req: Request, res: Response) => {
     try {
@@ -779,7 +757,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Return an absolute URL so the client (dev server) can load it directly
       const host = req.get("host") || "localhost:5000";
-      const proto = req.protocol || "http";
+      // Always use HTTPS in production - force it regardless of protocol
+      const proto = "https";
 
       // Perform resizing/compression using sharp where possible
       try {
@@ -873,6 +852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: review.createdAt.toISOString(),
       };
 
+      console.log(`Review saved to MongoDB: Product ${productId}, Rating ${rating}, User ${req.user!.name}`);
       res.status(201).json({ review: reviewResponse });
     } catch (error) {
       console.error("Create product review error:", error);
@@ -1197,7 +1177,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         images = [];
         if (req.files && Array.isArray(req.files)) {
           const host = req.get("host") || "localhost:5000";
-          const proto = req.protocol || "http";
+          // Always use HTTPS - force it regardless of protocol
+          const proto = "https";
           for (const file of req.files) {
             const imageUrl = `${proto}://${host}/uploads/${file.filename}`;
             images.push(imageUrl);

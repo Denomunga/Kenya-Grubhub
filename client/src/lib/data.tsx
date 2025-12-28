@@ -834,6 +834,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
         setReviews(prev => [serverReview, ...prev]);
         return serverReview;
+      } else {
+        const errorData = await resp.json();
+        console.error('Server error creating review:', errorData);
+        throw new Error(errorData.message || 'Failed to create review');
       }
     } catch (err) {
       console.debug("Server review submit failed, falling back to local-only storage", err);
