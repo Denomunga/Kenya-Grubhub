@@ -760,13 +760,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Chat Methods - Real API Implementation
   const sendMessage = async (threadId: string, _sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => {
     try {
-      console.log('useData sendMessage called:', { threadId, text: text.substring(0, 50) });
-      
-      // Check if CSRF token is available before sending
-      const { CSRFTokenManager } = await import('./csrf');
-      const csrfToken = CSRFTokenManager.getToken();
-      console.log('CSRF token available before sending:', csrfToken ? csrfToken.substring(0, 8) + '...' : 'NONE');
-      
       const response = await apiFetch('/api/chat/messages', {
         method: 'POST',
         body: JSON.stringify({ threadId, text })

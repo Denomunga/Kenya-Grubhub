@@ -1835,10 +1835,8 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         maxAge: 60 * 60 * 1000 // 1 hour
       });
       
-      // Set token in response header
+      // Send token in response headers and body
       res.setHeader('X-CSRF-Token', token);
-      
-      // Also return in response body for maximum compatibility
       res.json({ csrfToken: token });
     } catch (error) {
       console.error('CSRF token generation error:', error);

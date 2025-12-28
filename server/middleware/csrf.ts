@@ -16,13 +16,11 @@ export class CSRFProtection {
     const storedData = this.tokens.get(sessionId);
     
     if (!storedData) {
-      console.log(`No CSRF token found for session: ${sessionId}`);
       return false;
     }
     
     // Check if token has expired
     if (Date.now() > storedData.expires) {
-      console.log(`CSRF token expired for session: ${sessionId}`);
       this.tokens.delete(sessionId);
       return false;
     }
@@ -35,7 +33,6 @@ export class CSRFProtection {
                      Buffer.from(providedToken, 'hex')
                    );
     
-    console.log(`CSRF token validation for session ${sessionId}: ${isValid ? 'VALID' : 'INVALID'}`);
     return isValid;
   }
 
@@ -45,7 +42,6 @@ export class CSRFProtection {
       token,
       expires: Date.now() + this.TOKEN_EXPIRY
     });
-    console.log(`CSRF token stored for session: ${sessionId}, active tokens: ${this.tokens.size}`);
   }
 
   // Get session-based CSRF token (simpler approach)
@@ -66,7 +62,7 @@ export class CSRFProtection {
     }
     
     if (cleanedCount > 0) {
-      console.log(`Cleaned up ${cleanedCount} expired CSRF tokens, remaining: ${this.tokens.size}`);
+      // Tokens cleaned up
     }
   }
 }
@@ -111,11 +107,8 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
                          req.body?._csrf || 
                          req.cookies?.['csrf-token'];
 
-    console.log(`CSRF validation attempt: session=${sessionId}, token=${providedToken?.substring(0, 8)}...`);
-
     // Session-based validation: accept session ID or stored token
     if (!sessionId) {
-      console.log('No session found for CSRF validation');
       return res.status(403).json({ 
         message: 'No session found',
         error: 'CSRF_VALIDATION_FAILED'
@@ -124,13 +117,11 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
 
     // Allow session ID as CSRF token (session-based approach)
     if (providedToken === sessionId) {
-      console.log(`Session-based CSRF validation passed for session: ${sessionId}`);
       return next();
     }
 
     // Fallback to traditional token validation
     if (!providedToken) {
-      console.log('No CSRF token provided');
       return res.status(403).json({ 
         message: 'CSRF token missing',
         error: 'CSRF_VALIDATION_FAILED'
@@ -138,7 +129,6 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
     }
 
     if (!CSRFProtection.validateToken(sessionId, providedToken)) {
-      console.log(`CSRF token validation failed for session: ${sessionId}`);
       return res.status(403).json({ 
         message: 'Invalid CSRF token',
         error: 'CSRF_VALIDATION_FAILED'
