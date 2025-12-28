@@ -15,19 +15,26 @@ export class CSRFProtection {
   static validateToken(sessionId: string, providedToken: string): boolean {
     const storedData = this.tokens.get(sessionId);
     
-    if (!storedData) return false;
+    if (!storedData) {
+      console.log(`No CSRF token found for session: ${sessionId}`);
+      return false;
+    }
     
     // Check if token has expired
     if (Date.now() > storedData.expires) {
+      console.log(`CSRF token expired for session: ${sessionId}`);
       this.tokens.delete(sessionId);
       return false;
     }
     
     // Compare tokens
-    return crypto.timingSafeEqual(
+    const isValid = crypto.timingSafeEqual(
       Buffer.from(storedData.token, 'hex'),
       Buffer.from(providedToken, 'hex')
     );
+    
+    console.log(`CSRF token validation for session ${sessionId}: ${isValid ? 'VALID' : 'INVALID'}`);
+    return isValid;
   }
 
   // Store token for session
@@ -36,15 +43,23 @@ export class CSRFProtection {
       token,
       expires: Date.now() + this.TOKEN_EXPIRY
     });
+    console.log(`CSRF token stored for session: ${sessionId}, active tokens: ${this.tokens.size}`);
   }
 
   // Clean up expired tokens
   static cleanupExpiredTokens(): void {
     const now = Date.now();
+    let cleanedCount = 0;
+    
     for (const [sessionId, data] of this.tokens.entries()) {
       if (now > data.expires) {
         this.tokens.delete(sessionId);
+        cleanedCount++;
       }
+    }
+    
+    if (cleanedCount > 0) {
+      console.log(`Cleaned up ${cleanedCount} expired CSRF tokens, remaining: ${this.tokens.size}`);
     }
   }
 }
