@@ -93,7 +93,10 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
             <div className="relative">
               <button
                 className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-linear-to-r ${action.color} text-white shadow-xl hover:shadow-2xl border-2 border-white/20 backdrop-blur-sm transition-all duration-300`}
-                onClick={action.onClick}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  action.onClick();
+                }}
               >
                 {action.icon}
               </button>
