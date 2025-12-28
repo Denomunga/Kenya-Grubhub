@@ -1,3 +1,5 @@
+import { API_BASE_URL } from './api';
+
 // CSRF token management for client-side
 
 export class CSRFTokenManager {
@@ -82,11 +84,13 @@ export class CSRFTokenManager {
   // Initialize CSRF token by making a request to get it
   static async initializeToken(): Promise<void> {
     try {
-      const response = await fetch('/api/csrf-token', {
+      // Make a request to any protected endpoint to get CSRF token
+      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
         method: 'GET',
         credentials: 'include'
       });
       
+      // The CSRF token will be set in the response headers and cookie
       const token = response.headers.get('X-CSRF-Token');
       if (token) {
         this.setToken(token);
