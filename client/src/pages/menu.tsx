@@ -43,7 +43,7 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
       toast({ title: "Please login", description: "You must be logged in to post a review.", variant: "destructive" });
       return;
     }
-
+//
     const comment = reviewComment.trim();
     
     if (!comment) {
