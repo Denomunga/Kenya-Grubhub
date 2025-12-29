@@ -812,12 +812,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid product ID format" });
       }
       
-      // Check if product exists (optional but recommended)
-      const product = await Product.findOne({ id: sanitizedProductId });
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      
       // Exclude soft-deleted reviews by default, add pagination for performance
       const page = parseInt(req.query.page as string) || 1;
       const limit = Math.min(parseInt(req.query.limit as string) || 50, 100); // Max 100 reviews per request
@@ -884,12 +878,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (comment.trim().length > 1000) {
         return res.status(400).json({ message: "Comment must be less than 1000 characters" });
-      }
-
-      // Check if product exists
-      const product = await Product.findOne({ id: sanitizedProductId });
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
       }
 
       // Check if user already reviewed this product (optional - prevent duplicate reviews)
