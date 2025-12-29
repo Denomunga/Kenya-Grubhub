@@ -461,8 +461,8 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 ];
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [menu, setMenu] = useState<MenuItem[]>(INITIAL_MENU);
-  const [news, setNews] = useState<NewsItem[]>(INITIAL_NEWS);
+  const [menu, setMenu] = useState<MenuItem[]>([]); // Start empty to prioritize server data
+  const [news, setNews] = useState<NewsItem[]>([]); // Start empty to prioritize server data
   const [reviews, setReviews] = useState<Review[]>(INITIAL_REVIEWS);
   const [orders, setOrders] = useState<Order[]>([]);
   const [staff, setStaff] = useState<Staff[]>(INITIAL_STAFF);
@@ -473,7 +473,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [serverHealth, setServerHealth] = useState<any | null>(null);
   const [kpis, setKpis] = useState<any>({ totalRevenue: 0, activeOrders: 0, ordersPerMinute: 0 });
 
-  // Load from local storage to persist across refreshes (mock DB)
+  // Load from local storage to persist across refreshes (mock DB) - but not menu, prioritize server data
   useEffect(() => {
     const storedMsgs = localStorage.getItem("kenyan_bistro_messages");
     if (storedMsgs) {
@@ -487,10 +487,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (storedNews) {
       setNews(JSON.parse(storedNews));
     }
-    const storedMenu = localStorage.getItem("kenyan_bistro_menu");
-    if (storedMenu) {
-      setMenu(JSON.parse(storedMenu));
-    }
+    // Remove menu loading from localStorage to prioritize server data
     const storedOrders = localStorage.getItem("kenyan_bistro_orders");
     if (storedOrders) {
       setOrders(JSON.parse(storedOrders));
@@ -507,23 +504,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Try to fetch server-side menu/news if available and override local mock data
   useEffect(() => {
     (async () => {
+      let menuLoaded = false;
       try {
         const resMenu = await apiFetch('/api/menu');
         if (resMenu.ok) {
           const d = await resMenu.json();
-          if (Array.isArray(d.menu)) setMenu(d.menu.map((m: any) => ({
-            id: m.id,
-            name: m.name,
-            description: m.description,
-            price: m.price,
-            category: m.category,
-            images: m.images || [],  // ✅ Fixed: use images array
-            image: m.images?.[0] || '', // ✅ Backward compatibility
-            available: m.available,
-          })));
+          if (Array.isArray(d.menu)) {
+            setMenu(d.menu.map((m: any) => ({
+              id: m.id,
+              name: m.name,
+              description: m.description,
+              price: m.price,
+              category: m.category,
+              subcategory: m.subcategory,
+              brand: m.brand,
+              condition: m.condition,
+              specifications: m.specifications,
+              images: m.images || [],
+              image: m.images?.[0] || '',
+              available: m.available,
+              stock: m.stock,
+              location: m.location,
+              tags: m.tags,
+              size: m.size,
+              color: m.color,
+              year: m.year,
+              material: m.material,
+              weight: m.weight,
+              dimensions: m.dimensions
+            })));
+            menuLoaded = true;
+          }
         }
       } catch (err) {
-        // ignore if server not available
+        console.warn('Failed to fetch menu from server, using initial data');
+      }
+
+      // Fallback to initial data only if server fetch failed
+      if (!menuLoaded) {
+        setMenu(INITIAL_MENU);
       }
 
       try {
@@ -533,7 +552,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           if (Array.isArray(d.news)) setNews(d.news);
         }
       } catch (err) {
-        // ignore
+        console.warn('Failed to fetch news from server, using initial data');
+        setNews(INITIAL_NEWS);
       }
     })();
   }, []);
@@ -594,7 +614,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return () => { try { socket?.disconnect(); } catch (e) { } };
   }, []);
 
-  // Save to local storage on change
+  // Save to local storage on change - but not menu, to prioritize server data
   useEffect(() => {
     localStorage.setItem("kenyan_bistro_messages", JSON.stringify(messages));
   }, [messages]);
@@ -604,9 +624,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("kenyan_bistro_reviews", JSON.stringify(reviews));
   }, [reviews]);
 
-  useEffect(() => {
-    localStorage.setItem("kenyan_bistro_menu", JSON.stringify(menu));
-  }, [menu]);
+  // Remove menu saving to localStorage to prioritize server data from MongoDB
 
   // Persist news to localStorage
   useEffect(() => {
