@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect, useRef, useMemo } from "react";
+import { useState, useContext, useEffect, useMemo } from "react";
 import { DataContext } from "../lib/data";
 import type { MenuItem, Review } from "../lib/data";
 import { useAuth } from "@/lib/auth";
@@ -77,8 +77,7 @@ export default function Menu() {
   const ReviewForm = useMemo(() => {
     return function ReviewFormComponent({ itemId }: { itemId: string }) {
       const { user } = useAuth();
-      const textareaRef = useRef<HTMLTextAreaElement>(null);
-      const commentRef = useRef<string>("");
+      const [reviewComment, setReviewComment] = useState("");
 
       const handleSubmit = async () => {
         if (!user) {
@@ -86,18 +85,16 @@ export default function Menu() {
           return;
         }
 
-        const comment = commentRef.current || textareaRef.current?.value || "";
-        if (!comment.trim()) {
+        const comment = reviewComment.trim();
+        
+        if (!comment) {
           toast({ title: "Write a comment", description: "Please enter a short comment before submitting.", variant: "destructive" });
           return;
         }
 
         try {
-          await addReviewForProduct(itemId, { userId: user.id, user: user.name, rating: reviewRating, comment: comment.trim() });
-          commentRef.current = "";
-          if (textareaRef.current) {
-            textareaRef.current.value = "";
-          }
+          await addReviewForProduct(itemId, { userId: user.id, user: user.name, rating: reviewRating, comment });
+          setReviewComment("");
           setReviewRating(5);
           toast({ title: "Thank you", description: "Your review has been submitted." });
         } catch (error) {
@@ -114,8 +111,8 @@ export default function Menu() {
 
           <label className="text-sm font-medium">Comment</label>
           <Textarea 
-            ref={textareaRef}
-            onChange={(e) => commentRef.current = e.target.value}
+            value={reviewComment}
+            onChange={(e) => setReviewComment(e.target.value)}
             placeholder="Share your experience..." 
           />
 
