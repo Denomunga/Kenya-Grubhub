@@ -835,8 +835,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       // Fetch reviews in batches of 3 to avoid rate limiting
       const batchSize = 3;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
       for (let i = 0; i < productIds.length; i += batchSize) {
         const batch = productIds.slice(i, i + batchSize);
+        
+        // Exponential backoff for retries
+        const delay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Max 5 seconds
         
         // Fetch batch in parallel but limit concurrent requests
         const batchPromises = batch.map(async (productId) => {
@@ -856,6 +862,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
                 date: r.timestamp,
               }));
               return serverReviews;
+            } else if (resp.status === 429) {
+              // Rate limited - wait and retry
+              await new Promise(resolve => setTimeout(resolve, delay));
+              return [];
             }
             return [];
           } catch (error) {
@@ -865,11 +875,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
         });
 
         const batchResults = await Promise.all(batchPromises);
+        
+        // If all requests in batch failed due to rate limiting, retry
+        if (batchResults.every(result => result.length === 0) && retryCount < maxRetries) {
+          retryCount++;
+          i -= batchSize; // Retry this batch
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
         allReviews.push(...batchResults.flat());
+        retryCount = 0; // Reset retry count on success
 
-        // Add small delay between batches to avoid rate limiting
+        // Add delay between batches to avoid rate limiting
         if (i + batchSize < productIds.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay
         }
       }
 

@@ -73,9 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Poll /api/auth/me every 60 seconds to detect session invalidation and notify
   useEffect(() => {
-    const id = setInterval(async () => {
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    const pollAuth = async () => {
       try {
         const resp = await apiFetch('/api/auth/me');
+        
         if (!resp.ok) {
           // Only logout on actual auth errors (401, 403), not rate limiting (429)
           if (resp.status === 401 || resp.status === 403) {
@@ -83,10 +87,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUser(null);
               toast({ title: 'Logged out', description: 'Your session was ended. This can happen if your password or security settings were changed.', variant: 'destructive' });
             }
+          } else if (resp.status === 429) {
+            // Rate limited - implement exponential backoff
+            retryCount++;
+            if (retryCount <= maxRetries) {
+              const delay = Math.min(60000 * Math.pow(2, retryCount - 1), 300000); // Max 5 minutes
+              setTimeout(pollAuth, delay);
+              return;
+            }
           }
-          // Don't logout on 429 (rate limiting) or 500 (server errors)
+          // Don't logout on other errors
           return;
         }
+        
+        // Reset retry count on success
+        retryCount = 0;
+        
         const d = await resp.json();
         if (d.user?.lastSessionInvalidatedAt && lastInvalidatedAt && new Date(d.user.lastSessionInvalidatedAt).getTime() > new Date(lastInvalidatedAt).getTime()) {
           // sessions were invalidated after our recorded time
@@ -98,7 +114,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         // ignore polling errors and network issues
       }
-    }, 60000);
+    };
+    
+    const id = setInterval(pollAuth, 60000);
     return () => clearInterval(id);
   }, [user, lastInvalidatedAt, toast]);
 
