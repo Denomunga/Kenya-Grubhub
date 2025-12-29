@@ -77,11 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const resp = await apiFetch('/api/auth/me');
         if (!resp.ok) {
-          // if session became invalid, log out and show a message
-          if (user) {
-            setUser(null);
-            toast({ title: 'Logged out', description: 'Your session was ended. This can happen if your password or security settings were changed.', variant: 'destructive' });
+          // Only logout on actual auth errors (401, 403), not rate limiting (429)
+          if (resp.status === 401 || resp.status === 403) {
+            if (user) {
+              setUser(null);
+              toast({ title: 'Logged out', description: 'Your session was ended. This can happen if your password or security settings were changed.', variant: 'destructive' });
+            }
           }
+          // Don't logout on 429 (rate limiting) or 500 (server errors)
           return;
         }
         const d = await resp.json();
@@ -93,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         if (d.user?.lastSessionInvalidatedAt) setLastInvalidatedAt(d.user.lastSessionInvalidatedAt);
       } catch (err) {
-        // ignore polling errors
+        // ignore polling errors and network issues
       }
     }, 60000);
     return () => clearInterval(id);

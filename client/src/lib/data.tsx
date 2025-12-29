@@ -833,27 +833,43 @@ export function DataProvider({ children }: { children: ReactNode }) {
       
       const allReviews: Review[] = [];
 
-      // Fetch reviews for each product
-      for (const productId of productIds) {
-        try {
-          const resp = await apiFetch(`/api/products/${productId}/reviews`);
-          if (resp.ok) {
-            const data = await resp.json();
-            const reviewsResponse = data.reviews || [];
-            
-            const serverReviews: Review[] = reviewsResponse.map((r: any) => ({
-              id: r.id,
-              productId: r.productId,
-              userId: r.userId,
-              user: r.userName,
-              rating: r.rating,
-              comment: r.comment,
-              date: r.timestamp,
-            }));
-            allReviews.push(...serverReviews);
+      // Fetch reviews in batches of 3 to avoid rate limiting
+      const batchSize = 3;
+      for (let i = 0; i < productIds.length; i += batchSize) {
+        const batch = productIds.slice(i, i + batchSize);
+        
+        // Fetch batch in parallel but limit concurrent requests
+        const batchPromises = batch.map(async (productId) => {
+          try {
+            const resp = await apiFetch(`/api/products/${productId}/reviews`);
+            if (resp.ok) {
+              const data = await resp.json();
+              const reviewsResponse = data.reviews || [];
+              
+              const serverReviews: Review[] = reviewsResponse.map((r: any) => ({
+                id: r.id,
+                productId: r.productId,
+                userId: r.userId,
+                user: r.userName,
+                rating: r.rating,
+                comment: r.comment,
+                date: r.timestamp,
+              }));
+              return serverReviews;
+            }
+            return [];
+          } catch (error) {
+            // Continue with other products if one fails
+            return [];
           }
-        } catch (error) {
-          // Continue with other products if one fails
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        allReviews.push(...batchResults.flat());
+
+        // Add small delay between batches to avoid rate limiting
+        if (i + batchSize < productIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 
