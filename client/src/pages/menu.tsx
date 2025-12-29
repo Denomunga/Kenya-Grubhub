@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect, useMemo } from "react";
+import { useState, useContext, useEffect } from "react";
 import { DataContext } from "../lib/data";
 import type { MenuItem, Review } from "../lib/data";
 import { useAuth } from "@/lib/auth";
