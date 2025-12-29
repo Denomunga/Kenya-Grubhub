@@ -17,6 +17,9 @@ import { useAuth } from "@/lib/auth";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
+// Initialize CSRF token on app startup
+CSRFTokenManager.initializeToken();
+
 // Hide all network errors and 429 errors from console
 const originalError = console.error;
 const originalLog = console.log;

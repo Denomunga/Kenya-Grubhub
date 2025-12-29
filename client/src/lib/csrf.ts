@@ -1,39 +1,70 @@
 // CSRF token management for client-side
 
 export class CSRFTokenManager {
-  // Get CSRF token (disabled - returns null)
+  private static token: string | null = null;
+  private static readonly TOKEN_KEY = 'csrf_token';
+
+  // Get CSRF token
   static getToken(): string | null {
-    return null; // CSRF protection disabled
+    return this.token || localStorage.getItem(this.TOKEN_KEY);
   }
 
-  // Set CSRF token (disabled)
-  static setToken(_token: string): void {
-    // No-op - CSRF protection disabled
+  // Set CSRF token
+  static setToken(token: string): void {
+    this.token = token;
+    localStorage.setItem(this.TOKEN_KEY, token);
   }
 
-  // Clear token (disabled)
+  // Clear token
   static clearToken(): void {
-    // No-op - CSRF protection disabled
+    this.token = null;
+    localStorage.removeItem(this.TOKEN_KEY);
   }
 
-  // Add CSRF token to headers (disabled)
+  // Add CSRF token to headers
   static addTokenToHeaders(headers: Record<string, string>): Record<string, string> {
-    return headers; // No CSRF token added
+    const token = this.getToken();
+    if (token) {
+      return {
+        ...headers,
+        'X-CSRF-Token': token,
+      };
+    }
+    return headers;
   }
 
-  // Fetch wrapper without CSRF (disabled)
+  // Fetch wrapper with CSRF
   static async fetchWithCSRF(url: string, options: RequestInit = {}): Promise<Response> {
     const config: RequestInit = {
       credentials: 'include',
       ...options,
     };
 
+    const token = this.getToken();
+    if (token) {
+      config.headers = {
+        ...config.headers,
+        'X-CSRF-Token': token,
+      };
+    }
+
     return fetch(url, config);
   }
 
-  // Initialize CSRF token (disabled)
+  // Initialize CSRF token
   static async initializeToken(): Promise<void> {
-    // No-op - CSRF protection disabled
+    try {
+      const response = await fetch(`${import.meta.env?.VITE_API_URL || 'https://kenya-grubhub-server.onrender.com'}/api/csrf-token`, {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        this.setToken(data.token);
+      }
+    } catch (error) {
+      console.warn('Failed to initialize CSRF token:', error);
+    }
   }
 }
 
