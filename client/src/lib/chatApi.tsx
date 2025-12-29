@@ -3,6 +3,46 @@ import { useAuth } from "./auth";
 import { apiFetch } from "./api";
 import { toast } from "sonner";
 
+// Chat API cache
+const chatCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+
+// Helper function with retry-after and exponential backoff for chat
+const fetchChatWithRetry = async (url: string, maxRetries: number = 3) => {
+  let retryCount = 0;
+  
+  while (retryCount <= maxRetries) {
+    try {
+      const response = await apiFetch(url);
+      
+      if (response.status === 429) {
+        retryCount++;
+        
+        // Check for Retry-After header
+        const retryAfter = response.headers.get('Retry-After');
+        let delay = 1000 * Math.pow(2, retryCount - 1); // Exponential backoff
+        
+        if (retryAfter) {
+          delay = parseInt(retryAfter) * 1000;
+        }
+        
+        // Cap delay at 30 seconds
+        delay = Math.min(delay, 30000);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      return response;
+    } catch (error) {
+      if (retryCount >= maxRetries) throw error;
+      retryCount++;
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount - 1)));
+    }
+  }
+  
+  throw new Error('Max retries exceeded');
+};
+
 export interface ChatMessage {
   id: string;
   threadId: string;
@@ -47,17 +87,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     
     try {
-      const response = await apiFetch(`/api/chat/threads/${threadId}/messages`, {
-      });
+      const cacheKey = `/api/chat/threads/${threadId}/messages`;
+      const cached = chatCache.get(cacheKey);
       
-      // Handle rate limiting
-      if (response.status === 429) {
-        return; // Silently handle rate limiting
+      // Use cache if available and fresh (2 minutes for messages)
+      if (cached && Date.now() - cached.timestamp < 120000) {
+        setMessages(cached.data.messages || []);
+        return;
       }
+      
+      const response = await fetchChatWithRetry(`/api/chat/threads/${threadId}/messages`);
       
       if (response.ok) {
         const data = await response.json();
         const newMessages = data.messages || [];
+        
+        // Cache the results
+        chatCache.set(cacheKey, {
+          data: data,
+          timestamp: Date.now(),
+          ttl: 120000 // 2 minutes
+        });
         
         // Check for new messages and show notification
         if (newMessages.length > lastMessageCount && lastMessageCount > 0) {
@@ -91,16 +141,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (!user || user.role === "user") return;
     
     try {
-      const response = await apiFetch("/api/chat/threads", {
-      });
+      const cacheKey = "/api/chat/threads";
+      const cached = chatCache.get(cacheKey);
       
-      // Handle rate limiting
-      if (response.status === 429) {
-        return; // Silently handle rate limiting
+      // Use cache if available and fresh (5 minutes for threads)
+      if (cached && Date.now() - cached.timestamp < 300000) {
+        setThreads(cached.data.threads || []);
+        return;
       }
+      
+      const response = await fetchChatWithRetry("/api/chat/threads");
       
       if (response.ok) {
         const data = await response.json();
+        
+        // Cache the results
+        chatCache.set(cacheKey, {
+          data: data,
+          timestamp: Date.now(),
+          ttl: 300000 // 5 minutes
+        });
+        
         setThreads(data.threads || []);
         
         // Check for new messages in any thread and show notification for admins
@@ -147,7 +208,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     text: string
   ) => {
     try {
-      const response = await apiFetch("/api/chat/messages", {
+      const response = await apiFetch(`/api/chat/threads/${threadId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ threadId, text }),

@@ -822,7 +822,47 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const getReviewsForProduct = (productId: string) => reviews.filter(r => r.productId === productId);
 
-  const fetchReviewsFromServer = async () => {
+  // Cache for API responses
+const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+
+// Helper function with retry-after and exponential backoff
+const fetchWithRetry = async (url: string, maxRetries: number = 3) => {
+  let retryCount = 0;
+  
+  while (retryCount <= maxRetries) {
+    try {
+      const response = await apiFetch(url);
+      
+      if (response.status === 429) {
+        retryCount++;
+        
+        // Check for Retry-After header
+        const retryAfter = response.headers.get('Retry-After');
+        let delay = 1000 * Math.pow(2, retryCount - 1); // Exponential backoff
+        
+        if (retryAfter) {
+          delay = parseInt(retryAfter) * 1000;
+        }
+        
+        // Cap delay at 30 seconds
+        delay = Math.min(delay, 30000);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      return response;
+    } catch (error) {
+      if (retryCount >= maxRetries) throw error;
+      retryCount++;
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount - 1)));
+    }
+  }
+  
+  throw new Error('Max retries exceeded');
+};
+
+const fetchReviewsFromServer = async () => {
     try {
       // Get all unique product IDs from the menu
       const productIds = menu.map(item => item.id);
@@ -833,21 +873,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
       
       const allReviews: Review[] = [];
 
-      // Fetch reviews in batches of 3 to avoid rate limiting
-      const batchSize = 3;
-      let retryCount = 0;
-      const maxRetries = 3;
+      // Fetch reviews in batches of 2 to avoid rate limiting (reduced from 3)
+      const batchSize = 2;
       
       for (let i = 0; i < productIds.length; i += batchSize) {
         const batch = productIds.slice(i, i + batchSize);
         
-        // Exponential backoff for retries
-        const delay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Max 5 seconds
+        // Fetch batch sequentially to reduce concurrent requests
+        const batchResults: Review[] = [];
         
-        // Fetch batch in parallel but limit concurrent requests
-        const batchPromises = batch.map(async (productId) => {
+        for (const productId of batch) {
           try {
-            const resp = await apiFetch(`/api/products/${productId}/reviews`);
+            const cacheKey = `/api/products/${productId}/reviews`;
+            const cached = apiCache.get(cacheKey);
+            
+            // Use cache if available and fresh (5 minutes)
+            if (cached && Date.now() - cached.timestamp < 300000) {
+              batchResults.push(...cached.data);
+              continue;
+            }
+            
+            const resp = await fetchWithRetry(`/api/products/${productId}/reviews`);
+            
             if (resp.ok) {
               const data = await resp.json();
               const reviewsResponse = data.reviews || [];
@@ -861,35 +908,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
                 comment: r.comment,
                 date: r.timestamp,
               }));
-              return serverReviews;
-            } else if (resp.status === 429) {
-              // Rate limited - wait and retry
-              await new Promise(resolve => setTimeout(resolve, delay));
-              return [];
+              
+              // Cache the results
+              apiCache.set(cacheKey, {
+                data: serverReviews,
+                timestamp: Date.now(),
+                ttl: 300000 // 5 minutes
+              });
+              
+              batchResults.push(...serverReviews);
             }
-            return [];
           } catch (error) {
             // Continue with other products if one fails
-            return [];
+            continue;
           }
-        });
-
-        const batchResults = await Promise.all(batchPromises);
-        
-        // If all requests in batch failed due to rate limiting, retry
-        if (batchResults.every(result => result.length === 0) && retryCount < maxRetries) {
-          retryCount++;
-          i -= batchSize; // Retry this batch
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
         }
         
-        allReviews.push(...batchResults.flat());
-        retryCount = 0; // Reset retry count on success
+        allReviews.push(...batchResults);
 
         // Add delay between batches to avoid rate limiting
         if (i + batchSize < productIds.length) {
-          await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay
+          await new Promise(resolve => setTimeout(resolve, 500)); // Increased delay
         }
       }
 
