@@ -27,7 +27,9 @@ console.error = (...args) => {
     message.includes('429') || 
     message.includes('Too Many Requests') || 
     message.includes('Failed to load resource') ||
-    message.includes('GET') && message.includes('429')
+    message.includes('GET') && message.includes('429') ||
+    message.includes('kenya-grubhub.onrender.com/api/') ||
+    message.includes('fetchWithCSRF')
   ) {
     return; // Don't log 429 errors and network failures
   }
@@ -40,7 +42,9 @@ console.log = (...args) => {
     message.includes('429') || 
     message.includes('Too Many Requests') || 
     message.includes('Failed to load resource') ||
-    message.includes('GET') && message.includes('429')
+    message.includes('GET') && message.includes('429') ||
+    message.includes('kenya-grubhub.onrender.com/api/') ||
+    message.includes('fetchWithCSRF')
   ) {
     return; // Don't log 429 errors and network failures
   }
