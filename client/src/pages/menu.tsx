@@ -201,7 +201,7 @@ export default function Menu() {
 
   return (
     <div className="min-h-screen w-full particle-container gradient-mesh">
-      <div className="px-4 py-12">
+      <div className="container mx-auto px-6 py-14">
         <div className="mb-8">
           <div>
             <h1 className="text-4xl font-heading font-bold text-primary mb-2">Our Products</h1>
