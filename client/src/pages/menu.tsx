@@ -50,6 +50,8 @@ export default function Menu() {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [productDetailOpen, setProductDetailOpen] = useState(false);
   const [selectedProductForDetail, setSelectedProductForDetail] = useState<MenuItem | null>(null);
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState<string>("");
 
   // Handle product ID from URL parameter
   useEffect(() => {
@@ -73,8 +75,6 @@ export default function Menu() {
   // Helper small form component to post a review for the currently open product
   function ReviewForm({ itemId }: { itemId: string }) {
     const { user } = useAuth();
-    const [rating, setRating] = useState<number>(5);
-    const [comment, setComment] = useState<string>("");
 
     const submit = async () => {
       if (!user) {
@@ -82,30 +82,30 @@ export default function Menu() {
         return;
       }
 
-      if (!comment.trim()) {
+      if (!reviewComment.trim()) {
         toast({ title: "Write a comment", description: "Please enter a short comment before submitting.", variant: "destructive" });
         return;
       }
 
       try {
-        await addReviewForProduct(itemId, { userId: user.id, user: user.name, rating, comment });
-        setComment("");
-        setRating(5);
+        await addReviewForProduct(itemId, { userId: user.id, user: user.name, rating: reviewRating, comment: reviewComment });
+        setReviewComment("");
+        setReviewRating(5);
         toast({ title: "Thank you", description: "Your review has been submitted." });
       } catch (error) {
-        toast({ title: "Error", description: `Failed to submit review: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: 'destructive' });
+        toast({ title: "Error", description: `Failed to submit review: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
       }
     };
 
     return (
       <div className="mt-6 space-y-3">
         <label className="text-sm font-medium">Your rating</label>
-        <select value={rating} onChange={(e) => setRating(Number(e.target.value))} className="w-full rounded-md border px-3 py-2">
+        <select value={reviewRating} onChange={(e) => setReviewRating(Number(e.target.value))} className="w-full rounded-md border px-3 py-2">
           {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} star{n>1?"s":""}</option>)}
         </select>
 
         <label className="text-sm font-medium">Comment</label>
-        <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Share your experience..." />
+        <Textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} placeholder="Share your experience..." />
 
         <div className="flex justify-end">
           <Button onClick={submit} className="mt-2">Submit Review</Button>
