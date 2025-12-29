@@ -17,22 +17,32 @@ import { useAuth } from "@/lib/auth";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
-// Hide 429 errors from console
+// Hide 429 errors and network failures from console
 const originalError = console.error;
 const originalLog = console.log;
 
 console.error = (...args) => {
   const message = args.join(' ');
-  if (message.includes('429') || message.includes('Too Many Requests')) {
-    return; // Don't log 429 errors
+  if (
+    message.includes('429') || 
+    message.includes('Too Many Requests') || 
+    message.includes('Failed to load resource') ||
+    message.includes('GET') && message.includes('429')
+  ) {
+    return; // Don't log 429 errors and network failures
   }
   originalError(...args);
 };
 
 console.log = (...args) => {
   const message = args.join(' ');
-  if (message.includes('429') || message.includes('Too Many Requests')) {
-    return; // Don't log 429 errors
+  if (
+    message.includes('429') || 
+    message.includes('Too Many Requests') || 
+    message.includes('Failed to load resource') ||
+    message.includes('GET') && message.includes('429')
+  ) {
+    return; // Don't log 429 errors and network failures
   }
   originalLog(...args);
 };
