@@ -749,7 +749,6 @@ export default function Menu() {
                 <Button
                   onClick={() => {
                     addToCart(selectedProductForDetail);
-                    toast({ title: "Added to cart", description: `${selectedProductForDetail.name} added to cart.` });
                   }}
                   disabled={!selectedProductForDetail.available}
                   className="flex-1"
