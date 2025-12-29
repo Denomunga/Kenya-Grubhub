@@ -112,6 +112,7 @@ interface DataContextType {
   getReviewsForProduct: (productId: string) => Review[];
   addReviewForProduct: (productId: string, review: Omit<Review, "id" | "productId" | "date" | "userId"> & { userId?: string }) => Promise<Review>;
   removeReview: (reviewId: string, reason?: string, note?: string) => Promise<boolean>;
+  fetchReviewsFromServer: () => Promise<void>;
 
   orders: Order[];
   placeOrder: (items: { item: MenuItem; quantity: number }[], location?: OrderLocation) => void;
@@ -490,7 +491,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (storedMenu) {
       setMenu(JSON.parse(storedMenu));
     }
-    // Try to fetch server-side menu/news if available and override local mock data
+    const storedOrders = localStorage.getItem("kenyan_bistro_orders");
+    if (storedOrders) {
+      setOrders(JSON.parse(storedOrders));
+    }
+
+    // Fetch reviews from server to get the latest data
+    fetchReviewsFromServer();
+  }, []); 
+
+  // Try to fetch server-side menu/news if available and override local mock data
+  useEffect(() => {
     (async () => {
       try {
         const resMenu = await apiFetch('/api/menu');
@@ -806,6 +817,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const getReviewsForProduct = (productId: string) => reviews.filter(r => r.productId === productId);
+
+  const fetchReviewsFromServer = async () => {
+    try {
+      // Get all unique product IDs from the menu
+      const productIds = menu.map(item => item.id);
+      const allReviews: Review[] = [];
+
+      // Fetch reviews for each product
+      for (const productId of productIds) {
+        try {
+          const resp = await apiFetch(`/api/products/${productId}/reviews`);
+          if (resp.ok) {
+            const data = await resp.json();
+            const reviewsResponse = data.reviews || [];
+            const serverReviews: Review[] = reviewsResponse.map((r: any) => ({
+              id: r.id,
+              productId: r.productId,
+              userId: r.userId,
+              user: r.userName,
+              rating: r.rating,
+              comment: r.comment,
+              date: r.timestamp,
+            }));
+            allReviews.push(...serverReviews);
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch reviews for product ${productId}:`, error);
+        }
+      }
+
+      // Update the reviews state with server data
+      if (allReviews.length > 0) {
+        setReviews(allReviews);
+        console.log(`Loaded ${allReviews.length} reviews from server`);
+      }
+    } catch (error) {
+      console.error("Failed to fetch reviews from server:", error);
+    }
+  };
 
   const addReviewForProduct = async (productId: string, review: Omit<Review, "id" | "productId" | "date" | "userId"> & { userId?: string }) => {
     // Try to persist to server first (if available). If it fails, fall back to local-only storage.
@@ -1158,7 +1208,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     <DataContext.Provider value={{
       menu, addMenuItem, deleteMenuItem, updateMenuItem,
       news, addNews, deleteNews, getNewsById, updateNewsViews,
-      reviews, getReviewsForProduct, addReviewForProduct, removeReview,
+      reviews, getReviewsForProduct, addReviewForProduct, removeReview, fetchReviewsFromServer,
       orders, placeOrder, updateOrderStatus, cancelOrder, modifyOrder,
       staff, addStaff, removeStaff,
       messages, sendMessage, markThreadAsRead, setTypingStatus, getThreads, fetchThreads, fetchMessages,

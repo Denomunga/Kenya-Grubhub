@@ -800,20 +800,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products/:productId/reviews", async (req: Request, res: Response) => {
     try {
       const { productId } = req.params;
-      // Exclude soft-deleted reviews by default
-      const reviews = await Review.find({ productId, deletedAt: { $exists: false } }).sort({ createdAt: -1 });
-
+      
+      // Validate productId format
+      if (!productId || typeof productId !== "string" || productId.length < 1 || productId.length > 50) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      // Sanitize productId to prevent injection attacks
+      const sanitizedProductId = productId.replace(/[^a-zA-Z0-9_-]/g, '');
+      if (sanitizedProductId !== productId) {
+        return res.status(400).json({ message: "Invalid product ID format" });
+      }
+      
+      // Check if product exists (optional but recommended)
+      const product = await Product.findOne({ id: sanitizedProductId });
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      // Exclude soft-deleted reviews by default, add pagination for performance
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100); // Max 100 reviews per request
+      const skip = (page - 1) * limit;
+      
+      const reviews = await Review.find({ 
+        productId: sanitizedProductId, 
+        deletedAt: { $exists: false } 
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use lean for better performance
+      
       const reviewsResponse = reviews.map(r => ({
         id: r._id.toString(),
         productId: r.productId,
-        userId: r.userId,
-        userName: r.userName,
-        rating: r.rating,
-        comment: r.comment,
+        userId: r.userId, // Consider if you want to expose this
+        userName: r.userName || "Anonymous", // Sanitize user name
+        rating: Math.min(5, Math.max(1, r.rating || 0)), // Ensure rating is between 1-5
+        comment: r.comment ? r.comment.substring(0, 1000) : "", // Limit comment length
         timestamp: r.createdAt.toISOString(),
       }));
 
-      res.json({ reviews: reviewsResponse });
+      res.json({ 
+        reviews: reviewsResponse,
+        pagination: {
+          page,
+          limit,
+          total: reviews.length
+        }
+      });
     } catch (error) {
       console.error("Get product reviews error:", error);
       res.status(500).json({ message: "Failed to fetch product reviews" });
@@ -826,20 +862,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { productId } = req.params;
       const { rating, comment } = req.body;
 
+      // Validate and sanitize productId
+      if (!productId || typeof productId !== "string" || productId.length < 1 || productId.length > 50) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      const sanitizedProductId = productId.replace(/[^a-zA-Z0-9_-]/g, '');
+      if (sanitizedProductId !== productId) {
+        return res.status(400).json({ message: "Invalid product ID format" });
+      }
+
+      // Validate rating
       if (!rating || typeof rating !== "number" || rating < 1 || rating > 5) {
         return res.status(400).json({ message: "Rating must be a number between 1 and 5" });
       }
 
+      // Validate and sanitize comment
       if (!comment || typeof comment !== "string" || comment.trim().length === 0) {
         return res.status(400).json({ message: "Comment is required" });
       }
+      
+      if (comment.trim().length > 1000) {
+        return res.status(400).json({ message: "Comment must be less than 1000 characters" });
+      }
+
+      // Check if product exists
+      const product = await Product.findOne({ id: sanitizedProductId });
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      // Check if user already reviewed this product (optional - prevent duplicate reviews)
+      const existingReview = await Review.findOne({ 
+        productId: sanitizedProductId, 
+        userId: req.user!._id.toString(),
+        deletedAt: { $exists: false }
+      });
+      
+      if (existingReview) {
+        return res.status(400).json({ message: "You have already reviewed this product" });
+      }
+
+      // Sanitize comment - remove HTML/JS tags and excessive whitespace
+      const sanitizedComment = comment.trim()
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .substring(0, 1000); // Ensure max length
 
       const review = await Review.create({
-        productId,
+        productId: sanitizedProductId,
         userId: req.user!._id.toString(),
-        userName: req.user!.name,
-        rating,
-        comment: comment.trim(),
+        userName: req.user!.name || "Anonymous",
+        rating: Math.min(5, Math.max(1, rating)), // Ensure rating is 1-5
+        comment: sanitizedComment,
       });
 
       const reviewResponse = {
@@ -852,7 +928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: review.createdAt.toISOString(),
       };
 
-      console.log(`Review saved to MongoDB: Product ${productId}, Rating ${rating}, User ${req.user!.name}`);
+      console.log(`Review saved to MongoDB: Product ${sanitizedProductId}, Rating ${rating}, User ${req.user!.name}`);
       res.status(201).json({ review: reviewResponse });
     } catch (error) {
       console.error("Create product review error:", error);

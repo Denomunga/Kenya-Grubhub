@@ -24,7 +24,7 @@ interface NewsItem {
 }
 
 export default function Home() {
-  const { menu, reviews } = useData();
+  const { menu, reviews, fetchReviewsFromServer } = useData();
   const [, setLocation] = useLocation();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchedProducts, setSearchedProducts] = useState<any[]>([]);
@@ -128,10 +128,13 @@ export default function Home() {
     
     fetchNews();
     
+    // Fetch live reviews from server
+    fetchReviewsFromServer();
+    
     // Simulate loading
     const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [fetchReviewsFromServer]);
   
   // Filter menu items based on active category and search - memoized
   const filteredItems = useMemo(() => {
