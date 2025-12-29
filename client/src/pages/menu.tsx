@@ -201,20 +201,21 @@ export default function Menu() {
 
   return (
     <div className="container mx-auto px-4 py-12 particle-container gradient-mesh">
-      <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+      <div className="mb-8">
         <div>
           <h1 className="text-4xl font-heading font-bold text-primary mb-2">Our Products</h1>
           <p className="text-muted-foreground">Explore our wide selection of Comfy Wears.</p>
         </div>
 
         {/* Search Component */}
-        <ProductSearch 
-          products={menu}
-          onFilteredProducts={setSearchedProducts}
-          className="mb-6"
-        />
+        <div className="mt-6">
+          <ProductSearch 
+            products={menu}
+            onFilteredProducts={setSearchedProducts}
+          />
+        </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-end gap-4 mt-6">
           <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
             <TabsList className="bg-muted">
               {categories.map(cat => (
