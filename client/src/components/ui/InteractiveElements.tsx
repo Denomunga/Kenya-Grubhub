@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Heart, Share2, Eye, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import { formatPrice } from "@/lib/format";
 
 // Staggered List Animation
 interface StaggeredListProps {
@@ -457,7 +458,7 @@ export function InteractiveProductCard({
             className="text-xl font-bold text-primary"
             animate={{ scale: isHovered ? 1.1 : 1 }}
           >
-            ${product.price}
+            {formatPrice(product.price)}
           </motion.div>
           
           {product.rating && (

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useData } from "@/lib/data";
+import { formatPriceKSHS, formatNumber } from "@/lib/format";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -83,7 +84,7 @@ export default function Profile() {
   }
 
   // Filter orders for this user (mock logic)
-  const myOrders = orders.filter(o => o.user === "CurrentUser" || o.user === user.username);
+  const myOrders = orders.filter((o: any) => o.user === "CurrentUser" || o.user === user.username);
 
   const handleCancelOrder = async (orderId: string) => {
     setIsCancelling(true);
@@ -334,7 +335,7 @@ export default function Profile() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-primary">{order.total} KSHS</span>
+                            <span className="font-bold text-primary">{formatPriceKSHS(order.total)}</span>
                             <div className="flex gap-1">
                               {canModifyOrder(order) && (
                                 <Button
@@ -363,12 +364,12 @@ export default function Profile() {
                         </div>
                         
                         <div className="space-y-2">
-                          {order.items.map((line, idx) => (
+                          {order.items.map((line: any, idx: number) => (
                             <div key={idx} className="flex justify-between text-sm">
                               <span className="text-muted-foreground">
                                 {line.quantity}x {line.item.name}
                               </span>
-                              <span>{line.item.price * line.quantity}</span>
+                              <span>{formatNumber(line.item.price * line.quantity)}</span>
                             </div>
                           ))}
                         </div>
@@ -399,7 +400,7 @@ export default function Profile() {
                 <div key={index} className="flex items-center justify-between p-2 border rounded">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{item.item.name}</span>
-                    <span className="text-sm text-muted-foreground">KSHS {item.item.price} each</span>
+                    <span className="text-sm text-muted-foreground">{formatPriceKSHS(item.item.price)} each</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -451,7 +452,7 @@ export default function Profile() {
               <div className="flex justify-between items-center">
                 <span className="font-medium">Total:</span>
                 <span className="font-bold text-lg">
-                  KSHS {modifyCart.reduce((sum, item) => sum + (item.item.price * item.quantity), 0)}
+                  KSHS {formatNumber(modifyCart.reduce((sum, item) => sum + (item.item.price * item.quantity), 0))}
                 </span>
               </div>
             </div>

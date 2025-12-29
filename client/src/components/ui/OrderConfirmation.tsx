@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatPriceKSHS } from "@/lib/format";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -144,12 +145,12 @@ export default function OrderConfirmation({
                     </div>
                     <div>
                       <p className="font-medium">{item.item.name}</p>
-                      <p className="text-sm text-muted-foreground">KSHS {item.item.price} each</p>
+                      <p className="text-sm text-muted-foreground">{formatPriceKSHS(item.item.price)} each</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">x{item.quantity}</p>
-                    <p className="font-medium">KSHS {item.item.price * item.quantity}</p>
+                    <p className="font-medium">{formatPriceKSHS(item.item.price * item.quantity)}</p>
                   </div>
                 </div>
               ))}
@@ -161,7 +162,7 @@ export default function OrderConfirmation({
           {/* Total */}
           <div className="flex justify-between items-center text-lg font-bold">
             <span>Total Amount</span>
-            <span className="text-primary">KSHS {order.total}</span>
+            <span className="text-primary">{formatPriceKSHS(order.total)}</span>
           </div>
           <Separator />
 

@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingBag, Plus, Minus, Trash, MapPin } from "lucide-react";
+import { formatPriceKSHS, formatPrice } from "@/lib/format";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sheet,
@@ -260,7 +261,7 @@ export default function Menu() {
                       />
                       <div className="flex-1">
                         <h4 className="font-bold text-sm">{item.name}</h4>
-                        <p className="text-xs text-muted-foreground">{item.price} KSHS</p>
+                        <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, -1)}>
                             <Minus className="h-3 w-3" />
@@ -315,7 +316,7 @@ export default function Menu() {
 
                   <div className="flex justify-between items-center font-bold text-lg">
                     <span>Total</span>
-                    <span>{cartTotal} KSHS</span>
+                    <span>{formatPriceKSHS(cartTotal)}</span>
                   </div>
                   <Button 
                     className="w-full h-12 text-lg" 
@@ -361,7 +362,7 @@ export default function Menu() {
                 <CardContent className="p-6 flex-1">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-lg font-bold font-heading">{item.name}</h3>
-                    <span className="font-bold text-primary whitespace-nowrap">{item.price} KSHS</span>
+                    <span className="font-bold text-primary whitespace-nowrap">{formatPriceKSHS(item.price)}</span>
                   </div>
                   <p className="text-muted-foreground text-sm mb-4">{item.description}</p>
                   
@@ -638,7 +639,7 @@ export default function Menu() {
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Product Information</h3>
                   <div className="space-y-2">
-                    <p><span className="font-medium">Price:</span> KSH {selectedProductForDetail.price}</p>
+                    <p><span className="font-medium">Price:</span> {formatPrice(selectedProductForDetail.price)}</p>
                     <p><span className="font-medium">Category:</span> {selectedProductForDetail.category}</p>
                     {selectedProductForDetail.subcategory && (
                       <p><span className="font-medium">Subcategory:</span> {selectedProductForDetail.subcategory}</p>

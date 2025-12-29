@@ -1,5 +1,6 @@
 import React from "react";
 import { useAuth, Role } from "@/lib/auth";
+import { formatPriceKSHS } from "@/lib/format";
 import { useData } from "@/lib/data";
 import { useLocation } from "wouter";
 import { apiFetch } from "@/lib/api";
@@ -68,7 +69,7 @@ export default function Dashboard() {
   React.useEffect(() => {
     const handleNew = (e: any) => {
       const payload = e.detail;
-      toast({ title: 'New Order', description: `Order #${payload.id} for ${payload.total} KSHS` });
+      toast({ title: 'New Order', description: `Order #${payload.id} for ${formatPriceKSHS(payload.total)}` });
       try {
         const now = Date.now();
         orderTimestampsRef.current.push(now);
@@ -171,7 +172,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0)} KSHS
+                  {formatPriceKSHS(kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0))}
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <TrendingUp className="h-4 w-4 text-green-500" />
@@ -256,7 +257,7 @@ export default function Dashboard() {
                   <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0)} KSHS</div>
+                  <div className="text-2xl font-bold">{formatPriceKSHS(kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0))}</div>
                 </CardContent>
               </Card>
             </div>
@@ -350,7 +351,7 @@ export default function Dashboard() {
                           </div>
                         </TableCell>
                         <TableCell>{order.items.length} items</TableCell>
-                        <TableCell>{order.total} KSHS</TableCell>
+                        <TableCell>{formatPriceKSHS(order.total)}</TableCell>
                         <TableCell>
                           {order.location ? (
                             <div className="space-y-1">
