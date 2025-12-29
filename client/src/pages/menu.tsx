@@ -731,7 +731,7 @@ export default function Menu() {
                 </div>
 
                 {/* Add Review Form */}
-                {isAuthenticated && (
+                {isAuthenticated && selectedProductForDetail && (
                   <div className="mt-6">
                     <ReviewForm itemId={selectedProductForDetail.id} />
                   </div>
