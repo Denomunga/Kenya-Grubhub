@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
+import { formatPriceKSHS } from "@/lib/format";
 
 const AnimatedCard = motion.create(Card);
 
@@ -176,7 +177,7 @@ const FeaturedDishes = ({ items, isLoading }: FeaturedDishesProps) => {
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="text-xl font-bold font-serif text-foreground group-hover:text-primary transition-colors duration-300">{item.name}</h3>
-                    <span className="text-lg font-bold text-blue-600">KSh {item.price?.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-blue-600">{formatPriceKSHS(item.price)}</span>
                   </div>
                   <p className="text-muted-foreground text-sm mb-4 line-clamp-2 leading-relaxed">{item.description}</p>
                   <div className="flex justify-between items-center">

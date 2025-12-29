@@ -681,65 +681,129 @@ export default function Home() {
         >
           <div className="absolute inset-0 bg-white/5 backdrop-blur-sm"></div>
           <div className="max-w-md mx-auto w-full relative z-10">
-            <motion.h2 
-              className="text-4xl md:text-5xl font-bold mb-8"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              {locationLoading ? 'Loading...' : (businessLocation?.name || 'Visit Our Location')}
-            </motion.h2>
-            
-            <div className="space-y-8">
-              <motion.div 
-                className="flex gap-4"
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl h-fit border border-white/30 shadow-lg">
-                  <MapPin className="h-6 w-6" />
+            {locationLoading ? (
+              <>
+                <motion.h2 
+                  className="text-4xl md:text-5xl font-bold mb-8"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                  Loading...
+                </motion.h2>
+                <div className="space-y-8">
+                  <motion.div 
+                    className="flex gap-4"
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl h-fit border border-white/30 shadow-lg">
+                      <MapPin className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xl mb-2">Loading location...</h3>
+                      <p className="text-white/90 leading-relaxed">Please wait while we load the business location.</p>
+                    </div>
+                  </motion.div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-xl mb-2">
-                    {businessLocation?.name || 'Westlands Location'}
-                  </h3>
-                  <p className="text-white/90 leading-relaxed">
-                    {locationLoading ? 'Loading address...' : (businessLocation?.address || '123 Mpaka Road, Westlands')}
-                  </p>
-                  <p className="text-white/90">
-                    {businessLocation?.address ? '' : 'Nairobi, Kenya'}
-                  </p>
-                </div>
-              </motion.div>
+              </>
+            ) : businessLocation ? (
+              <>
+                <motion.h2 
+                  className="text-4xl md:text-5xl font-bold mb-8"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                  {businessLocation.name}
+                </motion.h2>
+                
+                <div className="space-y-8">
+                  <motion.div 
+                    className="flex gap-4"
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl h-fit border border-white/30 shadow-lg">
+                      <MapPin className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xl mb-2">{businessLocation.name}</h3>
+                      <p className="text-white/90 leading-relaxed">{businessLocation.address}</p>
+                    </div>
+                  </motion.div>
 
-              <motion.div 
-                className="flex gap-4"
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-              >
-                <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl h-fit border border-white/30 shadow-lg">
-                  <Clock className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-xl mb-2">Opening Hours</h3>
-                  {locationLoading ? (
-                    <p className="text-white/90 leading-relaxed">Loading hours...</p>
-                  ) : businessLocation?.openingHours ? (
-                    <div className="text-white/90 leading-relaxed">
-                      <p>Monday - Friday: {businessLocation.openingHours.monday || businessLocation.openingHours.friday}</p>
-                      <p>Weekends: {businessLocation.openingHours.saturday || businessLocation.openingHours.sunday}</p>
+                  <motion.div 
+                    className="flex gap-4"
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                  >
+                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl h-fit border border-white/30 shadow-lg">
+                      <Clock className="h-6 w-6" />
                     </div>
-                  ) : (
-                    <div className="text-white/90 leading-relaxed">
-                      <p>Monday - Friday: 11am - 10pm</p>
-                      <p>Weekends: 10am - 11pm</p>
+                    <div>
+                      <h3 className="font-bold text-xl mb-2">Opening Hours</h3>
+                      <div className="text-white/90 leading-relaxed">
+                        <p>Monday - Friday: {businessLocation.openingHours.monday || businessLocation.openingHours.friday}</p>
+                        <p>Weekends: {businessLocation.openingHours.saturday || businessLocation.openingHours.sunday}</p>
+                      </div>
                     </div>
-                  )}
+                  </motion.div>
                 </div>
-              </motion.div>
-            </div>
+              </>
+            ) : (
+              <>
+                <motion.h2 
+                  className="text-4xl md:text-5xl font-bold mb-8"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                  Location Coming Soon
+                </motion.h2>
+                
+                <div className="space-y-8">
+                  <motion.div 
+                    className="flex gap-4"
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl h-fit border border-white/30 shadow-lg">
+                      <MapPin className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xl mb-2">Waiting for Admin</h3>
+                      <p className="text-white/90 leading-relaxed">
+                        Please wait for the administrator to add the business location. 
+                        This will help you find us easily and get directions.
+                      </p>
+                    </div>
+                  </motion.div>
+
+                  <motion.div 
+                    className="flex gap-4"
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                  >
+                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl h-fit border border-white/30 shadow-lg">
+                      <Clock className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xl mb-2">Opening Hours</h3>
+                      <div className="text-white/90 leading-relaxed">
+                        <p>Monday - Friday: 11am - 10pm</p>
+                        <p>Weekends: 10am - 11pm</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </>
+            )}
           </div>
         </motion.div>
         <motion.div 

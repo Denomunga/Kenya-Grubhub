@@ -200,6 +200,28 @@ export default function InteractiveMap() {
     );
   }
 
+  // Show waiting message when no location is set by admin
+  if (!location) {
+    return (
+      <div className="flex items-center justify-center h-[600px]">
+        <div className="text-center p-8 max-w-md">
+          <MapPin className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Location Coming Soon</h3>
+          <p className="text-muted-foreground mb-4">
+            Please wait for the administrator to add the business location. 
+            This will help you find us easily and get directions.
+          </p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Waiting for admin to configure location...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Map Container */}
