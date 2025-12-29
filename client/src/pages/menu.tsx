@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect, useRef } from "react";
+import { useState, useContext, useEffect, useRef, useMemo } from "react";
 import { DataContext } from "../lib/data";
 import type { MenuItem, Review } from "../lib/data";
 import { useAuth } from "@/lib/auth";
@@ -72,56 +72,58 @@ export default function Menu() {
   };
 
   // Helper small form component to post a review for the currently open product
-  function ReviewForm({ itemId }: { itemId: string }) {
-    const { user } = useAuth();
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const commentRef = useRef<string>("");
+  const ReviewForm = useMemo(() => {
+    return function ReviewFormComponent({ itemId }: { itemId: string }) {
+      const { user } = useAuth();
+      const textareaRef = useRef<HTMLTextAreaElement>(null);
+      const commentRef = useRef<string>("");
 
-    const handleSubmit = async () => {
-      if (!user) {
-        toast({ title: "Please login", description: "You must be logged in to post a review.", variant: "destructive" });
-        return;
-      }
-
-      const comment = commentRef.current || textareaRef.current?.value || "";
-      if (!comment.trim()) {
-        toast({ title: "Write a comment", description: "Please enter a short comment before submitting.", variant: "destructive" });
-        return;
-      }
-
-      try {
-        await addReviewForProduct(itemId, { userId: user.id, user: user.name, rating: reviewRating, comment: comment.trim() });
-        commentRef.current = "";
-        if (textareaRef.current) {
-          textareaRef.current.value = "";
+      const handleSubmit = async () => {
+        if (!user) {
+          toast({ title: "Please login", description: "You must be logged in to post a review.", variant: "destructive" });
+          return;
         }
-        setReviewRating(5);
-        toast({ title: "Thank you", description: "Your review has been submitted." });
-      } catch (error) {
-        toast({ title: "Error", description: `Failed to submit review: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
-      }
-    };
 
-    return (
-      <div className="mt-6 space-y-3">
-        <label className="text-sm font-medium">Your rating</label>
-        <select value={reviewRating} onChange={(e) => setReviewRating(Number(e.target.value))} className="w-full rounded-md border px-3 py-2">
-          {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} star{n>1?"s":""}</option>)}
-        </select>
+        const comment = commentRef.current || textareaRef.current?.value || "";
+        if (!comment.trim()) {
+          toast({ title: "Write a comment", description: "Please enter a short comment before submitting.", variant: "destructive" });
+          return;
+        }
 
-        <label className="text-sm font-medium">Comment</label>
-        <Textarea 
-          ref={textareaRef}
-          onChange={(e) => commentRef.current = e.target.value}
-          placeholder="Share your experience..." 
-        />
+        try {
+          await addReviewForProduct(itemId, { userId: user.id, user: user.name, rating: reviewRating, comment: comment.trim() });
+          commentRef.current = "";
+          if (textareaRef.current) {
+            textareaRef.current.value = "";
+          }
+          setReviewRating(5);
+          toast({ title: "Thank you", description: "Your review has been submitted." });
+        } catch (error) {
+          toast({ title: "Error", description: `Failed to submit review: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
+        }
+      };
 
-        <div className="flex justify-end">
-          <Button onClick={handleSubmit} className="mt-2">Submit Review</Button>
+      return (
+        <div className="mt-6 space-y-3">
+          <label className="text-sm font-medium">Your rating</label>
+          <select value={reviewRating} onChange={(e) => setReviewRating(Number(e.target.value))} className="w-full rounded-md border px-3 py-2">
+            {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} star{n>1?"s":""}</option>)}
+          </select>
+
+          <label className="text-sm font-medium">Comment</label>
+          <Textarea 
+            ref={textareaRef}
+            onChange={(e) => commentRef.current = e.target.value}
+            placeholder="Share your experience..." 
+          />
+
+          <div className="flex justify-end">
+            <Button onClick={handleSubmit} className="mt-2">Submit Review</Button>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    };
+  }, [reviewRating, addReviewForProduct, setReviewRating]);
 
   // Get unique categories from menu items
   const categories = ["All", ...Array.from(new Set(menu.map((item: MenuItem) => item.category)))];
