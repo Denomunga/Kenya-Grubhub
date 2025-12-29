@@ -21,6 +21,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 const originalError = console.error;
 const originalLog = console.log;
 const originalWarn = console.warn;
+const originalInfo = console.info;
 
 // Override all console methods to catch network errors
 const shouldFilterMessage = (message: any[]) => {
@@ -36,7 +37,9 @@ const shouldFilterMessage = (message: any[]) => {
     msgStr.includes('fetchWithCSRF') ||
     msgStr.includes('messages') ||
     msgStr.includes('reviews') ||
-    msgStr.includes('news')
+    msgStr.includes('news') ||
+    msgStr.includes('window.fetch') ||
+    msgStr.includes('index.') && msgStr.includes('.js:')
   );
 };
 
@@ -53,6 +56,11 @@ console.log = (...args) => {
 console.warn = (...args) => {
   if (shouldFilterMessage(args)) return;
   originalWarn(...args);
+};
+
+console.info = (...args) => {
+  if (shouldFilterMessage(args)) return;
+  originalInfo(...args);
 };
 
 // Override fetch to suppress network errors globally
