@@ -17,6 +17,26 @@ import { useAuth } from "@/lib/auth";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
+// Hide 429 errors from console
+const originalError = console.error;
+const originalLog = console.log;
+
+console.error = (...args) => {
+  const message = args.join(' ');
+  if (message.includes('429') || message.includes('Too Many Requests')) {
+    return; // Don't log 429 errors
+  }
+  originalError(...args);
+};
+
+console.log = (...args) => {
+  const message = args.join(' ');
+  if (message.includes('429') || message.includes('Too Many Requests')) {
+    return; // Don't log 429 errors
+  }
+  originalLog(...args);
+};
+
 // Lazy load components for code splitting
 const Home = lazy(() => import("@/pages/home"));
 const Menu = lazy(() => import("@/pages/menu"));

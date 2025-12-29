@@ -111,14 +111,12 @@ export default function Home() {
       try {
         const response = await apiFetch('/api/news');
         
-        // Handle rate limiting
+        // Handle rate limiting silently
         if (response.status === 429) {
-          console.log('News API rate limited, will retry later');
           return;
         }
         
         if (!response.ok) {
-          console.log('News API not available');
           return;
         }
         
@@ -133,10 +131,7 @@ export default function Home() {
 
         setNews(normalized);
       } catch (error) {
-        // Don't log JSON parsing errors for 429 responses
-        if (!(error instanceof SyntaxError && error.message.includes('Too many r'))) {
-          console.error('Error fetching news:', error);
-        }
+        // Silently handle all errors
       }
     };
     
