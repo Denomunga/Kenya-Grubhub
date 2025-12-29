@@ -6,14 +6,14 @@ import { Request, Response, NextFunction } from 'express';
 // Rate limiting configuration
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  max: 20, // increased from 5 to 20 requests per windowMs
   message: 'Too many authentication attempts, please try again later.',
   skipSuccessfulRequests: true,
 });
 
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 200, // increased from 100 to 200 requests per windowMs
   message: 'Too many requests, please try again later.',
 });
 
