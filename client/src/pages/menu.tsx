@@ -27,6 +27,7 @@ import ProductImageViewer, { ProductImage } from "@/components/ui/ProductImageVi
 import LocationPicker from '@/components/ui/LocationPicker';
 import OrderConfirmation from '@/components/ui/OrderConfirmation';
 //
+//
 export default function Menu() {
   const { menu, placeOrder, getReviewsForProduct, addReviewForProduct, removeReview, reviews } = useContext(DataContext)!;
   const { user, isAuthenticated, isAdmin, isStaff } = useAuth();
