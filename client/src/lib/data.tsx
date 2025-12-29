@@ -495,10 +495,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (storedOrders) {
       setOrders(JSON.parse(storedOrders));
     }
+  }, []);
 
-    // Fetch reviews from server to get the latest data
-    fetchReviewsFromServer();
-  }, []); 
+  // Fetch reviews from server after menu is loaded
+  useEffect(() => {
+    if (menu.length > 0) {
+      fetchReviewsFromServer();
+    }
+  }, [menu]); 
 
   // Try to fetch server-side menu/news if available and override local mock data
   useEffect(() => {
@@ -822,6 +826,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       // Get all unique product IDs from the menu
       const productIds = menu.map(item => item.id);
+      
+      if (productIds.length === 0) {
+        return;
+      }
+      
       const allReviews: Review[] = [];
 
       // Fetch reviews for each product
@@ -831,6 +840,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           if (resp.ok) {
             const data = await resp.json();
             const reviewsResponse = data.reviews || [];
+            
             const serverReviews: Review[] = reviewsResponse.map((r: any) => ({
               id: r.id,
               productId: r.productId,
@@ -843,17 +853,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
             allReviews.push(...serverReviews);
           }
         } catch (error) {
-          console.warn(`Failed to fetch reviews for product ${productId}:`, error);
+          // Continue with other products if one fails
         }
       }
 
       // Update the reviews state with server data
       if (allReviews.length > 0) {
         setReviews(allReviews);
-        console.log(`Loaded ${allReviews.length} reviews from server`);
       }
     } catch (error) {
-      console.error("Failed to fetch reviews from server:", error);
+      // Silently handle errors
     }
   };
 
