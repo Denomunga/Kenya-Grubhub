@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useRef } from "react";
 import { DataContext } from "../lib/data";
 import type { MenuItem, Review } from "../lib/data";
 import { useAuth } from "@/lib/auth";
@@ -75,6 +75,7 @@ export default function Menu() {
   // Helper small form component to post a review for the currently open product
   function ReviewForm({ itemId }: { itemId: string }) {
     const { user } = useAuth();
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const submit = async () => {
       if (!user) {
@@ -105,7 +106,12 @@ export default function Menu() {
         </select>
 
         <label className="text-sm font-medium">Comment</label>
-        <Textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} placeholder="Share your experience..." />
+        <Textarea 
+          ref={textareaRef}
+          value={reviewComment} 
+          onChange={(e) => setReviewComment(e.target.value)} 
+          placeholder="Share your experience..." 
+        />
 
         <div className="flex justify-end">
           <Button onClick={submit} className="mt-2">Submit Review</Button>
