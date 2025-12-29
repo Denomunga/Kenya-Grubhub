@@ -457,6 +457,41 @@ export default function Menu() {
                       )}
                     </div>
                   )}
+                  
+                  {/* Key Specifications - Show 2-3 most important specs */}
+                  {item.specifications && Object.keys(item.specifications).length > 0 && (
+                    <div className="space-y-1 mb-3">
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Key Specs:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(item.specifications)
+                          .slice(0, 3)
+                          .map(([key, value]) => {
+                            // Format key for display
+                            const formattedKey = key.replace(/([A-Z])/g, ' $1').trim();
+                            // Show only important specs with short values
+                            if (String(value).length > 20) return null;
+                            return (
+                              <span key={key} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200">
+                                <span className="font-medium capitalize">{formattedKey}:</span> {String(value)}
+                              </span>
+                            );
+                          })}
+                        {Object.keys(item.specifications).length > 3 && (
+                          <span className="text-xs text-blue-600">+{Object.keys(item.specifications).length - 3} more specs</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Stock status for all items */}
+                  {item.stock !== undefined && (
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Stock: {item.stock} units</span>
+                      {item.stock <= 5 && (
+                        <span className="text-orange-600 font-medium">Low stock!</span>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter className="p-6 pt-0 flex gap-3 items-center">
                   <div className="flex-1">
@@ -474,7 +509,28 @@ export default function Menu() {
                   </div>
 
                   <div className="w-44 text-right">
-                    <div className="text-xs text-muted-foreground mb-1">{getReviewsForProduct(item.id).length} reviews</div>
+                    <div className="text-xs text-muted-foreground mb-1 flex items-center justify-end gap-1">
+                      {getReviewsForProduct(item.id).length > 0 && (
+                        <>
+                          <div className="flex items-center">
+                            {[...Array(5)].map((_, i) => (
+                              <svg
+                                key={i}
+                                className={`w-3 h-3 ${i < Math.round(getReviewsForProduct(item.id).reduce((acc, r) => acc + r.rating, 0) / getReviewsForProduct(item.id).length) ? 'text-yellow-400' : 'text-gray-300'}`}
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                            ))}
+                          </div>
+                          <span>({getReviewsForProduct(item.id).length})</span>
+                        </>
+                      )}
+                      {getReviewsForProduct(item.id).length === 0 && (
+                        <span>No reviews yet</span>
+                      )}
+                    </div>
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -484,7 +540,7 @@ export default function Menu() {
                         setProductDetailOpen(true);
                       }}
                     >
-                      View Reviews
+                      View Details
                     </Button>
                   </div>
                 </CardFooter>
@@ -651,9 +707,9 @@ export default function Menu() {
               </div>
 
               {/* Product Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Product Information</h3>
+                  <h3 className="text-lg font-semibold">Basic Information</h3>
                   <div className="space-y-2">
                     <p><span className="font-medium">Price:</span> {formatPrice(selectedProductForDetail.price)}</p>
                     <p><span className="font-medium">Category:</span> {selectedProductForDetail.category}</p>
@@ -664,19 +720,38 @@ export default function Menu() {
                       <p><span className="font-medium">Brand:</span> {selectedProductForDetail.brand}</p>
                     )}
                     {selectedProductForDetail.condition && (
-                      <p><span className="font-medium">Condition:</span> {selectedProductForDetail.condition}</p>
+                      <p><span className="font-medium">Condition:</span> 
+                        <span className={`ml-1 px-2 py-1 rounded text-xs ${
+                          selectedProductForDetail.condition === 'new' ? 'bg-green-100 text-green-800' :
+                          selectedProductForDetail.condition === 'used' ? 'bg-orange-100 text-orange-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {selectedProductForDetail.condition}
+                        </span>
+                      </p>
                     )}
+                    <p><span className="font-medium">Availability:</span> 
+                      <span className={`ml-1 px-2 py-1 rounded text-xs ${
+                        selectedProductForDetail.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedProductForDetail.available ? 'In Stock' : 'Out of Stock'}
+                      </span>
+                    </p>
                     {selectedProductForDetail.stock !== undefined && (
-                      <p><span className="font-medium">Stock:</span> {selectedProductForDetail.stock} units</p>
-                    )}
-                    {selectedProductForDetail.location && (
-                      <p><span className="font-medium">Location:</span> {selectedProductForDetail.location}</p>
+                      <p><span className="font-medium">Stock Level:</span> 
+                        <span className={`ml-1 ${
+                          selectedProductForDetail.stock <= 5 ? 'text-orange-600 font-medium' : 'text-green-600'
+                        }`}>
+                          {selectedProductForDetail.stock} units
+                          {selectedProductForDetail.stock <= 5 && ' (Low)'}
+                        </span>
+                      </p>
                     )}
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Additional Details</h3>
+                  <h3 className="text-lg font-semibold">Physical Attributes</h3>
                   <div className="space-y-2">
                     {selectedProductForDetail.size && (
                       <p><span className="font-medium">Size:</span> {selectedProductForDetail.size}</p>
@@ -696,6 +771,24 @@ export default function Menu() {
                     {selectedProductForDetail.dimensions && (
                       <p><span className="font-medium">Dimensions:</span> {selectedProductForDetail.dimensions.length}L × {selectedProductForDetail.dimensions.width}W × {selectedProductForDetail.dimensions.height}H cm</p>
                     )}
+                    {selectedProductForDetail.location && (
+                      <div className="flex items-start gap-2">
+                        <span className="font-medium">Location:</span>
+                        <span>{selectedProductForDetail.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Product Metadata</h3>
+                  <div className="space-y-2">
+                    <p><span className="font-medium">Product ID:</span> {selectedProductForDetail.id}</p>
+                    <p><span className="font-medium">Image Count:</span> {(selectedProductForDetail.images || []).length} images</p>
+                    {selectedProductForDetail.image && !selectedProductForDetail.images && (
+                      <p><span className="font-medium">Legacy Image:</span> Available</p>
+                    )}
+                    <p><span className="font-medium">Last Updated:</span> {new Date().toLocaleDateString()}</p>
                   </div>
                 </div>
               </div>
