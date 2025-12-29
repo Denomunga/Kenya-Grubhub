@@ -50,6 +50,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const response = await apiFetch(`/api/chat/threads/${threadId}/messages`, {
       });
       
+      // Handle rate limiting
+      if (response.status === 429) {
+        return; // Silently handle rate limiting
+      }
+      
       if (response.ok) {
         const data = await response.json();
         const newMessages = data.messages || [];
@@ -77,7 +82,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         setLastMessageCount(newMessages.length);
       }
     } catch (error) {
-      console.error("Failed to refresh messages:", error);
+      // Silently handle errors to avoid spam
     }
   }, [user, lastMessageCount]);
 
@@ -88,6 +93,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     try {
       const response = await apiFetch("/api/chat/threads", {
       });
+      
+      // Handle rate limiting
+      if (response.status === 429) {
+        return; // Silently handle rate limiting
+      }
       
       if (response.ok) {
         const data = await response.json();
@@ -113,7 +123,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (error) {
-      console.error("Failed to fetch threads:", error);
+      // Silently handle errors to avoid spam
     }
   }, [user]);
 

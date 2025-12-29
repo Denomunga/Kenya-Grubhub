@@ -109,8 +109,19 @@ export default function Home() {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        // Replace with your actual news fetching logic
         const response = await apiFetch('/api/news');
+        
+        // Handle rate limiting
+        if (response.status === 429) {
+          console.log('News API rate limited, will retry later');
+          return;
+        }
+        
+        if (!response.ok) {
+          console.log('News API not available');
+          return;
+        }
+        
         const data = await response.json();
 
         // Normalize response so `news` is always an array
@@ -122,7 +133,10 @@ export default function Home() {
 
         setNews(normalized);
       } catch (error) {
-        console.error('Error fetching news:', error);
+        // Don't log JSON parsing errors for 429 responses
+        if (!(error instanceof SyntaxError && error.message.includes('Too many r'))) {
+          console.error('Error fetching news:', error);
+        }
       }
     };
     
