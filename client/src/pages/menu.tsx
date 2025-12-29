@@ -200,45 +200,46 @@ export default function Menu() {
   const cartTotal = cart.reduce((sum, i) => sum + (i.item.price * i.quantity), 0);
 
   return (
-    <div className="container mx-auto px-4 py-12 particle-container gradient-mesh">
-      <div className="mb-8">
-        <div>
-          <h1 className="text-4xl font-heading font-bold text-primary mb-2">Our Products</h1>
-          <p className="text-muted-foreground">Explore our wide selection of Comfy Wears.</p>
-        </div>
+    <div className="min-h-screen w-full particle-container gradient-mesh">
+      <div className="px-4 py-12">
+        <div className="mb-8">
+          <div>
+            <h1 className="text-4xl font-heading font-bold text-primary mb-2">Our Products</h1>
+            <p className="text-muted-foreground">Explore our wide selection of Comfy Wears.</p>
+          </div>
 
-        {/* Search Component */}
-        <div className="mt-6">
-          <ProductSearch 
-            products={menu}
-            onFilteredProducts={setSearchedProducts}
-          />
-        </div>
+          {/* Search Component */}
+          <div className="mt-6">
+            <ProductSearch 
+              products={menu}
+              onFilteredProducts={setSearchedProducts}
+            />
+          </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-end gap-4 mt-6">
-          <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
-            <TabsList className="bg-muted">
-              {categories.map(cat => (
-                <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-white data-[state=active]:text-primary">
-                  {cat}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <div className="flex flex-col md:flex-row justify-between items-end gap-4 mt-6">
+            <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
+              <TabsList className="bg-muted">
+                {categories.map(cat => (
+                  <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-white data-[state=active]:text-primary">
+                    {cat}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
 
-          {/* Cart Sheet */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button className="relative">
-                <ShoppingBag className="mr-2 h-4 w-4" />
-                Cart
-                {cart.length > 0 && (
-                  <Badge variant="secondary" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-accent text-accent-foreground">
-                    {cart.length}
-                  </Badge>
-                )}
-              </Button>
-            </SheetTrigger>
+            {/* Cart Sheet */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button className="relative">
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Cart
+                  {cart.length > 0 && (
+                    <Badge variant="secondary" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-accent text-accent-foreground">
+                      {cart.length}
+                    </Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
             <SheetContent>
               <SheetHeader>
                 <SheetTitle>Your Order</SheetTitle>
@@ -764,6 +765,7 @@ export default function Menu() {
           )}
         </SheetContent>
       </Sheet>
+      </div>
     </div>
   );
 }
