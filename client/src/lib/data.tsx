@@ -812,6 +812,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const resp = await apiFetch(`/api/products/${productId}/reviews`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ rating: review.rating, comment: review.comment }),
       });
 
