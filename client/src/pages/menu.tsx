@@ -700,6 +700,20 @@ export default function Menu() {
                 </div>
               </div>
 
+              {/* Specifications */}
+              {selectedProductForDetail.specifications && Object.keys(selectedProductForDetail.specifications).length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Specifications</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Object.entries(selectedProductForDetail.specifications).map(([key, value]) => (
+                      <div key={key} className="space-y-1">
+                        <p><span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span> {String(value)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Tags */}
               {selectedProductForDetail.tags && selectedProductForDetail.tags.length > 0 && (
                 <div>
