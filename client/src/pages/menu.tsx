@@ -26,6 +26,61 @@ import { Textarea } from "@/components/ui/textarea";
 import ProductImageViewer, { ProductImage } from "@/components/ui/ProductImageViewer";
 import LocationPicker from '@/components/ui/LocationPicker';
 import OrderConfirmation from '@/components/ui/OrderConfirmation';
+
+// Helper small form component to post a review for the currently open product
+function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct }: { 
+  itemId: string; 
+  reviewRating: number; 
+  setReviewRating: (rating: number) => void; 
+  addReviewForProduct: (itemId: string, review: Omit<Review, "id" | "productId" | "date" | "userId"> & { userId?: string }) => Promise<Review>;
+}) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [reviewComment, setReviewComment] = useState("");
+
+  const handleSubmit = async () => {
+    if (!user) {
+      toast({ title: "Please login", description: "You must be logged in to post a review.", variant: "destructive" });
+      return;
+    }
+
+    const comment = reviewComment.trim();
+    
+    if (!comment) {
+      toast({ title: "Write a comment", description: "Please enter a short comment before submitting.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await addReviewForProduct(itemId, { userId: user.id, user: user.name, rating: reviewRating, comment });
+      setReviewComment("");
+      setReviewRating(5);
+      toast({ title: "Thank you", description: "Your review has been submitted." });
+    } catch (error) {
+      toast({ title: "Error", description: `Failed to submit review: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="mt-6 space-y-3">
+      <label className="text-sm font-medium">Your rating</label>
+      <select value={reviewRating} onChange={(e) => setReviewRating(Number(e.target.value))} className="w-full rounded-md border px-3 py-2">
+        {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} star{n>1?"s":""}</option>)}
+      </select>
+
+      <label className="text-sm font-medium">Comment</label>
+      <Textarea 
+        value={reviewComment}
+        onChange={(e) => setReviewComment(e.target.value)}
+        placeholder="Share your experience..." 
+      />
+
+      <div className="flex justify-end">
+        <Button onClick={handleSubmit} className="mt-2">Submit Review</Button>
+      </div>
+    </div>
+  );
+}
 //
 //
 //
@@ -71,55 +126,6 @@ export default function Menu() {
   const handleProductClick = (product: MenuItem) => {
     setSelectedProductForDetail(product);
     setProductDetailOpen(true);
-  };
-
-  // Helper small form component to post a review for the currently open product
-  const ReviewForm = function ReviewFormComponent({ itemId }: { itemId: string }) {
-    const { user } = useAuth();
-    const [reviewComment, setReviewComment] = useState("");
-
-    const handleSubmit = async () => {
-      if (!user) {
-        toast({ title: "Please login", description: "You must be logged in to post a review.", variant: "destructive" });
-        return;
-      }
-
-      const comment = reviewComment.trim();
-      
-      if (!comment) {
-        toast({ title: "Write a comment", description: "Please enter a short comment before submitting.", variant: "destructive" });
-        return;
-      }
-
-      try {
-        await addReviewForProduct(itemId, { userId: user.id, user: user.name, rating: reviewRating, comment });
-        setReviewComment("");
-        setReviewRating(5);
-        toast({ title: "Thank you", description: "Your review has been submitted." });
-      } catch (error) {
-        toast({ title: "Error", description: `Failed to submit review: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
-      }
-    };
-
-    return (
-      <div className="mt-6 space-y-3">
-        <label className="text-sm font-medium">Your rating</label>
-        <select value={reviewRating} onChange={(e) => setReviewRating(Number(e.target.value))} className="w-full rounded-md border px-3 py-2">
-          {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} star{n>1?"s":""}</option>)}
-        </select>
-
-        <label className="text-sm font-medium">Comment</label>
-        <Textarea 
-          value={reviewComment}
-          onChange={(e) => setReviewComment(e.target.value)}
-          placeholder="Share your experience..." 
-        />
-
-        <div className="flex justify-end">
-          <Button onClick={handleSubmit} className="mt-2">Submit Review</Button>
-        </div>
-      </div>
-    );
   };
 
   // Get unique categories from menu items
@@ -743,7 +749,12 @@ export default function Menu() {
                 {/* Add Review Form */}
                 {isAuthenticated && selectedProductForDetail && (
                   <div className="mt-6">
-                    <ReviewForm itemId={selectedProductForDetail.id} />
+                    <ReviewForm 
+                      itemId={selectedProductForDetail.id} 
+                      reviewRating={reviewRating}
+                      setReviewRating={setReviewRating}
+                      addReviewForProduct={addReviewForProduct}
+                    />
                   </div>
                 )}
 
