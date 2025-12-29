@@ -864,7 +864,7 @@ const fetchWithRetry = async (url: string, maxRetries: number = 3) => {
 
 const fetchReviewsFromServer = async () => {
     try {
-      // Get all unique product IDs from the menu
+      // Get all unique product IDs from menu
       const productIds = menu.map(item => item.id);
       
       if (productIds.length === 0) {
@@ -873,8 +873,8 @@ const fetchReviewsFromServer = async () => {
       
       const allReviews: Review[] = [];
 
-      // Fetch reviews in batches of 2 to avoid rate limiting (reduced from 3)
-      const batchSize = 2;
+      // Fetch reviews in batches of 1 to minimize requests
+      const batchSize = 1;
       
       for (let i = 0; i < productIds.length; i += batchSize) {
         const batch = productIds.slice(i, i + batchSize);
@@ -887,8 +887,8 @@ const fetchReviewsFromServer = async () => {
             const cacheKey = `/api/products/${productId}/reviews`;
             const cached = apiCache.get(cacheKey);
             
-            // Use cache if available and fresh (5 minutes)
-            if (cached && Date.now() - cached.timestamp < 300000) {
+            // Use cache if available and fresh (15 minutes)
+            if (cached && Date.now() - cached.timestamp < 900000) {
               batchResults.push(...cached.data);
               continue;
             }
@@ -913,7 +913,7 @@ const fetchReviewsFromServer = async () => {
               apiCache.set(cacheKey, {
                 data: serverReviews,
                 timestamp: Date.now(),
-                ttl: 300000 // 5 minutes
+                ttl: 900000 // 15 minutes
               });
               
               batchResults.push(...serverReviews);
@@ -928,7 +928,7 @@ const fetchReviewsFromServer = async () => {
 
         // Add delay between batches to avoid rate limiting
         if (i + batchSize < productIds.length) {
-          await new Promise(resolve => setTimeout(resolve, 500)); // Increased delay
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 

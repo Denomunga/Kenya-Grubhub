@@ -49,14 +49,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  // Check if user is logged in on mount
+  // Auth cache management
+  const getAuthCache = () => {
+    try {
+      const cached = localStorage.getItem('auth_cache');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const setAuthCache = (userData: User) => {
+    try {
+      localStorage.setItem('auth_cache', JSON.stringify({
+        user: userData,
+        timestamp: Date.now()
+      }));
+    } catch {
+      // Ignore cache errors
+    }
+  };
+
+  const clearAuthCache = () => {
+    try {
+      localStorage.removeItem('auth_cache');
+    } catch {
+      // Ignore cache errors
+    }
+  };
+
+  // Check if user is logged in on mount with caching
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Check cache first (5 minutes)
+        const cached = getAuthCache();
+        if (cached && cached.user && Date.now() - cached.timestamp < 300000) {
+          setUser(cached.user);
+          if (cached.user?.lastSessionInvalidatedAt) {
+            setLastInvalidatedAt(cached.user.lastSessionInvalidatedAt);
+          }
+          setLoading(false);
+          return;
+        }
+
         const response = await apiFetch("/api/auth/me");
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
+          setAuthCache(data.user);
           if (data.user?.lastSessionInvalidatedAt) setLastInvalidatedAt(data.user.lastSessionInvalidatedAt);
           if (data.user?.lastSessionInvalidatedAt) {
             setLastInvalidatedAt(data.user.lastSessionInvalidatedAt);
@@ -71,18 +112,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  // Poll /api/auth/me every 60 seconds to detect session invalidation and notify
+  // Poll /api/auth/me every 5 minutes (reduced from 60 seconds) with caching
   useEffect(() => {
     let retryCount = 0;
     const maxRetries = 3;
     
     const pollAuth = async () => {
       try {
+        // Check cache first
+        const cached = getAuthCache();
+        if (cached && cached.user && Date.now() - cached.timestamp < 300000) {
+          // Cache is still valid, skip polling
+          return;
+        }
+
         const resp = await apiFetch('/api/auth/me');
         
         if (!resp.ok) {
           // Only logout on actual auth errors (401, 403), not rate limiting (429)
           if (resp.status === 401 || resp.status === 403) {
+            clearAuthCache();
             if (user) {
               setUser(null);
               toast({ title: 'Logged out', description: 'Your session was ended. This can happen if your password or security settings were changed.', variant: 'destructive' });
@@ -91,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Rate limited - implement exponential backoff
             retryCount++;
             if (retryCount <= maxRetries) {
-              const delay = Math.min(60000 * Math.pow(2, retryCount - 1), 300000); // Max 5 minutes
+              const delay = Math.min(300000 * Math.pow(2, retryCount - 1), 900000); // Max 15 minutes
               setTimeout(pollAuth, delay);
               return;
             }
@@ -104,8 +153,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         retryCount = 0;
         
         const d = await resp.json();
+        if (d.user) {
+          setUser(d.user);
+          setAuthCache(d.user);
+        }
         if (d.user?.lastSessionInvalidatedAt && lastInvalidatedAt && new Date(d.user.lastSessionInvalidatedAt).getTime() > new Date(lastInvalidatedAt).getTime()) {
           // sessions were invalidated after our recorded time
+          clearAuthCache();
           toast({ title: 'Session invalidated', description: 'Your sessions were logged out due to password change.', variant: 'destructive' });
           // force logout
           setUser(null);
@@ -116,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
     
-    const id = setInterval(pollAuth, 60000);
+    const id = setInterval(pollAuth, 300000); // 5 minutes (increased from 60 seconds)
     return () => clearInterval(id);
   }, [user, lastInvalidatedAt, toast]);
 
@@ -162,6 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setUser(data.user);
+      setAuthCache(data.user);
       if (data.user?.lastSessionInvalidatedAt) setLastInvalidatedAt(data.user.lastSessionInvalidatedAt);
       
       const roleMsg = data.user.role === "admin" ? "Admin Access Granted" : 
@@ -412,12 +467,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
       });
       
+      clearAuthCache();
       setUser(null);
       setAllUsers([]);
       toast({ title: "Logged out", description: "See you soon!" });
       setLocation("/");
     } catch (error) {
       console.error("Logout error:", error);
+      clearAuthCache();
       toast({ title: "Logged out", description: "See you soon!" });
       setUser(null);
       setLocation("/");

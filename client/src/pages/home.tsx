@@ -105,10 +105,22 @@ export default function Home() {
     fetchBusinessLocation();
   }, []);
 
-  // Fetch news on component mount
+  // Fetch news on component mount with caching
   useEffect(() => {
     const fetchNews = async () => {
       try {
+        // Check cache first (30 minutes for news)
+        const cacheKey = '/api/news';
+        const cached = localStorage.getItem(cacheKey);
+        
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < 1800000) { // 30 minutes
+            setNews(data);
+            return;
+          }
+        }
+
         const response = await apiFetch('/api/news');
         
         // Handle rate limiting silently
@@ -128,6 +140,12 @@ export default function Home() {
           : Array.isArray((data as any)?.news)
             ? (data as any).news
             : [];
+
+        // Cache the results
+        localStorage.setItem(cacheKey, JSON.stringify({
+          data: normalized,
+          timestamp: Date.now()
+        }));
 
         setNews(normalized);
       } catch (error) {
