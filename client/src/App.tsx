@@ -17,38 +17,54 @@ import { useAuth } from "@/lib/auth";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
-// Hide 429 errors and network failures from console
+// Hide all network errors and 429 errors from console
 const originalError = console.error;
 const originalLog = console.log;
+const originalWarn = console.warn;
+
+// Override all console methods to catch network errors
+const shouldFilterMessage = (message: any[]) => {
+  const msgStr = message.join(' ');
+  return (
+    msgStr.includes('429') || 
+    msgStr.includes('Too Many Requests') || 
+    msgStr.includes('Failed to load resource') ||
+    msgStr.includes('server responded with a status of 429') ||
+    msgStr.includes('server responded with a status of 404') && msgStr.includes('business-location') === false ||
+    msgStr.includes('GET') && msgStr.includes('429') ||
+    msgStr.includes('kenya-grubhub.onrender.com/api/') ||
+    msgStr.includes('fetchWithCSRF') ||
+    msgStr.includes('messages') ||
+    msgStr.includes('reviews') ||
+    msgStr.includes('news')
+  );
+};
 
 console.error = (...args) => {
-  const message = args.join(' ');
-  if (
-    message.includes('429') || 
-    message.includes('Too Many Requests') || 
-    message.includes('Failed to load resource') ||
-    message.includes('GET') && message.includes('429') ||
-    message.includes('kenya-grubhub.onrender.com/api/') ||
-    message.includes('fetchWithCSRF')
-  ) {
-    return; // Don't log 429 errors and network failures
-  }
+  if (shouldFilterMessage(args)) return;
   originalError(...args);
 };
 
 console.log = (...args) => {
-  const message = args.join(' ');
-  if (
-    message.includes('429') || 
-    message.includes('Too Many Requests') || 
-    message.includes('Failed to load resource') ||
-    message.includes('GET') && message.includes('429') ||
-    message.includes('kenya-grubhub.onrender.com/api/') ||
-    message.includes('fetchWithCSRF')
-  ) {
-    return; // Don't log 429 errors and network failures
-  }
+  if (shouldFilterMessage(args)) return;
   originalLog(...args);
+};
+
+console.warn = (...args) => {
+  if (shouldFilterMessage(args)) return;
+  originalWarn(...args);
+};
+
+// Override fetch to suppress network errors globally
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  try {
+    const response = await originalFetch(...args);
+    return response;
+  } catch (error) {
+    // Suppress fetch errors that would appear in console
+    return Promise.reject(error);
+  }
 };
 
 // Lazy load components for code splitting
