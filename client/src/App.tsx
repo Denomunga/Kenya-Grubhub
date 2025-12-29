@@ -39,7 +39,10 @@ const shouldFilterMessage = (message: any[]) => {
     msgStr.includes('reviews') ||
     msgStr.includes('news') ||
     msgStr.includes('window.fetch') ||
-    msgStr.includes('index.') && msgStr.includes('.js:')
+    msgStr.includes('index.') && msgStr.includes('.js:') ||
+    msgStr.includes('Rate limited for') ||
+    msgStr.includes('Retrying in') ||
+    msgStr.includes('attempt') && msgStr.includes('maxRetries')
   );
 };
 
