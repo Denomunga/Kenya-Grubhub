@@ -82,13 +82,35 @@ export const validateNews = [
     .withMessage('Title must be 3-200 characters')
     .trim(),
   body('content')
-    .isLength({ min: 10, max: 5000 })
-    .withMessage('Content must be 10-5000 characters')
+    .isLength({ min: 5, max: 5000 })
+    .withMessage('Content must be 5-5000 characters')
+    .trim(),
+  body('excerpt')
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage('Excerpt must be maximum 500 characters')
     .trim(),
   body('author')
     .isLength({ min: 2, max: 50 })
     .withMessage('Author name must be 2-50 characters')
     .trim(),
+  body('category')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('Category must be maximum 50 characters')
+    .trim(),
+  body('tags')
+    .optional()
+    .isArray()
+    .withMessage('Tags must be an array'),
+  body('featured')
+    .optional()
+    .isBoolean()
+    .withMessage('Featured must be a boolean'),
+  body('published')
+    .optional()
+    .isBoolean()
+    .withMessage('Published must be a boolean'),
 ];
 
 export const validateMenuItem = [

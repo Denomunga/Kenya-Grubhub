@@ -853,6 +853,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
         setNews(prev => [serverItem, ...prev]);
         console.log('News article successfully saved:', serverItem);
+        
+        // ✅ Refetch news from server to ensure homepage updates
+        try {
+          const resNews = await apiFetch('/api/news');
+          if (resNews.ok) {
+            const d = await resNews.json();
+            if (Array.isArray(d.news)) setNews(d.news);
+          }
+        } catch (err) {
+          console.warn('Failed to refetch news after publish:', err);
+        }
+        
         return serverItem;
       } else {
         const errorData = await resp.json().catch(() => ({}));
