@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { io } from "socket.io-client";
 import { apiFetch } from "./api";
+import { useToast } from "@/hooks/use-toast";
 
 export interface MenuItem {
   id: string;
@@ -613,6 +614,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
           location: payload.location || undefined
         }, ...prev]);
         try { window.dispatchEvent(new CustomEvent('orders:new', { detail: payload })); } catch (e) { }
+        
+        // Enhanced admin/staff notifications
+        if (user?.role === 'admin' || user?.role === 'staff') {
+          new Notification(`New Order: ${payload.id}`, {
+            body: `Order #${payload.id} for ${payload.total} from ${payload.user}`,
+            icon: '/favicon.ico',
+            tag: 'new-order'
+          });
+          
+          toast({
+            title: "New Order Received",
+            description: `Order #${payload.id} for ${payload.total} from ${payload.user}`,
+            action: {
+              label: "View Order",
+              onClick: () => setLocation('/dashboard')
+            }
+          });
+        }
       });
       socket.on('orders:update', (payload: any) => {
         setOrders(prev => prev.map(o => o.id === payload.id ? { 

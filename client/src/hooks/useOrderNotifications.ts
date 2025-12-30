@@ -45,8 +45,7 @@ export function useOrderNotifications() {
         const lastStatusKey = `last_status_${order.id}`;
         const lastStatus = localStorage.getItem(lastStatusKey);
         
-        // Only create notifications for status changes made by staff/admin
-        // This prevents users from getting notifications for their own status changes
+        // Create notifications for status changes made by staff/admin
         if (lastStatus && lastStatus !== order.status && (user.role === 'admin' || user.role === 'staff')) {
           const notification: OrderNotification = {
             id: `${order.id}_${Date.now()}`,
@@ -71,6 +70,84 @@ export function useOrderNotifications() {
 
     checkOrderStatusChanges();
   }, [orders, user]);
+
+  // Check for new orders and create admin notifications
+  useEffect(() => {
+    if (!user || orders.length === 0) return;
+
+    const checkForNewOrders = () => {
+      if (user.role === 'admin' || user.role === 'staff') {
+        // Get previous orders count
+        const previousOrdersCount = orders.length;
+        
+        // Check if we have new orders (orders count increased)
+        setTimeout(() => {
+          if (orders.length > previousOrdersCount) {
+            const newOrders = orders.slice(previousOrdersCount);
+            
+            newOrders.forEach(newOrder => {
+              const notification: OrderNotification = {
+                id: `new_order_${newOrder.id}_${Date.now()}`,
+                orderId: newOrder.id,
+                message: `New Order #${newOrder.id} for ${newOrder.total} from ${newOrder.user}`,
+                status: 'New Order',
+                timestamp: new Date().toISOString(),
+                read: false
+              };
+
+              setNotifications(prev => {
+                const updated = [notification, ...prev].slice(0, 50);
+                localStorage.setItem(`order_notifications_${user.id}`, JSON.stringify(updated));
+                return updated;
+              });
+            });
+          }
+        }, 1000); // Check every second for new orders
+      }
+    };
+
+    checkForNewOrders();
+  }, [orders, user]);
+
+  // Request browser notification permission
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window && 'Notification.requestPermission' in window.Notification) {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+    return false;
+  };
+
+  // Create browser notification
+  const createBrowserNotification = (title: string, body: string, icon?: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification(title, {
+        body,
+        icon: icon || '/favicon.ico',
+        tag: 'order-notification',
+        requireInteraction: true,
+        silent: false
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        // Clicking notification focuses the window
+      };
+
+      notification.onshow = () => {
+        // When notification is shown, update unread count
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        setHasUnread(prev => prev > 1);
+      };
+
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => {
+        notification.close();
+      }, 5000);
+
+      return notification;
+    }
+  };
 
   // Update unread count when notifications change
   useEffect(() => {
@@ -103,6 +180,10 @@ export function useOrderNotifications() {
       localStorage.setItem(`order_notifications_${user.id}`, JSON.stringify(updated));
       return updated;
     });
+    
+    // Update unread count
+    setUnreadCount(notifications.filter(n => !n.read).length);
+    setHasUnread(notifications.filter(n => !n.read).length > 0);
   };
 
   // Clear all notifications
