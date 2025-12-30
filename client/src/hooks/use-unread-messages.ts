@@ -17,16 +17,27 @@ export function useUnreadMessages() {
     const fetchUnreadCount = async () => {
       try {
         if (user.role === 'user') {
-          // For regular users, check their own thread
-          const response = await apiFetch(`/api/chat/messages?threadId=${user.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            const messages = data.messages || [];
-            const unreadMessages = messages.filter((msg: any) => 
-              !msg.isRead && msg.senderRole !== 'user'
-            );
-            setUnreadCount(unreadMessages.length);
-            setHasUnread(unreadMessages.length > 0);
+          // For regular users, check their own thread - use local state first for real-time updates
+          const userMessages = messages.filter(m => 
+            m.threadId === user.id && !m.isRead && m.senderRole !== 'user'
+          );
+          
+          if (userMessages.length > 0) {
+            // Use local state if we have messages
+            setUnreadCount(userMessages.length);
+            setHasUnread(userMessages.length > 0);
+          } else {
+            // Fallback to API if local state is empty
+            const response = await apiFetch(`/api/chat/messages?threadId=${user.id}`);
+            if (response.ok) {
+              const data = await response.json();
+              const apiMessages = data.messages || [];
+              const unreadMessages = apiMessages.filter((msg: any) => 
+                !msg.isRead && msg.senderRole !== 'user'
+              );
+              setUnreadCount(unreadMessages.length);
+              setHasUnread(unreadMessages.length > 0);
+            }
           }
         } else if (user.role === 'admin' || user.role === 'staff') {
           // For admins/staff, check all threads for unread user messages

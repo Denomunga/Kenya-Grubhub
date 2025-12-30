@@ -664,6 +664,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
             isRead: false, 
             encrypted: payload.message.encrypted 
           }]);
+          
+          // ✅ Immediate notification update for users receiving admin messages
+          if (user && user.role === 'user' && payload.message.senderRole !== 'user') {
+            // User received a message from admin/staff - trigger immediate notification update
+            try {
+              window.dispatchEvent(new CustomEvent('chat:message', { detail: payload }));
+            } catch (e) { }
+          }
         }
         
         try { window.dispatchEvent(new CustomEvent('chat:message', { detail: payload })); } catch (e) { }
