@@ -12,7 +12,11 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const config: RequestInit = {
     credentials: 'include',
     ...options,
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+      ...options.headers,
+    },
   };
   
   return fetchWithRateLimit(url, config);

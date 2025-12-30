@@ -1961,23 +1961,6 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     }
   });
 
-  // Test endpoint for POST requests
-  app.post("/api/test-post", requireAuth, async (req: Request, res: Response) => {
-    console.log('POST /api/test-post: Request received', {
-      body: req.body,
-      headers: req.headers,
-      user: req.user
-    });
-    res.json({ 
-      message: "POST test successful!", 
-      timestamp: new Date().toISOString(),
-      received: {
-        body: req.body,
-        user: req.user?.name
-      }
-    });
-  });
-
   // Send a message - Enhanced with validation and error handling
   app.post("/api/chat/messages", requireAuth, async (req: Request, res: Response) => {
     try {
