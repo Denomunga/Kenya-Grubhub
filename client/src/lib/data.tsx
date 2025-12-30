@@ -812,19 +812,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setNews(prev => [item, ...prev]);
 
     try {
+      // Validate required fields before sending
+      if (!item.title || !item.content || !item.author) {
+        console.error('Missing required fields for news article', { title: item.title, content: item.content, author: item.author });
+        return item;
+      }
+
       const resp = await apiFetch('/api/news', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: item.title,
-          content: item.content,
-          excerpt: item.excerpt,
-          author: item.author,
-          category: item.category,
-          tags: item.tags,
-          image: item.image,
-          featured: item.featured,
-          published: item.published
+          title: item.title?.trim(),
+          content: item.content?.trim(),
+          excerpt: item.excerpt?.trim() || '',
+          author: item.author?.trim(),
+          category: item.category?.trim() || 'General',
+          tags: Array.isArray(item.tags) ? item.tags : [],
+          image: item.image?.trim() || '',
+          featured: Boolean(item.featured),
+          published: Boolean(item.published !== false) // Default to true
         }),
       });
 
@@ -833,10 +839,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const n = data.news;
         // replace temporary news id and image if server produced a canonical id
         setNews(prev => prev.map(i => i.id === item.id ? ({ ...i, id: n.id, image: n.image || i.image }) : i));
+        console.log('News article successfully saved:', n);
         return n;
+      } else {
+        const errorData = await resp.json().catch(() => ({}));
+        console.error('Server error when saving news:', {
+          status: resp.status,
+          statusText: resp.statusText,
+          error: errorData
+        });
       }
     } catch (err) {
-      console.debug('Could not persist news to server, saved locally', err);
+      console.error('Failed to persist news to server:', err);
     }
 
     return item;
