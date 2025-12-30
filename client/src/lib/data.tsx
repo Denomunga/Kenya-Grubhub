@@ -796,6 +796,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
       if (resp.ok) {
         setNews(prev => prev.filter(n => n.id !== newsId));
+        
+        // ✅ Refetch news from server to ensure homepage updates
+        try {
+          const resNews = await apiFetch('/api/news');
+          if (resNews.ok) {
+            const d = await resNews.json();
+            if (Array.isArray(d.news)) setNews(d.news);
+          }
+        } catch (err) {
+          console.warn('Failed to refetch news after delete:', err);
+        }
+        
         return true;
       }
     } catch (err) {
