@@ -1479,13 +1479,52 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         return res.status(403).json({ message: "Admin/staff access required" });
       }
 
-      const { title, content, author, date, image } = req.body;
+      const { 
+        title, 
+        content, 
+        excerpt,
+        author, 
+        date,
+        category,
+        tags,
+        image, 
+        featured,
+        published
+      } = req.body;
+      
       if (!title || !content || !author || !date) {
         return res.status(400).json({ message: "title, content, author and date are required" });
       }
 
-      const created = await News.create({ title, content, author, date, image });
-      res.status(201).json({ news: { id: created._id.toString(), title: created.title, content: created.content, author: created.author, date: created.date, image: created.image } });
+      const created = await News.create({ 
+        title, 
+        content, 
+        excerpt,
+        author, 
+        date, 
+        category,
+        tags,
+        image, 
+        featured,
+        published
+      });
+      
+      res.status(201).json({ 
+        news: { 
+          id: created._id.toString(), 
+          title: created.title, 
+          content: created.content,
+          excerpt: created.excerpt,
+          author: created.author, 
+          date: created.date,
+          category: created.category,
+          tags: created.tags,
+          image: created.image,
+          featured: created.featured,
+          published: created.published,
+          views: created.views || 0
+        } 
+      });
     } catch (err) {
       console.error("Create news error:", err);
       res.status(500).json({ message: "Failed to create news" });

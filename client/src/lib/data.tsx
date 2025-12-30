@@ -808,9 +808,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const addNews = async (item: NewsItem) => {
-    // Optimistic local add
-    setNews(prev => [item, ...prev]);
-
+    // Try to persist server-side first (like addMenuItem)
     try {
       // Validate required fields before sending
       if (!item.title || !item.content || !item.author) {
@@ -837,10 +835,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (resp.ok) {
         const data = await resp.json();
         const n = data.news;
-        // replace temporary news id and image if server produced a canonical id
-        setNews(prev => prev.map(i => i.id === item.id ? ({ ...i, id: n.id, image: n.image || i.image }) : i));
-        console.log('News article successfully saved:', n);
-        return n;
+        // Add the server-created item to local state (like addMenuItem)
+        const serverItem: NewsItem = {
+          id: n.id,
+          title: n.title,
+          content: n.content,
+          excerpt: n.excerpt,
+          date: n.date || item.date,
+          author: n.author,
+          category: n.category,
+          tags: n.tags,
+          image: n.image || item.image,
+          featured: n.featured,
+          published: n.published,
+          views: n.views || 0
+        };
+        setNews(prev => [serverItem, ...prev]);
+        console.log('News article successfully saved:', serverItem);
+        return serverItem;
       } else {
         const errorData = await resp.json().catch(() => ({}));
         console.error('Server error when saving news:', {
@@ -853,6 +865,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       console.error('Failed to persist news to server:', err);
     }
 
+    // fallback: local-only (only if server fails)
+    setNews(prev => [item, ...prev]);
     return item;
   };
 
