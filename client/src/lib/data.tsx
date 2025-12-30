@@ -1311,13 +1311,19 @@ const fetchReviewsFromServer = async () => {
   // Chat Methods - Real API Implementation
   const sendMessage = async (threadId: string, _sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => {
     try {
+      console.log('sendMessage: API call', { threadId, sender: _sender, text: text.trim() });
+      
       const response = await apiFetch('/api/chat/messages', {
         method: 'POST',
         body: JSON.stringify({ threadId, text })
       });
 
+      console.log('sendMessage: Response status', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('sendMessage: Response data', data);
+        
         const newMessage: ChatMessage = {
           id: data.message.id,
           threadId: data.message.threadId,
@@ -1329,6 +1335,8 @@ const fetchReviewsFromServer = async () => {
           isRead: data.message.isRead,
           encrypted: data.message.encrypted,
         };
+        
+        console.log('sendMessage: New message created', newMessage);
         setMessages(prev => [...prev, newMessage]);
         return true;
       } else {
@@ -1421,6 +1429,12 @@ const fetchReviewsFromServer = async () => {
 
   const fetchMessages = async (threadId: string) => {
     try {
+      // Validate threadId before making request
+      if (!threadId || typeof threadId !== 'string') {
+        console.error('fetchMessages: Invalid threadId:', threadId);
+        return [];
+      }
+      
       const response = await apiFetch(`/api/chat/messages?threadId=${threadId}`);
       if (response.ok) {
         const data = await response.json();

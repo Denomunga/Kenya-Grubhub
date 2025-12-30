@@ -167,7 +167,25 @@ export default function Chat() {
   }, [isInitialLoad, isAdmin, isManager]);
 
   const handleSend = async () => {
-    if (!inputValue.trim() || !user || !currentThreadId) return;
+    if (!inputValue.trim() || !user || !currentThreadId) {
+      console.log('handleSend: Validation failed', { 
+        hasInput: !!inputValue.trim(), 
+        hasUser: !!user, 
+        hasThreadId: !!currentThreadId,
+        threadId: currentThreadId,
+        userId: user?.id,
+        userRole: user?.role
+      });
+      return;
+    }
+
+    console.log('handleSend: Sending message', { 
+      threadId: currentThreadId,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      message: inputValue.trim()
+    });
 
     await sendMessage(currentThreadId, {
       id: user.id,
