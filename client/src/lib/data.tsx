@@ -1431,8 +1431,15 @@ const fetchReviewsFromServer = async () => {
 
     const threads: ChatThread[] = [];
     (threadsMap || new Map()).forEach((msgs, threadId) => {
-      // Sort by time
-      msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      // Sort by time with safe date parsing
+      msgs.sort((a, b) => {
+        const dateA = new Date(a.timestamp);
+        const dateB = new Date(b.timestamp);
+        // Handle invalid dates by treating them as oldest
+        const timeA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+        const timeB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
+        return timeA - timeB;
+      });
       const lastMsg = msgs[msgs.length - 1];
 
       // Find user name from messages if possible (simplification)
@@ -1449,8 +1456,14 @@ const fetchReviewsFromServer = async () => {
     });
 
     return threads.sort((a, b) => {
-      const timeA = a.lastMessage ? new Date(a.lastMessage.timestamp).getTime() : 0;
-      const timeB = b.lastMessage ? new Date(b.lastMessage.timestamp).getTime() : 0;
+      const timeA = a.lastMessage ? (() => {
+        const date = new Date(a.lastMessage.timestamp);
+        return isNaN(date.getTime()) ? 0 : date.getTime();
+      })() : 0;
+      const timeB = b.lastMessage ? (() => {
+        const date = new Date(b.lastMessage.timestamp);
+        return isNaN(date.getTime()) ? 0 : date.getTime();
+      })() : 0;
       return timeB - timeA;
     });
   };

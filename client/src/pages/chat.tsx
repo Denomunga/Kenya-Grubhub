@@ -185,11 +185,15 @@ export default function Chat() {
                             <span className={`font-medium ${thread.unreadCount > 0 ? "text-foreground" : "text-muted-foreground"}`}>
                               {thread.userName}
                             </span>
-                            {thread.lastMessage && (
-                              <span className="text-[10px] text-muted-foreground">
-                                {format(new Date(thread.lastMessage.timestamp), "HH:mm")}
-                              </span>
-                            )}
+                            {thread.lastMessage && (() => {
+                              const date = new Date(thread.lastMessage.timestamp);
+                              const isValid = !isNaN(date.getTime());
+                              return isValid ? (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {format(date, "HH:mm")}
+                                </span>
+                              ) : null;
+                            })()}
                           </div>
                           <p className="text-xs text-muted-foreground truncate">
                             {thread.typing ? (
@@ -393,11 +397,15 @@ function ChatBubble({ message, isMe, showSenderName = false }: { message: ChatMe
           <p className="text-sm leading-relaxed">{message.text}</p>
           
           <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${isMe ? "opacity-70" : "opacity-40"}`}>
-             <span>{format(new Date(message.timestamp), "HH:mm")}</span>
+             {(() => {
+               const date = new Date(message.timestamp);
+               const isValid = !isNaN(date.getTime());
+               return isValid ? format(date, "HH:mm") : "Invalid time";
+             })()}
              {isMe && (
                message.isRead ? <CheckCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />
              )}
-          </div>
+           </div>
         </div>
       </div>
     </motion.div>
