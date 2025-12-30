@@ -824,6 +824,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           content: item.content?.trim(),
           excerpt: item.excerpt?.trim() || '',
           author: item.author?.trim(),
+          date: item.date || new Date().toISOString().split('T')[0], // ✅ Add required date field
           category: item.category?.trim() || 'General',
           tags: Array.isArray(item.tags) ? item.tags : [],
           image: item.image?.trim() || '',
