@@ -92,27 +92,57 @@ export default function Chat() {
 
   // State to track if this is initial load
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isUserAtBottom, setIsUserAtBottom] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom when messages change (but not on initial load)
+  // Check if user is at bottom of chat
+  const checkIfUserAtBottom = () => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+      if (scrollContainer) {
+        const threshold = 100; // 100px from bottom
+        const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < threshold;
+        setIsUserAtBottom(isAtBottom);
+        return isAtBottom;
+      }
+    }
+    return true;
+  };
+
+  // Handle scroll events to track user position
   useEffect(() => {
-    if (scrollRef.current && !isInitialLoad) {
+    const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+    if (scrollContainer) {
+      const handleScroll = () => checkIfUserAtBottom();
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
+
+  // Scroll to bottom only when appropriate
+  useEffect(() => {
+    // Only auto-scroll if:
+    // 1. User is at bottom, OR
+    // 2. This is initial load, OR  
+    // 3. User just sent a message
+    if (scrollRef.current && (isUserAtBottom || isInitialLoad)) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
     if (isInitialLoad && currentMessages.length > 0) {
       setIsInitialLoad(false);
     }
-  }, [currentMessages, isInitialLoad]);
+  }, [currentMessages, isInitialLoad, isUserAtBottom]);
 
-  // Force scroll to top on initial load
+  // Force scroll to top on initial load for admin
   useEffect(() => {
-    if (scrollAreaRef.current && isInitialLoad) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+    if (scrollAreaRef.current && isInitialLoad && (isAdmin || isManager)) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
       if (scrollContainer) {
         scrollContainer.scrollTop = 0;
+        setIsUserAtBottom(false); // User is now at top
       }
     }
-  }, [isInitialLoad, currentThreadId]);
+  }, [isInitialLoad, isAdmin, isManager]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || !user || !currentThreadId) return;
@@ -124,6 +154,8 @@ export default function Chat() {
     }, inputValue);
     
     setInputValue("");
+    // User is now at bottom after sending message
+    setIsUserAtBottom(true);
   };
 
   if (!isAuthenticated) {
