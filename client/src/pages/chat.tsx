@@ -133,13 +133,20 @@ export default function Chat() {
     }
   }, [currentMessages, isInitialLoad, isUserAtBottom]);
 
-  // Force scroll to top on initial load for admin
+  // Force scroll to appropriate position on initial load
   useEffect(() => {
-    if (scrollAreaRef.current && isInitialLoad && (isAdmin || isManager)) {
+    if (scrollAreaRef.current && isInitialLoad) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
       if (scrollContainer) {
-        scrollContainer.scrollTop = 0;
-        setIsUserAtBottom(false); // User is now at top
+        if (isAdmin || isManager) {
+          // Admin starts at top to read message history
+          scrollContainer.scrollTop = 0;
+          setIsUserAtBottom(false); // User is now at top
+        } else {
+          // Regular users start at bottom to see latest messages
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+          setIsUserAtBottom(true); // User is now at bottom
+        }
       }
     }
   }, [isInitialLoad, isAdmin, isManager]);
