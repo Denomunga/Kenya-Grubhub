@@ -1395,7 +1395,16 @@ const fetchReviewsFromServer = async () => {
       const response = await apiFetch(`/api/chat/messages?threadId=${threadId}`);
       if (response.ok) {
         const data = await response.json();
-        return data.messages || [];
+        const fetchedMessages = data.messages || [];
+        
+        // Update global messages state with fetched messages
+        setMessages(prev => {
+          // Remove existing messages for this thread and add new ones
+          const filtered = prev.filter(m => m.threadId !== threadId);
+          return [...filtered, ...fetchedMessages];
+        });
+        
+        return fetchedMessages;
       }
       return [];
     } catch (error) {
