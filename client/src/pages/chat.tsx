@@ -18,7 +18,7 @@ import { useLocation } from "wouter";
 
 export default function Chat() {
   const { user, isAuthenticated, isManager, isAdmin } = useAuth();
-  const { messages, sendMessage, getThreads, markThreadAsRead, fetchMessages } = useData();
+  const { messages, sendMessage, getThreads, markThreadAsRead, fetchMessages, fetchThreads } = useData();
   const { unreadCount, markAsRead: markNotificationsAsRead } = useUnreadMessages();
   const [inputValue, setInputValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -38,7 +38,17 @@ export default function Chat() {
       fetchMessages(threads[0].id);
       setIsInitialLoad(true); // Reset initial load for new thread
     }
-  }, [isAdmin, isManager, threads.length, activeThreadId, fetchMessages]);
+  }, [isAdmin || isManager, threads.length, activeThreadId, fetchMessages]);
+
+  // Also fetch threads for admin independently if messages state is empty
+  useEffect(() => {
+    if ((isAdmin || isManager) && messages.length === 0) {
+      const loadThreads = async () => {
+        await fetchThreads();
+      };
+      loadThreads();
+    }
+  }, [isAdmin, isManager, messages.length]);
 
   // Refresh messages when thread changes
   useEffect(() => {

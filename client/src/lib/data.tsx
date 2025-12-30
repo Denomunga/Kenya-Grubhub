@@ -1380,8 +1380,16 @@ const fetchReviewsFromServer = async () => {
       const response = await apiFetch('/api/chat/threads');
       if (response.ok) {
         const data = await response.json();
-        // The backend returns an array of threads directly
-        return data;
+        const threads = data.threads || data || [];
+        
+        // For admin/staff, also fetch messages for each thread to populate global state
+        if (user && (user.role === 'admin' || user.role === 'staff')) {
+          for (const thread of threads) {
+            await fetchMessages(thread.id);
+          }
+        }
+        
+        return threads;
       }
       return [];
     } catch (error) {
