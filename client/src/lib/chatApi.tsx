@@ -3,37 +3,6 @@ import { useAuth } from "./auth";
 import { apiFetch } from "./api";
 import { toast } from "sonner";
 
-// Chat API cache with localStorage persistence
-const chatCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
-
-// localStorage cache management
-const getChatCache = (key: string) => {
-  try {
-    const cached = localStorage.getItem(`chat_cache_${key}`);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (Date.now() - parsed.timestamp < parsed.ttl) {
-        return parsed;
-      }
-    }
-  } catch {
-    // Ignore cache errors
-  }
-  return null;
-};
-
-const setChatCache = (key: string, data: any, ttl: number) => {
-  try {
-    localStorage.setItem(`chat_cache_${key}`, JSON.stringify({
-      data,
-      timestamp: Date.now(),
-      ttl
-    }));
-  } catch {
-    // Ignore cache errors
-  }
-};
-
 // Helper function with retry-after and exponential backoff for chat
 const fetchChatWithRetry = async (url: string, maxRetries: number = 3) => {
   let retryCount = 0;
@@ -115,28 +84,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     
     try {
-      const cacheKey = `/api/chat/threads/${threadId}/messages`;
-      
-      // Check localStorage cache first (10 minutes)
-      const cached = getChatCache(cacheKey);
-      if (cached) {
-        setMessages(cached.data.messages || []);
-        return;
-      }
-      
       const response = await fetchChatWithRetry(`/api/chat/threads/${threadId}/messages`);
       
       if (response.ok) {
         const data = await response.json();
         const newMessages = data.messages || [];
-        
-        // Cache the results in both memory and localStorage
-        chatCache.set(cacheKey, {
-          data: data,
-          timestamp: Date.now(),
-          ttl: 600000 // 10 minutes
-        });
-        setChatCache(cacheKey, data, 600000);
         
         // Check for new messages and show notification
         if (newMessages.length > lastMessageCount && lastMessageCount > 0) {
@@ -170,27 +122,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (!user || user.role === "user") return;
     
     try {
-      const cacheKey = "/api/chat/threads";
-      
-      // Check localStorage cache first (15 minutes)
-      const cached = getChatCache(cacheKey);
-      if (cached) {
-        setThreads(cached.data.threads || []);
-        return;
-      }
-      
       const response = await fetchChatWithRetry("/api/chat/threads");
       
       if (response.ok) {
         const data = await response.json();
-        
-        // Cache results in both memory and localStorage
-        chatCache.set(cacheKey, {
-          data: data,
-          timestamp: Date.now(),
-          ttl: 900000 // 15 minutes
-        });
-        setChatCache(cacheKey, data, 900000);
         
         setThreads(data.threads || []);
         

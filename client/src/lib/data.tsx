@@ -454,14 +454,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  // Load from local storage to persist across refreshes (mock DB) - but not menu, news, orders, reviews, or messages, prioritize server data from MongoDB
+  // Load from local storage to persist across refreshes (mock DB) - but not menu, news, orders, or reviews, prioritize server data from MongoDB
   useEffect(() => {
     // Remove all localStorage loading to prioritize server data from MongoDB
-    const storedMsgs = localStorage.getItem("kenyan_bistro_messages");
-    if (storedMsgs) {
-      // Don't load messages from localStorage anymore
-      console.log('Ignoring localStorage messages, fetching from server');
-    }
     const storedReviews = localStorage.getItem("kenyan_bistro_reviews");
     if (storedReviews) {
       // Don't load reviews from localStorage anymore
