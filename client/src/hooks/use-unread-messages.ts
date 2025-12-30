@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth';
-import { useChat, ChatThread } from '@/lib/chatApi';
-import { apiFetch } from '@/lib/api';
+import { useAuth } from "@/lib/auth";
+import { useData } from "@/lib/data";
+import { apiFetch } from "@/lib/api";
+import { ChatThread } from "@/lib/data";
 
 export function useUnreadMessages() {
   const { user } = useAuth();
-  const { getThreads } = useChat();
+  const { messages, getThreads } = useData();
   const threads = getThreads();
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasUnread, setHasUnread] = useState(false);
@@ -64,7 +65,7 @@ export function useUnreadMessages() {
       window.removeEventListener('chat:read', handleMessageRead);
       window.removeEventListener('chat:message', handleMessage);
     };
-  }, [user, threads]);
+  }, [user, threads, messages]); // Add messages as dependency to recalculate when messages state changes
 
   const markAsRead = () => {
     // For users, clear all notifications

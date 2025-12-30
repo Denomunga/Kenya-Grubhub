@@ -73,11 +73,19 @@ export default function Chat() {
   // Mark as read when viewing and clear notifications
   useEffect(() => {
     if (user && currentThreadId) {
-       markThreadAsRead(currentThreadId, user.role);
-       // Clear notifications when admin views messages
-       if (isAdmin || isManager) {
-         markNotificationsAsRead();
-       }
+       const markAsReadAndClearNotifications = async () => {
+         // First mark messages as read
+         await markThreadAsRead(currentThreadId, user.role);
+         
+         // Then clear notifications after a short delay to ensure state is updated
+         if (isAdmin || isManager) {
+           setTimeout(() => {
+             markNotificationsAsRead();
+           }, 100);
+         }
+       };
+       
+       markAsReadAndClearNotifications();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentThreadId, currentMessages.length, user?.role]);
