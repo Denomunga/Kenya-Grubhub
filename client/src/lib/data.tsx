@@ -2,6 +2,8 @@ import { createContext, useContext, useState, ReactNode, useEffect } from "react
 import { io } from "socket.io-client";
 import { apiFetch } from "./api";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
+import { useLocation } from "wouter";
 
 export interface MenuItem {
   id: string;
@@ -31,9 +33,14 @@ export interface NewsItem {
   id: string;
   title: string;
   content: string;
+  excerpt?: string;
   date: string;
   author: string;
+  category?: string;
+  tags?: string[];
   image?: string;
+  featured?: boolean;
+  published?: boolean;
   views?: number;
 }
 
@@ -424,69 +431,47 @@ const INITIAL_NEWS: NewsItem[] = [
   }
 ];
 
-const INITIAL_REVIEWS: Review[] = [
-  { id: "1", productId: "1", user: "Wanjiku M.", rating: 5, comment: "Best Nyama Choma in town! The vibe is immaculate.", date: "2024-06-10" },
-  { id: "2", productId: "1", user: "Brian O.", rating: 4, comment: "Great food, service was a bit slow but worth the wait.", date: "2024-06-12" },
-  { id: "3", productId: "2", user: "Grace K.", rating: 4, comment: "Delicious and filling.", date: "2024-06-20" },
-];
-
 const INITIAL_STAFF: Staff[] = [
   { id: "1", name: "Juma", role: "Head Chef" },
   { id: "2", name: "Achieng", role: "Manager" },
 ];
 
-// Mock initial chat data
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: "msg-1",
-    threadId: "3", // User John Doe
-    senderId: "3",
-    senderName: "John Doe",
-    senderRole: "user",
-    text: "Hello, do you have any vegan options for the Nyama Choma?",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-    isRead: false,
-    encrypted: true,
-  },
-  {
-    id: "msg-2",
-    threadId: "3",
-    senderId: "2",
-    senderName: "Manager Jane",
-    senderRole: "staff",
-    text: "Hi John! While Nyama Choma is meat-based, we can prepare a grilled vegetable platter with the same spices. Would you like that?",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    isRead: true,
-    encrypted: true,
-  }
-];
-
 export function DataProvider({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState<MenuItem[]>([]); // Start empty to prioritize server data
   const [news, setNews] = useState<NewsItem[]>([]); // Start empty to prioritize server data
-  const [reviews, setReviews] = useState<Review[]>(INITIAL_REVIEWS);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]); // Start empty to prioritize server data
+  const [orders, setOrders] = useState<Order[]>([]); // Start empty to prioritize server data
   const [staff, setStaff] = useState<Staff[]>(INITIAL_STAFF);
 
   // Chat State
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<ChatMessage[]>([]); // Start empty to prioritize server data
   const [typingStatus, setTypingStatusState] = useState<Record<string, boolean>>({});
   const [serverHealth, setServerHealth] = useState<any | null>(null);
   const [kpis, setKpis] = useState<any>({ totalRevenue: 0, activeOrders: 0, ordersPerMinute: 0 });
 
-  // Load from local storage to persist across refreshes (mock DB) - but not menu or orders, prioritize server data
+  // Add missing variables for notifications
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  // Load from local storage to persist across refreshes (mock DB) - but not menu, news, orders, reviews, or messages, prioritize server data from MongoDB
   useEffect(() => {
+    // Remove all localStorage loading to prioritize server data from MongoDB
     const storedMsgs = localStorage.getItem("kenyan_bistro_messages");
     if (storedMsgs) {
-      setMessages(JSON.parse(storedMsgs));
+      // Don't load messages from localStorage anymore
+      console.log('Ignoring localStorage messages, fetching from server');
     }
     const storedReviews = localStorage.getItem("kenyan_bistro_reviews");
     if (storedReviews) {
-      setReviews(JSON.parse(storedReviews));
+      // Don't load reviews from localStorage anymore
+      console.log('Ignoring localStorage reviews, fetching from server');
     }
+    // Remove news loading from localStorage to prioritize server data from MongoDB
     const storedNews = localStorage.getItem("kenyan_bistro_news");
     if (storedNews) {
-      setNews(JSON.parse(storedNews));
+      // Don't load news from localStorage anymore
+      console.log('Ignoring localStorage news, fetching from server');
     }
     // Remove orders loading from localStorage to prioritize server data from MongoDB
     const storedOrders = localStorage.getItem("kenyan_bistro_orders");
@@ -502,6 +487,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       fetchReviewsFromServer();
     }
   }, [menu]); 
+
+  // Fetch messages and threads from server
+  useEffect(() => {
+    fetchThreads();
+  }, []); 
 
   // Try to fetch server-side menu/news/orders if available and override local mock data
   useEffect(() => {
@@ -626,10 +616,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
           toast({
             title: "New Order Received",
             description: `Order #${payload.id} for ${payload.total} from ${payload.user}`,
-            action: {
-              label: "View Order",
-              onClick: () => setLocation('/dashboard')
-            }
+            action: (
+              <button 
+                onClick={() => setLocation('/dashboard')}
+                className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+              >
+                View Order
+              </button>
+            )
           });
         }
       });
@@ -668,22 +662,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return () => { try { socket?.disconnect(); } catch (e) { } };
   }, []);
 
-  // Save to local storage on change - but not menu, to prioritize server data
-  useEffect(() => {
-    localStorage.setItem("kenyan_bistro_messages", JSON.stringify(messages));
-  }, [messages]);
-
-  // Persist reviews locally so they survive page reloads in this mock app
-  useEffect(() => {
-    localStorage.setItem("kenyan_bistro_reviews", JSON.stringify(reviews));
-  }, [reviews]);
-
-  // Remove menu saving to localStorage to prioritize server data from MongoDB
-
-  // Persist news to localStorage
-  useEffect(() => {
-    localStorage.setItem("kenyan_bistro_news", JSON.stringify(news));
-  }, [news]);
+  // Save to local storage on change - but not menu, news, orders, reviews, or messages, to prioritize server data from MongoDB
+  // Remove localStorage saving to prioritize server data from MongoDB
 
   const addMenuItem = async (item: MenuItem) => {
     // Try to persist server-side first
@@ -834,8 +814,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const resp = await apiFetch('/api/news', {
         method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: item.title,
+          content: item.content,
+          excerpt: item.excerpt,
+          author: item.author,
+          category: item.category,
+          tags: item.tags,
+          image: item.image,
+          featured: item.featured,
+          published: item.published
+        }),
       });
 
       if (resp.ok) {
