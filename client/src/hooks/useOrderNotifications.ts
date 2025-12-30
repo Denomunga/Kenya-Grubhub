@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useData } from '@/lib/data';
-import { apiFetch } from '@/lib/api';
 
 interface OrderNotification {
   id: string;
@@ -33,7 +32,7 @@ export function useOrderNotifications() {
     }
   }, [user]);
 
-  // Check for order status changes
+  // Check for order status changes (only track changes made by staff/admin)
   useEffect(() => {
     if (!user || orders.length === 0) return;
 
@@ -46,8 +45,9 @@ export function useOrderNotifications() {
         const lastStatusKey = `last_status_${order.id}`;
         const lastStatus = localStorage.getItem(lastStatusKey);
         
-        // If status changed, create notification
-        if (lastStatus && lastStatus !== order.status) {
+        // Only create notifications for status changes made by staff/admin
+        // This prevents users from getting notifications for their own status changes
+        if (lastStatus && lastStatus !== order.status && (user.role === 'admin' || user.role === 'staff')) {
           const notification: OrderNotification = {
             id: `${order.id}_${Date.now()}`,
             orderId: order.id,

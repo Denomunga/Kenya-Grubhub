@@ -380,7 +380,18 @@ export default function Dashboard() {
                         <TableCell>
                           <Select 
                             defaultValue={order.status} 
-                            onValueChange={(val: any) => updateOrderStatus(order.id, val)}
+                            onValueChange={(val: any) => {
+                              if (isAdmin || isStaff) {
+                                updateOrderStatus(order.id, val);
+                              } else {
+                                toast({
+                                  title: "Permission Denied",
+                                  description: "Only staff and admin can update order status",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                            disabled={!isAdmin && !isStaff}
                           >
                             <SelectTrigger className="w-[130px]">
                               <SelectValue />
