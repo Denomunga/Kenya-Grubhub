@@ -1344,6 +1344,19 @@ const fetchReviewsFromServer = async () => {
 
   const markThreadAsRead = async (threadId: string, readerRole: "admin" | "staff" | "user") => {
     try {
+      // Validate inputs before making request
+      if (!threadId || typeof threadId !== 'string') {
+        console.error('markThreadAsRead: Invalid threadId:', threadId);
+        return false;
+      }
+      
+      if (!readerRole || !["admin", "staff", "user"].includes(readerRole)) {
+        console.error('markThreadAsRead: Invalid readerRole:', readerRole);
+        return false;
+      }
+      
+      console.log(`markThreadAsRead: threadId=${threadId}, readerRole=${readerRole}`);
+      
       const response = await apiFetch(`/api/chat/threads/${threadId}/read`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

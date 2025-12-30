@@ -82,7 +82,7 @@ export default function Chat() {
 
   // Mark as read when viewing and clear notifications
   useEffect(() => {
-    if (user && currentThreadId) {
+    if (user && currentThreadId && user.role && currentThreadId) {
        const markAsReadAndClearNotifications = async () => {
          // First mark messages as read
          await markThreadAsRead(currentThreadId, user.role);
