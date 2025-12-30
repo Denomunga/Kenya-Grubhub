@@ -1961,14 +1961,25 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   app.post("/api/chat/messages", requireAuth, async (req: Request, res: Response) => {
     try {
       const { threadId, text } = req.body;
+      
+      console.log('POST /api/chat/messages: Request received', {
+        body: req.body,
+        threadId,
+        text,
+        threadIdType: typeof threadId,
+        textType: typeof text,
+        textLength: text?.length,
+        user: req.user
+      });
 
       // Enhanced validation
       if (!text || typeof text !== 'string' || text.trim().length === 0) {
+        console.log('POST /api/chat/messages: Text validation failed', { text, textType: typeof text });
         return res.status(400).json({ message: "Message text is required and cannot be empty" });
       }
       
       if (!threadId || typeof threadId !== 'string') {
-        console.error('Thread ID validation failed:', { threadId, type: typeof threadId });
+        console.log('POST /api/chat/messages: Thread ID validation failed', { threadId, threadIdType: typeof threadId });
         return res.status(400).json({ message: "Valid thread ID is required" });
       }
 
@@ -1991,6 +2002,16 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         console.warn('Index creation warning:', indexError);
       }
 
+      console.log('POST /api/chat/messages: Creating message in MongoDB', {
+        threadId,
+        senderId: req.user!._id.toString(),
+        senderName: req.user!.name || 'Unknown User',
+        senderRole: req.user!.role || 'user',
+        text: sanitizedText,
+        isRead: false,
+        encrypted: true,
+      });
+
       const message = await ChatMessage.create({
         threadId,
         senderId: req.user!._id.toString(),
@@ -1999,6 +2020,12 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         text: sanitizedText,
         isRead: false,
         encrypted: true,
+      });
+
+      console.log('POST /api/chat/messages: Message created successfully', {
+        messageId: message._id.toString(),
+        createdAt: message.createdAt,
+        threadId: message.threadId
       });
 
       const messageResponse = {
@@ -2041,7 +2068,15 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       const { threadId } = req.params;
       const { readerRole } = req.body;
 
-      console.log(`Mark as read request: threadId=${threadId}, readerRole=${readerRole}`);
+      console.log(`PATCH /api/chat/threads/${threadId}/read: Request received`, {
+        params: req.params,
+        body: req.body,
+        threadId,
+        readerRole,
+        threadIdType: typeof threadId,
+        readerRoleType: typeof readerRole,
+        user: req.user
+      });
 
       // Validate threadId
       if (!threadId || typeof threadId !== 'string') {
