@@ -483,10 +483,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [menu]); 
 
-  // Fetch messages and threads from server
+  // Fetch messages and threads from server (admin/staff only)
   useEffect(() => {
-    fetchThreads();
-  }, []); 
+    if (user && (user.role === 'admin' || user.role === 'staff')) {
+      fetchThreads();
+    }
+  }, [user]); 
 
   // Try to fetch server-side menu/news/orders if available and override local mock data
   useEffect(() => {
@@ -1311,11 +1313,23 @@ const fetchReviewsFromServer = async () => {
   // Chat Methods - Real API Implementation
   const sendMessage = async (threadId: string, _sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => {
     try {
-      console.log('sendMessage: API call', { threadId, sender: _sender, text: text.trim() });
+      const trimmedText = text.trim();
+      console.log('sendMessage: API call', { 
+        threadId, 
+        sender: _sender, 
+        text: trimmedText,
+        textLength: trimmedText.length,
+        textType: typeof trimmedText,
+        originalText: text,
+        originalTextLength: text.length
+      });
+      
+      const requestBody = JSON.stringify({ threadId, text: trimmedText });
+      console.log('sendMessage: Request body', requestBody);
       
       const response = await apiFetch('/api/chat/messages', {
         method: 'POST',
-        body: JSON.stringify({ threadId, text })
+        body: requestBody
       });
 
       console.log('sendMessage: Response status', response.status);
