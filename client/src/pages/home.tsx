@@ -24,7 +24,7 @@ interface NewsItem {
 }
 
 export default function Home() {
-  const { menu, reviews, fetchReviewsFromServer } = useData();
+  const { menu, reviews, fetchReviewsFromServer, news } = useData(); // ✅ Use global news state
   const [, setLocation] = useLocation();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchedProducts, setSearchedProducts] = useState<any[]>([]);
@@ -32,7 +32,7 @@ export default function Home() {
   const [, setLoadingNews] = useState(false);
   const [, setSelectedNews] = useState<NewsItem | null>(null);
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
-  const [news, setNews] = useState<NewsItem[]>([]);
+  // const [news, setNews] = useState<NewsItem[]>([]); // ❌ Remove local news state
   const [businessLocation, setBusinessLocation] = useState<any>(null);
   const [locationLoading, setLocationLoading] = useState(true);
   
@@ -105,56 +105,8 @@ export default function Home() {
     fetchBusinessLocation();
   }, []);
 
-  // Fetch news on component mount with caching
+  // ✅ News is now fetched from global DataContext, no need for local fetching
   useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        // Check cache first (30 minutes for news)
-        const cacheKey = '/api/news';
-        const cached = localStorage.getItem(cacheKey);
-        
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < 1800000) { // 30 minutes
-            setNews(data);
-            return;
-          }
-        }
-
-        const response = await apiFetch('/api/news');
-        
-        // Handle rate limiting silently
-        if (response.status === 429) {
-          return;
-        }
-        
-        if (!response.ok) {
-          return;
-        }
-        
-        const data = await response.json();
-
-        // Normalize response so `news` is always an array
-        const normalized: NewsItem[] = Array.isArray(data)
-          ? data
-          : Array.isArray((data as any)?.news)
-            ? (data as any).news
-            : [];
-
-        // Cache the results
-        localStorage.setItem(cacheKey, JSON.stringify({
-          data: normalized,
-          timestamp: Date.now()
-        }));
-
-        setNews(normalized);
-      } catch (error) {
-        // Silently handle all errors
-      }
-    };
-    
-    fetchNews();
-    
     // Fetch live reviews from server
     fetchReviewsFromServer();
     
@@ -266,12 +218,7 @@ export default function Home() {
             const data = await response.json();
             // Update the view count in the modal
             setSelectedNews((prev: any) => prev ? { ...prev, views: data.views } : null);
-            // Also update the news item in the list if it exists
-            setNews((prev: any[]) => 
-              prev.map(item => 
-                item.id === id ? { ...item, views: data.views } : item
-              )
-            );
+            // ✅ View count updates are handled by global DataContext
           }
         }
       } catch (error) {
