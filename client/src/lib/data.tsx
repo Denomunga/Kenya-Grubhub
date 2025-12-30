@@ -644,8 +644,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
         try { window.dispatchEvent(new CustomEvent('orders:update', { detail: payload })); } catch (e) { }
       });
       socket.on('chat:message', (payload: any) => {
-        setMessages(prev => [...prev, { id: payload.message.id, threadId: payload.message.threadId, senderId: payload.message.senderId, senderName: payload.message.senderName, senderRole: payload.message.senderRole, text: payload.message.text, timestamp: payload.message.timestamp, isRead: false, encrypted: payload.message.encrypted }]);
+        // ✅ Only add message if it belongs to current user's thread or if admin/staff
+        const shouldAddMessage = user && (
+          (user.role === 'admin' || user.role === 'staff') || 
+          payload.message.threadId === user.id
+        );
+        
+        if (shouldAddMessage) {
+          setMessages(prev => [...prev, { 
+            id: payload.message.id, 
+            threadId: payload.message.threadId, 
+            senderId: payload.message.senderId, 
+            senderName: payload.message.senderName, 
+            senderRole: payload.message.senderRole, 
+            text: payload.message.text, 
+            timestamp: payload.message.timestamp, 
+            isRead: false, 
+            encrypted: payload.message.encrypted 
+          }]);
+        }
+        
         try { window.dispatchEvent(new CustomEvent('chat:message', { detail: payload })); } catch (e) { }
+      });
+      socket.on('chat:read', (payload: any) => {
+        // ✅ Handle real-time read status updates
+        setMessages(prev => prev.map(m => {
+          if (m.threadId !== payload.threadId) return m;
+          
+          // Update read status based on who read the messages
+          if (payload.readerRole === "admin" || payload.readerRole === "staff") {
+            return m.senderRole === "user" ? { ...m, isRead: true } : m;
+          }
+          
+          if (payload.readerRole === "user") {
+            return (m.senderRole === "admin" || m.senderRole === "staff") ? { ...m, isRead: true } : m;
+          }
+          
+          return m;
+        }));
+        try { window.dispatchEvent(new CustomEvent('chat:read', { detail: payload })); } catch (e) { }
       });
       socket.on('audit:review', (payload: any) => { try { window.dispatchEvent(new CustomEvent('audit:review', { detail: payload })); } catch (e) { } });
       socket.on('audit:news', (payload: any) => { try { window.dispatchEvent(new CustomEvent('audit:news', { detail: payload })); } catch (e) { } });

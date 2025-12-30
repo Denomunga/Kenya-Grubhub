@@ -45,7 +45,25 @@ export function useUnreadMessages() {
     // Set up polling for new messages
     const interval = setInterval(fetchUnreadCount, 10000); // Check every 10 seconds
 
-    return () => clearInterval(interval);
+    // ✅ Listen for real-time chat events to update notifications immediately
+    const handleMessageRead = () => {
+      // Update notifications immediately when messages are read
+      setTimeout(fetchUnreadCount, 100); // Small delay to ensure backend is updated
+    };
+
+    const handleMessage = () => {
+      // Update notifications immediately when new messages arrive
+      setTimeout(fetchUnreadCount, 100);
+    };
+
+    window.addEventListener('chat:read', handleMessageRead);
+    window.addEventListener('chat:message', handleMessage);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('chat:read', handleMessageRead);
+      window.removeEventListener('chat:message', handleMessage);
+    };
   }, [user, threads]);
 
   const markAsRead = () => {

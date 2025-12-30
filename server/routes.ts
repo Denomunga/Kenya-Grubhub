@@ -1858,6 +1858,85 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     }
   });
 
+  // POST endpoint for sending messages to a specific thread (alternative endpoint)
+  app.post("/api/chat/threads/:threadId/messages", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { threadId } = req.params;
+      const { text } = req.body;
+
+      // Enhanced validation
+      if (!text || typeof text !== 'string' || text.trim().length === 0) {
+        return res.status(400).json({ message: "Message text is required and cannot be empty" });
+      }
+      
+      if (!threadId || typeof threadId !== 'string') {
+        console.error('Thread ID validation failed:', { threadId, type: typeof threadId });
+        return res.status(400).json({ message: "Valid thread ID is required" });
+      }
+
+      // Validate text length
+      if (text.trim().length > 1000) {
+        return res.status(400).json({ message: "Message cannot exceed 1000 characters" });
+      }
+
+      // Sanitize input
+      const sanitizedText = text.trim().substring(0, 1000);
+
+      // Ensure MongoDB indexes exist for performance and uniqueness
+      try {
+        await ChatMessage.collection.createIndexes([
+          { key: { threadId: 1, createdAt: -1 } },
+          { key: { senderId: 1 } },
+          { key: { senderRole: 1 } }
+        ]);
+      } catch (indexError) {
+        console.warn('Index creation warning:', indexError);
+      }
+
+      const message = await ChatMessage.create({
+        threadId,
+        senderId: req.user!._id.toString(),
+        senderName: req.user!.name || 'Unknown User',
+        senderRole: req.user!.role || 'user',
+        text: sanitizedText,
+        isRead: false,
+        encrypted: true,
+      });
+
+      const messageResponse = {
+        id: message._id.toString(),
+        threadId: message.threadId,
+        senderId: message.senderId,
+        senderName: message.senderName,
+        senderRole: message.senderRole,
+        text: message.text,
+        isRead: message.isRead,
+        encrypted: message.encrypted,
+        timestamp: message.createdAt.toISOString(),
+      };
+
+      console.log(`Chat message saved to MongoDB: Thread ${threadId}, Sender ${req.user!.name}`);
+      
+      // ✅ Emit real-time chat message to specific thread participants only
+      try {
+        // Emit to all clients but include threadId for frontend filtering
+        (app as any).locals.io?.emit('chat:message', {
+          message: messageResponse,
+          threadId: threadId // Include threadId for frontend filtering
+        });
+        
+        console.log(`Chat message emitted via socket.io to thread ${threadId}`);
+      } catch (socketError) {
+        console.warn('Failed to emit chat message via socket.io:', socketError);
+      }
+      
+      res.status(201).json({ message: messageResponse });
+    } catch (error) {
+      console.error("Send message error:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
   // Get messages for a thread
   app.get("/api/chat/messages", requireAuth, async (req: Request, res: Response) => {
     try {
@@ -1936,12 +2015,15 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
 
       console.log(`Chat message saved to MongoDB: Thread ${threadId}, Sender ${req.user!.name}`);
       
-      // ✅ Emit real-time chat message to all connected clients
+      // ✅ Emit real-time chat message to specific thread participants only
       try {
+        // Emit to all clients but include threadId for frontend filtering
         (app as any).locals.io?.emit('chat:message', {
-          message: messageResponse
+          message: messageResponse,
+          threadId: threadId // Include threadId for frontend filtering
         });
-        console.log('Chat message emitted via socket.io');
+        
+        console.log(`Chat message emitted via socket.io to thread ${threadId}`);
       } catch (socketError) {
         console.warn('Failed to emit chat message via socket.io:', socketError);
       }
@@ -1986,6 +2068,20 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       );
 
       console.log(`Marked ${result.modifiedCount} messages as read in thread ${threadId} by ${readerRole}`);
+      
+      // ✅ Emit real-time read status update to all connected clients
+      try {
+        (app as any).locals.io?.emit('chat:read', {
+          threadId: threadId,
+          readerRole: readerRole,
+          count: result.modifiedCount,
+          timestamp: new Date().toISOString()
+        });
+        console.log('Chat read status emitted via socket.io');
+      } catch (socketError) {
+        console.warn('Failed to emit chat read status via socket.io:', socketError);
+      }
+      
       res.json({ 
         message: "Messages marked as read", 
         count: result.modifiedCount,
