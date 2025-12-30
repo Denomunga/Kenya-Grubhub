@@ -157,12 +157,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(d.user);
           setAuthCache(d.user);
         }
-        if (d.user?.lastSessionInvalidatedAt && lastInvalidatedAt && new Date(d.user.lastSessionInvalidatedAt).getTime() > new Date(lastInvalidatedAt).getTime()) {
-          // sessions were invalidated after our recorded time
-          clearAuthCache();
-          toast({ title: 'Session invalidated', description: 'Your sessions were logged out due to password change.', variant: 'destructive' });
-          // force logout
-          setUser(null);
+        if (d.user?.lastSessionInvalidatedAt && lastInvalidatedAt) {
+          const userInvalidatedTime = new Date(d.user.lastSessionInvalidatedAt);
+          const lastInvalidatedTime = new Date(lastInvalidatedAt);
+          if (!isNaN(userInvalidatedTime.getTime()) && !isNaN(lastInvalidatedTime.getTime()) && 
+              userInvalidatedTime.getTime() > lastInvalidatedTime.getTime()) {
+            // sessions were invalidated after our recorded time
+            clearAuthCache();
+            toast({ title: 'Session invalidated', description: 'Your sessions were logged out due to password change.', variant: 'destructive' });
+            // force logout
+            setUser(null);
+          }
         }
         if (d.user?.lastSessionInvalidatedAt) setLastInvalidatedAt(d.user.lastSessionInvalidatedAt);
       } catch (err) {

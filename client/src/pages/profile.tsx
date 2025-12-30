@@ -331,7 +331,11 @@ export default function Profile() {
                             </div>
                             <div className="flex items-center text-xs text-muted-foreground gap-1">
                               <Clock className="h-3 w-3" />
-                              {new Date(order.date).toLocaleDateString()}
+                              {(() => {
+                                const date = new Date(order.date);
+                                const isValid = !isNaN(date.getTime());
+                                return isValid ? date.toLocaleDateString() : 'Invalid date';
+                              })()}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">

@@ -744,7 +744,13 @@ function AuditViewer() {
         <TableBody>
           {audits.map(a => (
             <TableRow key={a.id}>
-              <TableCell className="text-xs">{new Date(a.timestamp).toLocaleString()}</TableCell>
+              <TableCell className="text-xs">
+            {(() => {
+              const date = new Date(a.timestamp);
+              const isValid = !isNaN(date.getTime());
+              return isValid ? date.toLocaleString() : 'Invalid time';
+            })()}
+          </TableCell>
               <TableCell>{a.action}</TableCell>
               <TableCell className="text-xs">{a.reviewId}</TableCell>
               <TableCell>{a.byName || a.byId}</TableCell>
@@ -890,7 +896,13 @@ function UserAuditViewer() {
         <TableBody>
           {audits.map(a => (
             <TableRow key={a.id}>
-              <TableCell className="text-xs">{new Date(a.timestamp).toLocaleString()}</TableCell>
+              <TableCell className="text-xs">
+            {(() => {
+              const date = new Date(a.timestamp);
+              const isValid = !isNaN(date.getTime());
+              return isValid ? date.toLocaleString() : 'Invalid time';
+            })()}
+          </TableCell>
               <TableCell>{a.action}</TableCell>
               <TableCell className="text-xs">{a.userId}</TableCell>
               <TableCell>{a.byName || a.byId}</TableCell>

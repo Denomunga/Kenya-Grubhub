@@ -121,7 +121,11 @@ export default function OrdersPage() {
                           Order #{notification.orderId}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {new Date(notification.timestamp).toLocaleString()}
+                          {(() => {
+                            const date = new Date(notification.timestamp);
+                            const isValid = !isNaN(date.getTime());
+                            return isValid ? date.toLocaleString() : 'Invalid time';
+                          })()}
                         </p>
                       </div>
                       {!notification.read && (
@@ -168,7 +172,11 @@ export default function OrdersPage() {
                         Order #{order.id}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        {new Date(order.date).toLocaleDateString()} • {order.user}
+                        {(() => {
+                          const date = new Date(order.date);
+                          const isValid = !isNaN(date.getTime());
+                          return isValid ? date.toLocaleDateString() : 'Invalid date';
+                        })()} • {order.user}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
