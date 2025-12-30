@@ -1331,37 +1331,15 @@ const fetchReviewsFromServer = async () => {
         return false;
       }
       
-      console.log('sendMessage: API call', { 
-        threadId, 
-        sender: _sender, 
-        text: trimmedText,
-        textLength: trimmedText.length,
-        textType: typeof trimmedText,
-        originalText: text,
-        originalTextLength: text.length
-      });
-      
       const requestBody = JSON.stringify({ threadId, text: trimmedText });
-      console.log('sendMessage: Request body', requestBody);
       
       const response = await apiFetch('/api/chat/messages', {
         method: 'POST',
         body: requestBody
       });
 
-      console.log('sendMessage: Response status', response.status);
-      
-      // Debug CSRF token
-      const csrfToken = localStorage.getItem('csrf_token');
-      console.log('sendMessage: CSRF token status', {
-        hasToken: !!csrfToken,
-        tokenLength: csrfToken?.length,
-        tokenPreview: csrfToken ? `${csrfToken.substring(0, 10)}...` : 'none'
-      });
-
       if (response.ok) {
         const data = await response.json();
-        console.log('sendMessage: Response data', data);
         
         const newMessage: ChatMessage = {
           id: data.message.id,
@@ -1375,30 +1353,11 @@ const fetchReviewsFromServer = async () => {
           encrypted: data.message.encrypted,
         };
         
-        console.log('sendMessage: New message created', newMessage);
         setMessages(prev => [...prev, newMessage]);
         return true;
       } else {
         const errorData = await response.json();
         console.error('Failed to send message:', errorData);
-        console.error('Response details:', {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          errorData
-        });
-        
-        // Provide user-friendly error messages
-        if (errorData.message?.includes('Message text is required')) {
-          console.error('Frontend validation failed - this should not happen with our validation');
-          console.error('Sent data:', { threadId, text: trimmedText });
-        } else if (errorData.message?.includes('Valid thread ID is required')) {
-          console.error('Thread ID validation failed - check threadId value');
-          console.error('Sent threadId:', threadId);
-        } else if (errorData.message?.includes('1000 characters')) {
-          console.error('Message too long - frontend should have caught this');
-          console.error('Message length:', trimmedText.length);
-        }
         
         return false;
       }
@@ -1412,16 +1371,12 @@ const fetchReviewsFromServer = async () => {
     try {
       // Validate inputs before making request
       if (!threadId || typeof threadId !== 'string') {
-        console.error('markThreadAsRead: Invalid threadId:', threadId);
         return false;
       }
       
       if (!readerRole || !["admin", "staff", "user"].includes(readerRole)) {
-        console.error('markThreadAsRead: Invalid readerRole:', readerRole);
         return false;
       }
-      
-      console.log(`markThreadAsRead: threadId=${threadId}, readerRole=${readerRole}`);
       
       const response = await apiFetch(`/api/chat/threads/${threadId}/read`, {
         method: 'PATCH',
@@ -1448,11 +1403,9 @@ const fetchReviewsFromServer = async () => {
         }));
         return true;
       } else {
-        console.error('Failed to mark as read:', response.statusText);
         return false;
       }
     } catch (error) {
-      console.error('Error marking as read:', error);
       return false;
     }
   };
@@ -1480,7 +1433,6 @@ const fetchReviewsFromServer = async () => {
       }
       return [];
     } catch (error) {
-      console.error('Failed to fetch threads:', error);
       return [];
     }
   };
@@ -1489,7 +1441,6 @@ const fetchReviewsFromServer = async () => {
     try {
       // Validate threadId before making request
       if (!threadId || typeof threadId !== 'string') {
-        console.error('fetchMessages: Invalid threadId:', threadId);
         return [];
       }
       
@@ -1509,7 +1460,6 @@ const fetchReviewsFromServer = async () => {
       }
       return [];
     } catch (error) {
-      console.error('Failed to fetch messages:', error);
       return [];
     }
   };
@@ -1517,13 +1467,13 @@ const fetchReviewsFromServer = async () => {
   const getThreads = (): ChatThread[] => {
     // Group messages by threadId
     const threadsMap = new Map<string, ChatMessage[]>();
-    (messages || []).forEach(m => {
+    messages.forEach(m => {
       if (!threadsMap.has(m.threadId)) threadsMap.set(m.threadId, []);
       threadsMap.get(m.threadId)?.push(m);
     });
 
     const threads: ChatThread[] = [];
-    (threadsMap || new Map()).forEach((msgs, threadId) => {
+    threadsMap.forEach((msgs, threadId) => {
       // Sort by time with safe date parsing
       msgs.sort((a, b) => {
         const dateA = new Date(a.timestamp);

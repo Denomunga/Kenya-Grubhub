@@ -24,26 +24,15 @@ export class CSRFTokenManager {
   // Add CSRF token to headers
   static addTokenToHeaders(headers: Record<string, string>): Record<string, string> {
     const token = this.getToken();
-    console.log('CSRFTokenManager: Adding token to headers', {
-      hasToken: !!token,
-      tokenLength: token?.length,
-      tokenPreview: token ? `${token.substring(0, 10)}...` : 'none',
-      originalHeaders: Object.keys(headers)
-    });
     
     if (token) {
       const newHeaders = {
         ...headers,
         'X-CSRF-Token': token,
       };
-      console.log('CSRFTokenManager: Token added to headers', {
-        newHeaders: Object.keys(newHeaders),
-        hasCSRFHeader: !!newHeaders['X-CSRF-Token']
-      });
       return newHeaders;
     }
     
-    console.warn('CSRFTokenManager: No token available to add to headers');
     return headers;
   }
 
@@ -68,22 +57,13 @@ export class CSRFTokenManager {
   // Initialize CSRF token
   static async initializeToken(): Promise<void> {
     try {
-      console.log('CSRFTokenManager: Initializing token...');
       const response = await fetch(`${import.meta.env?.VITE_API_URL || 'https://kenya-grubhub-server.onrender.com'}/api/csrf-token`, {
         credentials: 'include',
       });
       
       if (response.ok) {
         const data = await response.json();
-        console.log('CSRFTokenManager: Token received', { 
-          token: data.csrfToken,
-          tokenLength: data.csrfToken?.length,
-          tokenPreview: data.csrfToken ? `${data.csrfToken.substring(0, 10)}...` : 'none'
-        });
         this.setToken(data.csrfToken);
-        console.log('CSRFTokenManager: Token stored successfully');
-      } else {
-        console.error('CSRFTokenManager: Failed to fetch token', response.status);
       }
     } catch (error) {
       console.warn('Failed to initialize CSRF token:', error);
