@@ -68,14 +68,6 @@ export default function Chat() {
     }
   }, [activeThreadId, isAdmin, isManager, fetchMessages]);
 
-  // Refresh messages for regular users when they open chat
-  useEffect(() => {
-    if (user && user.role === 'user' && user.id && !activeThreadId) {
-      fetchMessages(user.id);
-      setIsInitialLoad(true); // Reset initial load
-    }
-  }, [user, activeThreadId, fetchMessages]);
-
   // Filter messages for the active view
   const currentMessages = messages
     .filter(m => m.threadId === currentThreadId)
@@ -96,11 +88,9 @@ export default function Chat() {
          await markThreadAsRead(currentThreadId, user.role);
          
          // Then clear notifications after a short delay to ensure state is updated
-         if (isAdmin || isManager) {
-           setTimeout(() => {
-             markNotificationsAsRead();
-           }, 100);
-         }
+         setTimeout(() => {
+           markNotificationsAsRead();
+         }, 100);
        };
        
        markAsReadAndClearNotifications();
