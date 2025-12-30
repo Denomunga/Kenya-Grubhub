@@ -171,7 +171,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <NavLink href="/">Home</NavLink>
             <NavLink href="/menu">Products</NavLink>
             <NavLink href="/chat" onClick={markAsRead}>
-              Chat with Staff
+              Chat with Admin
               {hasUnread && (
                 <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -477,7 +477,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               >
                 <div className="text-center">
                   <div className="text-xs text-muted-foreground font-medium">WATHII</div>
-                  <div className="text-xs text-muted-foreground mt-1">Premium Fashion Experience</div>
+                  <div className="text-xs text-muted-foreground mt-1">Premium Kenyan Experience</div>
                 </div>
               </motion.div>
             </motion.div>
@@ -555,8 +555,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {isChristmasMode ? (
                 <>Experience the magic of Christmas fashion! 🎅 Discover festive styles and elegant designs that bring joy and style to your holiday season. Perfect for spreading cheer and looking your best! 🎁</>
               ) : (
-                <>Experience fashion, elegance thrifted wear. 
-                From sizzling jackets, Denim, Shoes, Trousers,caps cadigans.</>
+                <>Experience Kenyan Style and Designs that bring joy in all Seasons. Perfect for spreading cheer and looking for the best! 🎁</>
               )}
             </p>
           </motion.div>
@@ -590,7 +589,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 : 'text-primary-foreground/80'
             }`}>
               <li className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Westlands, Nairobi, Kenya</li>
-              <li className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> +254 700 000 000</li>
+              <li className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> +254 717 320 783</li>
             </ul>
           </motion.div>
 

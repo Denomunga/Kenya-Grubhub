@@ -135,7 +135,7 @@ const HeroSection = () => {
               )}
             </motion.div>
             <span className="text-sm font-medium text-white">
-              {isChristmasMode ? '🎄 Magical Christmas Collection' : 'Experience Authentic Kenyan Fashion'}
+              {isChristmasMode ? '🎄 Magical Christmas Collection' : 'Experience Authentic Kenyan Style'}
             </span>
           </motion.div>
           <motion.h1 

@@ -381,7 +381,7 @@ export default function Home() {
             className="group bg-blue-600 hover:bg-blue-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 px-10 py-4 text-lg font-semibold border-0 relative z-30 pointer-events-auto rounded-full hover:scale-105 active:scale-95"
           >
             <Link href="/menu">
-              View Full Menu
+              View All Products
               <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-2" />
             </Link>
           </Button>
@@ -602,7 +602,7 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              Stay updated with the latest trends, offers, and news from our fashion store
+              Stay updated with the latest trends, offers, and news!
             </motion.p>
           </motion.div>
 
