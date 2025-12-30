@@ -582,11 +582,7 @@ export default function Home() {
                     <CardContent className="p-6 flex-1 flex flex-col">
                       <div className="flex items-center gap-2 text-sm text-blue-600 font-medium mb-4">
                         <Clock className="h-4 w-4" />
-                        <span>{item.date ? (() => {
-                        const date = new Date(item.date);
-                        const isValid = !isNaN(date.getTime());
-                        return isValid ? date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Invalid date';
-                      })() : 'No date'}</span>
+                        <span>{item.date ? new Date(item.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No date'}</span>
                       </div>
                       <h3 className="text-xl font-bold mb-4 font-heading line-clamp-2 group-hover:text-blue-600 transition-colors duration-300">{item.title}</h3>
                       <p className="text-muted-foreground mb-6 line-clamp-3 flex-1 leading-relaxed">{item.content}</p>

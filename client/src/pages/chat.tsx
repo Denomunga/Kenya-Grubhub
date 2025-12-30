@@ -131,7 +131,14 @@ export default function Chat() {
     if (isInitialLoad && currentMessages.length > 0) {
       setIsInitialLoad(false);
     }
-  }, [currentMessages, isInitialLoad, isUserAtBottom]);
+  }, [isInitialLoad, isUserAtBottom]); // Remove currentMessages to prevent constant scrolling
+
+  // Handle new messages - only scroll if user is at bottom
+  useEffect(() => {
+    if (scrollRef.current && isUserAtBottom && currentMessages.length > 0 && !isInitialLoad) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [currentMessages.length, isUserAtBottom, isInitialLoad]); // Only trigger when message count changes
 
   // Force scroll to appropriate position on initial load
   useEffect(() => {
