@@ -17,7 +17,7 @@ export function useUnreadMessages() {
       try {
         if (user.role === 'user') {
           // For regular users, check their own thread
-          const response = await apiFetch(`/api/chat/threads/${user.id}/messages`);
+          const response = await apiFetch(`/api/chat/messages?threadId=${user.id}`);
           if (response.ok) {
             const data = await response.json();
             const messages = data.messages || [];

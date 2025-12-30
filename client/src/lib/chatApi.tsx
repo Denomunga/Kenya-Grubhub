@@ -84,7 +84,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     
     try {
-      const response = await fetchChatWithRetry(`/api/chat/threads/${threadId}/messages`);
+      const response = await fetchChatWithRetry(`/api/chat/messages?threadId=${threadId}`);
       
       if (response.ok) {
         const data = await response.json();
