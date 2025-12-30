@@ -1350,6 +1350,14 @@ const fetchReviewsFromServer = async () => {
       });
 
       console.log('sendMessage: Response status', response.status);
+      
+      // Debug CSRF token
+      const csrfToken = localStorage.getItem('csrf_token');
+      console.log('sendMessage: CSRF token status', {
+        hasToken: !!csrfToken,
+        tokenLength: csrfToken?.length,
+        tokenPreview: csrfToken ? `${csrfToken.substring(0, 10)}...` : 'none'
+      });
 
       if (response.ok) {
         const data = await response.json();
