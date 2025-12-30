@@ -1373,14 +1373,23 @@ const fetchReviewsFromServer = async () => {
       } else {
         const errorData = await response.json();
         console.error('Failed to send message:', errorData);
+        console.error('Response details:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          errorData
+        });
         
         // Provide user-friendly error messages
         if (errorData.message?.includes('Message text is required')) {
           console.error('Frontend validation failed - this should not happen with our validation');
+          console.error('Sent data:', { threadId, text: trimmedText });
         } else if (errorData.message?.includes('Valid thread ID is required')) {
           console.error('Thread ID validation failed - check threadId value');
+          console.error('Sent threadId:', threadId);
         } else if (errorData.message?.includes('1000 characters')) {
           console.error('Message too long - frontend should have caught this');
+          console.error('Message length:', trimmedText.length);
         }
         
         return false;
