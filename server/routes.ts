@@ -1935,6 +1935,17 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       };
 
       console.log(`Chat message saved to MongoDB: Thread ${threadId}, Sender ${req.user!.name}`);
+      
+      // ✅ Emit real-time chat message to all connected clients
+      try {
+        (app as any).locals.io?.emit('chat:message', {
+          message: messageResponse
+        });
+        console.log('Chat message emitted via socket.io');
+      } catch (socketError) {
+        console.warn('Failed to emit chat message via socket.io:', socketError);
+      }
+      
       res.status(201).json({ message: messageResponse });
     } catch (error) {
       console.error("Send message error:", error);
