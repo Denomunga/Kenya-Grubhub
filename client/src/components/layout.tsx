@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { useUnreadMessages } from "@/hooks/use-unread-messages";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChristmas } from "@/lib/christmas";
+import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 import { Button } from "@/components/ui/button";
 import { 
   Menu, X, UtensilsCrossed, MapPin, 
-  MessageSquare, LayoutDashboard, Gift
+  MessageSquare, LayoutDashboard, Gift, Bell
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,6 +27,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout, isAuthenticated, isAdmin, isStaff } = useAuth();
   const { isChristmasMode } = useChristmas();
   const { hasUnread, unreadCount, markAsRead } = useUnreadMessages();
+  const { hasUnread: hasOrderUnread, unreadCount: orderUnreadCount, markAsRead: markOrdersRead } = useOrderNotifications();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -175,6 +177,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {hasUnread && (
                 <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </NavLink>
+            
+            <NavLink href="/orders" onClick={markOrdersRead}>
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Orders
+              </div>
+              {hasOrderUnread && (
+                <span className="absolute -top-1 -right-2 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                  {orderUnreadCount > 9 ? '9+' : orderUnreadCount}
                 </span>
               )}
             </NavLink>
@@ -334,6 +348,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   { href: "/", label: "Home", icon: "🏠", desc: "Welcome page" },
                   { href: "/menu", label: "Products", icon: "🛍️", desc: "Browse items" },
                   { href: "/chat", label: "Chat", icon: "💬", desc: "Talk to staff" },
+                  { href: "/orders", label: "Orders", icon: "🔔", desc: "Order updates" },
                   ...(isAdmin || isStaff ? [{ href: "/dashboard", label: "Dashboard", icon: "📊", desc: "Admin panel", special: true }] : [])
                 ].map((item, index) => (
                   <motion.div
@@ -354,6 +369,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         onClick={() => {
                           setMobileMenuOpen(false);
                           if (item.href === "/chat") markAsRead();
+                          if (item.href === "/orders") markOrdersRead();
                         }}
                         whileHover={{ boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)" }}
                       >
@@ -393,6 +409,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         {item.href === "/chat" && hasUnread && (
                           <span className="absolute top-2 right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
                             {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
+                        
+                        {/* Unread Badge for Orders */}
+                        {item.href === "/orders" && hasOrderUnread && (
+                          <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                            {orderUnreadCount > 9 ? '9+' : orderUnreadCount}
                           </span>
                         )}
                       </motion.span>

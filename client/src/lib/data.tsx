@@ -473,7 +473,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [serverHealth, setServerHealth] = useState<any | null>(null);
   const [kpis, setKpis] = useState<any>({ totalRevenue: 0, activeOrders: 0, ordersPerMinute: 0 });
 
-  // Load from local storage to persist across refreshes (mock DB) - but not menu, prioritize server data
+  // Load from local storage to persist across refreshes (mock DB) - but not menu or orders, prioritize server data
   useEffect(() => {
     const storedMsgs = localStorage.getItem("kenyan_bistro_messages");
     if (storedMsgs) {
@@ -487,10 +487,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (storedNews) {
       setNews(JSON.parse(storedNews));
     }
-    // Remove menu loading from localStorage to prioritize server data
+    // Remove orders loading from localStorage to prioritize server data from MongoDB
     const storedOrders = localStorage.getItem("kenyan_bistro_orders");
     if (storedOrders) {
-      setOrders(JSON.parse(storedOrders));
+      // Don't load orders from localStorage anymore
+      console.log('Ignoring localStorage orders, fetching from server');
     }
   }, []);
 
@@ -501,10 +502,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [menu]); 
 
-  // Try to fetch server-side menu/news if available and override local mock data
+  // Try to fetch server-side menu/news/orders if available and override local mock data
   useEffect(() => {
     (async () => {
       let menuLoaded = false;
+      
       try {
         const resMenu = await apiFetch('/api/menu');
         if (resMenu.ok) {
@@ -543,6 +545,39 @@ export function DataProvider({ children }: { children: ReactNode }) {
       // Fallback to initial data only if server fetch failed
       if (!menuLoaded) {
         setMenu(INITIAL_MENU);
+      }
+
+      try {
+        const resOrders = await apiFetch('/api/orders');
+        if (resOrders.ok) {
+          const d = await resOrders.json();
+          if (Array.isArray(d.orders)) {
+            setOrders(d.orders.map((o: any) => ({
+              id: o.id,
+              items: o.items.map((item: any) => ({
+                item: {
+                  id: item.productId || Date.now().toString(),
+                  name: item.name,
+                  description: item.description || '',
+                  price: item.price,
+                  category: item.category || 'Main',
+                  image: item.image || '',
+                  available: true
+                },
+                quantity: item.quantity
+              })),
+              total: o.total,
+              status: o.status,
+              user: o.user,
+              userEmail: o.userEmail,
+              userPhone: o.userPhone,
+              date: o.createdAt || o.date,
+              location: o.location
+            })));
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch orders from server');
       }
 
       try {

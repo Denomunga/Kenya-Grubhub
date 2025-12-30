@@ -88,6 +88,7 @@ const Login = lazy(() => import("@/pages/login"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const Chat = lazy(() => import("@/pages/chat"));
 const Profile = lazy(() => import("@/pages/profile"));
+const Orders = lazy(() => import("@/pages/orders"));
 const ConfirmPassword = lazy(() => import("@/pages/confirm-password"));
 const NewsDetail = lazy(() => import("@/pages/news-detail"));
 const ConfirmPhone = lazy(() => import("@/pages/confirm-phone"));
@@ -114,6 +115,7 @@ function Router() {
               <Route path="/login" component={Login} />
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/chat" component={Chat} />
+              <Route path="/orders" component={Orders} />
               <Route path="/profile" component={Profile} />
               <Route path="/auth/confirm-password" component={ConfirmPassword} />
               <Route path="/news/:id" component={NewsDetail} />
