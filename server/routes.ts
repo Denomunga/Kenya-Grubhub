@@ -2041,13 +2041,17 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       const { threadId } = req.params;
       const { readerRole } = req.body;
 
+      console.log(`Mark as read request: threadId=${threadId}, readerRole=${readerRole}`);
+
       // Validate threadId
       if (!threadId || typeof threadId !== 'string') {
+        console.error('Invalid threadId:', threadId);
         return res.status(400).json({ message: "Valid thread ID is required" });
       }
 
       // Validate readerRole
       if (!readerRole || !["admin", "staff", "user"].includes(readerRole)) {
+        console.error('Invalid readerRole:', readerRole);
         return res.status(400).json({ message: "Valid reader role is required" });
       }
 

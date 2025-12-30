@@ -67,6 +67,8 @@ export function useUnreadMessages() {
   }, [user, threads]);
 
   const markAsRead = () => {
+    // For users, clear all notifications
+    // For admin/staff, this will be called when they view messages
     setUnreadCount(0);
     setHasUnread(false);
   };

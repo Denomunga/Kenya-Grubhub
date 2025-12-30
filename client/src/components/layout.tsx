@@ -171,7 +171,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <nav className="hidden md:flex items-center gap-6">
             <NavLink href="/">Home</NavLink>
             <NavLink href="/menu">Products</NavLink>
-            <NavLink href="/chat" onClick={markAsRead}>
+            <NavLink href="/chat" onClick={() => {
+              // Clear notifications when navigating to chat
+              if (isAdmin || isStaff) {
+                // For admin/staff, clear all notifications when entering chat
+                markAsRead();
+              } else {
+                // For users, clear notifications when entering chat
+                markAsRead();
+              }
+            }}>
               Chat with Admin
               {hasUnread && (
                 <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">

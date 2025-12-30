@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
-import { useChat, ChatMessage } from "@/lib/chatApi";
+import { useData } from "@/lib/data";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { ChatMessage } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,7 +18,8 @@ import { useLocation } from "wouter";
 
 export default function Chat() {
   const { user, isAuthenticated, isManager, isAdmin } = useAuth();
-  const { messages, sendMessage, getThreads, markThreadAsRead, refreshMessages } = useChat();
+  const { messages, sendMessage, getThreads, markThreadAsRead, fetchMessages } = useData();
+  const { unreadCount, markAsRead: markNotificationsAsRead } = useUnreadMessages();
   const [inputValue, setInputValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [, setLocation] = useLocation();
@@ -32,28 +35,39 @@ export default function Chat() {
   useEffect(() => {
     if ((isAdmin || isManager) && !activeThreadId && threads.length > 0) {
       setActiveThreadId(threads[0].id);
-      refreshMessages(threads[0].id);
+      fetchMessages(threads[0].id);
       setIsInitialLoad(true); // Reset initial load for new thread
     }
-  }, [isAdmin, isManager, threads.length, activeThreadId, refreshMessages]);
+  }, [isAdmin, isManager, threads.length, activeThreadId, fetchMessages]);
 
   // Refresh messages when thread changes
   useEffect(() => {
     if (activeThreadId && (isAdmin || isManager)) {
-      refreshMessages(activeThreadId);
+      fetchMessages(activeThreadId);
       setIsInitialLoad(true); // Reset initial load for new thread
     }
-  }, [activeThreadId, isAdmin, isManager, refreshMessages]);
+  }, [activeThreadId, isAdmin, isManager, fetchMessages]);
 
   // Filter messages for the active view
   const currentMessages = messages
     .filter(m => m.threadId === currentThreadId)
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    .sort((a, b) => {
+      const dateA = new Date(a.timestamp);
+      const dateB = new Date(b.timestamp);
+      // Handle invalid dates by treating them as oldest
+      const timeA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+      const timeB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
+      return timeA - timeB;
+    });
 
-  // Mark as read when viewing
+  // Mark as read when viewing and clear notifications
   useEffect(() => {
     if (user && currentThreadId) {
        markThreadAsRead(currentThreadId, user.role);
+       // Clear notifications when admin views messages
+       if (isAdmin || isManager) {
+         markNotificationsAsRead();
+       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentThreadId, currentMessages.length, user?.role]);
@@ -121,7 +135,7 @@ export default function Chat() {
               <div className="flex items-center justify-between mb-2">
                 <CardTitle className="text-lg">Inbox</CardTitle>
                 <Badge variant="secondary" className="bg-primary/10 text-primary">
-                  {threads.reduce((acc, t) => acc + t.unreadCount, 0)} New
+                  {unreadCount} New
                 </Badge>
               </div>
               <div className="relative">

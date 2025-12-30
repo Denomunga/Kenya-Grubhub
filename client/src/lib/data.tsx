@@ -644,9 +644,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         try { window.dispatchEvent(new CustomEvent('orders:update', { detail: payload })); } catch (e) { }
       });
       socket.on('chat:message', (payload: any) => {
-        // ✅ Only add message if it belongs to current user's thread or if admin/staff
+        // ✅ Add message based on user role and thread ownership
         const shouldAddMessage = user && (
+          // Admin/staff see all messages
           (user.role === 'admin' || user.role === 'staff') || 
+          // Users see only messages from their own thread
           payload.message.threadId === user.id
         );
         
@@ -1336,6 +1338,7 @@ const fetchReviewsFromServer = async () => {
     try {
       const response = await apiFetch(`/api/chat/threads/${threadId}/read`, {
         method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ readerRole })
       });
 
