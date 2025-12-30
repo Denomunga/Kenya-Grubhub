@@ -1314,6 +1314,23 @@ const fetchReviewsFromServer = async () => {
   const sendMessage = async (threadId: string, _sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => {
     try {
       const trimmedText = text.trim();
+      
+      // Enhanced frontend validation
+      if (!trimmedText || trimmedText.length === 0) {
+        console.error('sendMessage: Empty message rejected');
+        return false;
+      }
+      
+      if (!threadId || typeof threadId !== 'string' || threadId.length === 0) {
+        console.error('sendMessage: Invalid threadId rejected', { threadId, type: typeof threadId });
+        return false;
+      }
+      
+      if (trimmedText.length > 1000) {
+        console.error('sendMessage: Message too long', { length: trimmedText.length });
+        return false;
+      }
+      
       console.log('sendMessage: API call', { 
         threadId, 
         sender: _sender, 
@@ -1356,6 +1373,16 @@ const fetchReviewsFromServer = async () => {
       } else {
         const errorData = await response.json();
         console.error('Failed to send message:', errorData);
+        
+        // Provide user-friendly error messages
+        if (errorData.message?.includes('Message text is required')) {
+          console.error('Frontend validation failed - this should not happen with our validation');
+        } else if (errorData.message?.includes('Valid thread ID is required')) {
+          console.error('Thread ID validation failed - check threadId value');
+        } else if (errorData.message?.includes('1000 characters')) {
+          console.error('Message too long - frontend should have caught this');
+        }
+        
         return false;
       }
     } catch (error) {
