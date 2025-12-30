@@ -9,12 +9,17 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   // Add CSRF token to headers
   const headers = CSRFTokenManager.addTokenToHeaders(options.headers as Record<string, string> || {});
   
+  // Only set Content-Type for JSON requests (not for file uploads)
+  const contentType = options.body && typeof options.body === 'string' && options.body.startsWith('{') 
+    ? 'application/json' 
+    : undefined;
+  
   const config: RequestInit = {
     credentials: 'include',
     ...options,
     headers: {
-      'Content-Type': 'application/json',
       ...headers,
+      ...(contentType && { 'Content-Type': contentType }),
       ...options.headers,
     },
   };
