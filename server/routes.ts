@@ -95,6 +95,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enable preflight for all routes
   app.options('*', cors());
 
+  // Add body parser middleware to parse JSON request bodies
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
   console.log('CORS configured for origin:', process.env.FRONTEND_URL || 'http://localhost:3000');
 
   // Session setup with secure MongoDB storage
@@ -1955,6 +1959,23 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       console.error("Get messages error:", error);
       res.status(500).json({ message: "Failed to get messages" });
     }
+  });
+
+  // Test endpoint for POST requests
+  app.post("/api/test-post", requireAuth, async (req: Request, res: Response) => {
+    console.log('POST /api/test-post: Request received', {
+      body: req.body,
+      headers: req.headers,
+      user: req.user
+    });
+    res.json({ 
+      message: "POST test successful!", 
+      timestamp: new Date().toISOString(),
+      received: {
+        body: req.body,
+        user: req.user?.name
+      }
+    });
   });
 
   // Send a message - Enhanced with validation and error handling

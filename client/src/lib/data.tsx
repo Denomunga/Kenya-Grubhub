@@ -1331,6 +1331,24 @@ const fetchReviewsFromServer = async () => {
         return false;
       }
       
+      // Test POST request to verify backend connectivity
+      console.log('sendMessage: Testing POST connectivity...');
+      try {
+        const testResponse = await apiFetch('/api/test-post', {
+          method: 'POST',
+          body: JSON.stringify({ test: 'hello', timestamp: Date.now() })
+        });
+        
+        if (testResponse.ok) {
+          const testData = await testResponse.json();
+          console.log('sendMessage: POST test successful', testData);
+        } else {
+          console.error('sendMessage: POST test failed', testResponse.status);
+        }
+      } catch (testError) {
+        console.error('sendMessage: POST test error', testError);
+      }
+      
       console.log('sendMessage: API call', { 
         threadId, 
         sender: _sender, 
