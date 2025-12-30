@@ -50,6 +50,16 @@ export default function Chat() {
     }
   }, [isAdmin, isManager, messages.length]);
 
+  // Fetch messages for regular users if state is empty
+  useEffect(() => {
+    if (user && user.role === 'user' && messages.length === 0 && user.id) {
+      const loadUserMessages = async () => {
+        await fetchMessages(user.id);
+      };
+      loadUserMessages();
+    }
+  }, [user, messages.length, fetchMessages]);
+
   // Refresh messages when thread changes
   useEffect(() => {
     if (activeThreadId && (isAdmin || isManager)) {
@@ -57,6 +67,14 @@ export default function Chat() {
       setIsInitialLoad(true); // Reset initial load for new thread
     }
   }, [activeThreadId, isAdmin, isManager, fetchMessages]);
+
+  // Refresh messages for regular users when they open chat
+  useEffect(() => {
+    if (user && user.role === 'user' && user.id && !activeThreadId) {
+      fetchMessages(user.id);
+      setIsInitialLoad(true); // Reset initial load
+    }
+  }, [user, activeThreadId, fetchMessages]);
 
   // Filter messages for the active view
   const currentMessages = messages
