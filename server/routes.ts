@@ -53,6 +53,10 @@ declare module "express-session" {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   console.log("🚀 registerRoutes function called - starting route registration...");
+  
+  // ✅ Set trust proxy for proper rate limiting behind load balancer
+  app.set('trust proxy', 1);
+  
   // CORS configuration - MUST come before session middleware
   app.use(cors({
     origin: function(origin, callback) {
