@@ -1602,6 +1602,71 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     }
   });
 
+  // Update a news item (admin/staff only)
+  app.put('/api/news/:newsId', requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'staff')) {
+        return res.status(403).json({ message: 'Admin/staff access required' });
+      }
+
+      const { newsId } = req.params;
+      if (!mongoose.isValidObjectId(newsId)) {
+        return res.status(400).json({ message: 'Invalid news id' });
+      }
+
+      const found = await News.findById(newsId);
+      if (!found) {
+        return res.status(404).json({ message: 'News not found' });
+      }
+
+      const { title, content, excerpt, author, date, category, tags, image, featured, published } = req.body;
+
+      // Update news item fields
+      if (title !== undefined) found.title = title;
+      if (content !== undefined) found.content = content;
+      if (excerpt !== undefined) found.excerpt = excerpt;
+      if (author !== undefined) found.author = author;
+      if (date !== undefined) found.date = date;
+      if (category !== undefined) found.category = category;
+      if (tags !== undefined) found.tags = tags;
+      if (image !== undefined) found.image = image;
+      if (featured !== undefined) found.featured = featured;
+      if (published !== undefined) found.published = published;
+
+      await found.save();
+
+      // Audit update
+      const na = await NewsAudit.create({ 
+        newsId: found._id.toString(), 
+        action: 'updated', 
+        byId: req.user!._id.toString(), 
+        byName: req.user!.name, 
+        note: `Updated news article: ${found.title}` 
+      });
+      try { (app as any).locals.io?.emit('audit:news', na); } catch (err) {}
+
+      res.json({ 
+        news: { 
+          id: found._id.toString(), 
+          title: found.title, 
+          content: found.content, 
+          excerpt: found.excerpt,
+          author: found.author, 
+          date: found.date,
+          category: found.category,
+          tags: found.tags,
+          image: found.image,
+          featured: found.featured,
+          published: found.published,
+          views: found.views
+        } 
+      });
+    } catch (err) {
+      console.error('Update news error:', err);
+      res.status(500).json({ message: 'Failed to update news' });
+    }
+  });
+
   // Get a single news item by id (public) — excludes soft-deleted items
   app.get('/api/news/:newsId', async (req: Request, res: Response) => {
     try {

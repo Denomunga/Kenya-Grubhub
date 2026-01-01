@@ -9,6 +9,8 @@ import {
   Newspaper, 
   Plus, 
   Eye,
+  Edit,
+  Trash,
   Calendar,
   User,
   X
@@ -29,7 +31,7 @@ interface NewsItem {
 
 const NewsManager: React.FC = () => {
   const { toast } = useToast();
-  const { news, addNews } = useData();
+  const { news, addNews, updateNews, deleteNews } = useData();
   const [isLoading, setIsLoading] = useState(false);
   
   // Form state for adding news
@@ -39,6 +41,11 @@ const NewsManager: React.FC = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [image, setImage] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+
+  // Edit state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<NewsItem | null>(null);
+  const [editingImageFiles, setEditingImageFiles] = useState<File[]>([]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -127,6 +134,94 @@ const NewsManager: React.FC = () => {
       toast({
         title: "Error",
         description: "Failed to publish news article",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Edit functions
+  const handleEditNews = (item: NewsItem) => {
+    setEditingItem(item);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      if (files.length > 1) {
+        toast({ title: 'Error', description: 'Only 1 image allowed per news article', variant: 'destructive' });
+        return;
+      }
+      setEditingImageFiles(files);
+    }
+  };
+
+  const removeEditingImage = (index: number) => {
+    setEditingImageFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateNews = async () => {
+    if (!editingItem) {
+      toast({ title: 'Error', description: 'No article selected for editing', variant: 'destructive' });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      let uploadedImageUrl = '';
+      
+      // Upload image if selected
+      if (editingImageFiles.length > 0) {
+        const file = editingImageFiles[0];
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        try {
+          const response = await apiFetch('/api/uploads', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            uploadedImageUrl = data.url;
+          } else {
+            throw new Error('Upload failed');
+          }
+        } catch (error) {
+          toast({ title: 'Error', description: `Failed to upload ${file.name}`, variant: 'destructive' });
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const updatedItem: NewsItem = {
+        ...editingItem,
+        title: editingItem.title,
+        content: editingItem.content,
+        author: editingItem.author,
+        date: editingItem.date,
+        image: uploadedImageUrl || editingItem.image,
+      };
+
+      await updateNews(updatedItem);
+      
+      setIsEditModalOpen(false);
+      setEditingItem(null);
+      setEditingImageFiles([]);
+      
+      toast({
+        title: "Success",
+        description: "News article updated successfully",
+      });
+    } catch (error) {
+      console.error('Failed to update news:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update news article",
         variant: "destructive",
       });
     } finally {
@@ -343,6 +438,28 @@ const NewsManager: React.FC = () => {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleEditNews(article)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to delete "${article.title}"?`)) {
+                                  deleteNews(article.id);
+                                  toast({
+                                    title: "Success",
+                                    description: "News article deleted successfully",
+                                  });
+                                }
+                              }}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       </CardContent>
@@ -354,6 +471,152 @@ const NewsManager: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Modal */}
+      {isEditModalOpen && editingItem && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto gradient-mesh border-animated-gradient">
+            <CardHeader>
+              <CardTitle className="text-holographic">Edit News Article</CardTitle>
+              <CardDescription>
+                Update the news article details
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-title">Article Title *</Label>
+                    <Input
+                      id="edit-title"
+                      placeholder="Enter article title"
+                      value={editingItem.title}
+                      onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                      className="liquid-transition"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-author">Author *</Label>
+                    <Input
+                      id="edit-author"
+                      placeholder="Author name"
+                      value={editingItem.author}
+                      onChange={(e) => setEditingItem({ ...editingItem, author: e.target.value })}
+                      className="liquid-transition"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date">Publication Date *</Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editingItem.date}
+                    onChange={(e) => setEditingItem({ ...editingItem, date: e.target.value })}
+                    className="liquid-transition"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-image-upload">Update Featured Image (optional)</Label>
+                  <Input
+                    id="edit-image-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditImageChange}
+                    className="liquid-transition"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Upload a new image to replace the current one
+                  </p>
+                  
+                  {/* Existing Image Preview */}
+                  {editingItem.image && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-foreground">Current Image:</p>
+                      <div className="relative group">
+                        <img
+                          src={editingItem.image}
+                          alt="Current news article image"
+                          className="w-full h-48 object-cover rounded border"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* New Image Preview */}
+                  {editingImageFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-foreground">New Image:</p>
+                      <div className="relative group">
+                        <img
+                          src={URL.createObjectURL(editingImageFiles[0])}
+                          alt="New news article preview"
+                          className="w-full h-48 object-cover rounded border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeEditingImage(0)}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center truncate">
+                          {editingImageFiles[0].name}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-content">Content *</Label>
+                  <Textarea
+                    id="edit-content"
+                    placeholder="Write your news article content here..."
+                    value={editingItem.content}
+                    onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })}
+                    className="liquid-transition min-h-[200px]"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    onClick={handleUpdateNews}
+                    className="flex-1 luminous-glow magnetic"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>Updating...</>
+                    ) : (
+                      <>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Update Article
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsEditModalOpen(false);
+                      setEditingItem(null);
+                      setEditingImageFiles([]);
+                    }}
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

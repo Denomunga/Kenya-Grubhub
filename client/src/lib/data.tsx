@@ -114,6 +114,7 @@ interface DataContextType {
   getNewsById: (id: string) => Promise<NewsItem | null>;
   updateNewsViews: (id: string, views: number) => Promise<boolean>;
   addNews: (news: NewsItem) => Promise<NewsItem | void>;
+  updateNews: (news: NewsItem) => Promise<void>;
   deleteNews: (newsId: string, reason?: string, note?: string) => Promise<boolean>;
 
   reviews: Review[];
@@ -979,6 +980,43 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
+  const updateNews = async (item: NewsItem) => {
+    // Update locally first for immediate UI update
+    setNews(prev => prev.map(n => n.id === item.id ? item : n));
+
+    // Try to persist server-side
+    try {
+      const resp = await apiFetch(`/api/news/${item.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: item.title,
+          content: item.content,
+          excerpt: item.excerpt,
+          author: item.author,
+          date: item.date,
+          category: item.category,
+          tags: Array.isArray(item.tags) ? item.tags : [],
+          image: item.image,
+          featured: Boolean(item.featured),
+          published: Boolean(item.published !== false)
+        }),
+      });
+
+      if (!resp.ok) {
+        // If server update fails, revert the change
+        const originalNews = await resp.json().catch(() => null);
+        if (originalNews) {
+          setNews(prev => prev.map(n => n.id === item.id ? originalNews : n));
+        }
+        throw new Error('Failed to update news');
+      }
+    } catch (error) {
+      console.error('Error updating news:', error);
+      // Keep local changes even if server fails
+    }
+  };
+
   const getReviewsForProduct = (productId: string) => reviews.filter(r => r.productId === productId);
 
   // Cache for API responses
@@ -1514,7 +1552,7 @@ const fetchReviewsFromServer = async () => {
   return (
     <DataContext.Provider value={{
       menu, addMenuItem, deleteMenuItem, updateMenuItem,
-      news, addNews, deleteNews, getNewsById, updateNewsViews,
+      news, addNews, updateNews, deleteNews, getNewsById, updateNewsViews,
       reviews, getReviewsForProduct, addReviewForProduct, removeReview, fetchReviewsFromServer,
       orders, placeOrder, updateOrderStatus, cancelOrder, modifyOrder,
       staff, addStaff, removeStaff,
