@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { useAuth0 } from "@auth0/auth0-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { apiFetch } from "@/lib/api";
 
 export type Role = "admin" | "staff" | "user";
 
@@ -77,7 +78,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
           }
           
           // Sync with your backend
-          const response = await fetch('/api/auth/sync-auth0', {
+          const response = await apiFetch('/api/auth/sync-auth0', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
