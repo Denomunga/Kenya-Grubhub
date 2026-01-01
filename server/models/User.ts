@@ -8,6 +8,8 @@ export interface IUser extends Document {
   role: "admin" | "staff" | "user";
   jobTitle?: string;
   avatar?: string;
+  // Auth0 integration field
+  auth0Id?: string;
   // Pending password change fields (email-confirmation flow)
   pendingPasswordHash?: string;
   pendingPasswordToken?: string;
@@ -18,6 +20,8 @@ export interface IUser extends Document {
   pendingPhone?: string;
   pendingPhoneToken?: string;
   pendingPhoneExpires?: Date;
+  // Email verification
+  emailVerified?: boolean;
   // timestamp when sessions for this user were last invalidated
   lastSessionInvalidatedAt?: Date;
   createdAt: Date;
@@ -42,7 +46,10 @@ const UserSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: true,
+      required: function(this: IUser) {
+        // Password is required unless it's an Auth0 user
+        return !this.auth0Id;
+      },
       minlength: 4,
     },
     name: {
@@ -62,8 +69,14 @@ const UserSchema = new Schema<IUser>(
     avatar: {
       type: String,
     },
+    auth0Id: {
+      type: String,
+      unique: true,
+      sparse: true, // Allows multiple users without auth0Id
+    },
     phone: { type: String, unique: true, sparse: true },
     phoneVerified: { type: Boolean, default: false },
+    emailVerified: { type: Boolean, default: false },
     pendingPhone: { type: String },
     pendingPhoneToken: { type: String },
     pendingPhoneExpires: { type: Date },

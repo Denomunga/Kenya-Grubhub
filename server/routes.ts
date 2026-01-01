@@ -33,6 +33,7 @@ import {
   securityHeaders
 } from "./middleware/security";
 import { csrfProtection } from "./middleware/csrf";
+import { auth0Router } from "./routes/auth0";
 
 import cors from "cors";
 
@@ -149,10 +150,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(securityHeaders);
   app.use(xssProtection);
   
+  // Add Auth0 routes BEFORE CSRF protection (Auth0 handles its own security)
+  app.use("/api/auth", auth0Router);
+  
   // Apply rate limiting
   app.use(generalLimiter);
   
-  // Apply CSRF protection
+  // Apply CSRF protection (except for Auth0 routes)
   app.use(csrfProtection);
 
   // Authentication middleware 

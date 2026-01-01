@@ -2,17 +2,18 @@ import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/lib/auth";
 import { DataProvider } from "@/lib/data";
 import { ChatProvider } from "@/lib/chatApi";
 import { ChristmasProvider } from "@/lib/christmas";
 import { Layout } from "@/components/layout";
 import NotFound from "@/pages/not-found";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PageLoader } from "@/components/ui/LoadingStates";
 import { CSRFTokenManager } from "@/lib/csrf";
-import { useAuth } from "@/lib/auth";
+import { Auth0Provider } from "@auth0/auth0-react";
+import { HybridAuthProvider } from "@/lib/hybrid-auth";
+import { auth0Config } from "@/lib/auth0-config";
 
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -84,7 +85,7 @@ window.fetch = async (...args) => {
 // Lazy load components for code splitting
 const Home = lazy(() => import("@/pages/home"));
 const Menu = lazy(() => import("@/pages/menu"));
-const Login = lazy(() => import("@/pages/login"));
+const Auth = lazy(() => import("@/pages/auth"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const Chat = lazy(() => import("@/pages/chat"));
 const Profile = lazy(() => import("@/pages/profile"));
@@ -111,7 +112,7 @@ function Router() {
             <Switch>
               <Route path="/" component={Home} />
               <Route path="/menu" component={Menu} />
-              <Route path="/login" component={Login} />
+              <Route path="/login" component={Auth} />
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/chat" component={Chat} />
               <Route path="/profile" component={Profile} />
@@ -127,34 +128,30 @@ function Router() {
   );
 }
 
-// Component to initialize CSRF after authentication
-function CSRFInitializer() {
-  const { user, isAuthenticated } = useAuth();
-  
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      CSRFTokenManager.initializeToken();
-    }
-  }, [isAuthenticated, user]);
-  
-  return null;
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <DndProvider backend={HTML5Backend}>
-        <AuthProvider>
-          <ChristmasProvider>
-            <ChatProvider>
-              <DataProvider>
-                <CSRFInitializer />
-                <Router />
-                <Toaster />
-              </DataProvider>
-            </ChatProvider>
-          </ChristmasProvider>
-        </AuthProvider>
+        <Auth0Provider
+          domain={auth0Config.domain}
+          clientId={auth0Config.clientId}
+          authorizationParams={{
+            redirect_uri: auth0Config.redirectUri,
+            audience: auth0Config.audience,
+            scope: auth0Config.scope
+          }}
+        >
+          <HybridAuthProvider>
+            <ChristmasProvider>
+              <ChatProvider>
+                <DataProvider>
+                  <Router />
+                  <Toaster />
+                </DataProvider>
+              </ChatProvider>
+            </ChristmasProvider>
+          </HybridAuthProvider>
+        </Auth0Provider>
       </DndProvider>
     </QueryClientProvider>
   );
