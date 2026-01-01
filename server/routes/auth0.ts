@@ -21,17 +21,17 @@ const checkJwt = expressjwt({
 // Sync Auth0 user with your database
 router.post('/sync-auth0', checkJwt, async (req: any, res: express.Response) => {
   try {
-    const { sub, email, name, picture } = req.auth;
+    const { auth0Id, email, name, avatar } = req.body;
     
     // Validate required fields
-    if (!sub || !email || !name) {
+    if (!auth0Id || !email || !name) {
       return res.status(400).json({ 
         error: 'Missing required user information from Auth0' 
       });
     }
     
     // Find or create user
-    let user = await User.findOne({ auth0Id: sub });
+    let user = await User.findOne({ auth0Id: auth0Id });
     
     if (!user) {
       // Check if user exists with email (for migration)
@@ -39,18 +39,18 @@ router.post('/sync-auth0', checkJwt, async (req: any, res: express.Response) => 
       
       if (user) {
         // Update existing user with auth0Id
-        user.auth0Id = sub;
-        user.avatar = picture;
+        user.auth0Id = auth0Id;
+        user.avatar = avatar;
         user.emailVerified = true; // Auth0 emails are verified
         await user.save();
       } else {
         // Create new user
         try {
           user = await User.create({
-            auth0Id: sub,
+            auth0Id: auth0Id,
             email,
             name,
-            avatar: picture,
+            avatar: avatar,
             emailVerified: true,
             role: 'user',
             username: email.split('@')[0], // Generate username from email
@@ -70,7 +70,7 @@ router.post('/sync-auth0', checkJwt, async (req: any, res: express.Response) => 
     } else {
       // Update user info if changed
       user.name = name;
-      user.avatar = picture;
+      user.avatar = avatar;
       user.emailVerified = true; // Ensure email is marked as verified
       await user.save();
     }
