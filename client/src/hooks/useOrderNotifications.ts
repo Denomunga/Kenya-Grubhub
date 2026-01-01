@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useHybridAuth } from '@/lib/hybrid-auth';
 import { useData } from '@/lib/data';
 
 interface OrderNotification {
@@ -12,7 +12,7 @@ interface OrderNotification {
 }
 
 export function useOrderNotifications() {
-  const { user } = useAuth();
+  const { user } = useHybridAuth();
   const { orders } = useData();
   const [notifications, setNotifications] = useState<OrderNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -59,6 +59,14 @@ export function useOrderNotifications() {
           setNotifications(prev => {
             const updated = [notification, ...prev].slice(0, 50); // Keep only last 50 notifications
             localStorage.setItem(`order_notifications_${user.id}`, JSON.stringify(updated));
+            
+            // Create browser notification for status change
+            createBrowserNotification(
+              `Order Status Update`,
+              notification.message,
+              '/favicon.ico'
+            );
+            
             return updated;
           });
         }
@@ -98,6 +106,14 @@ export function useOrderNotifications() {
               setNotifications(prev => {
                 const updated = [notification, ...prev].slice(0, 50);
                 localStorage.setItem(`order_notifications_${user.id}`, JSON.stringify(updated));
+                
+                // Create browser notification for new order
+                createBrowserNotification(
+                  'New Order Received',
+                  notification.message,
+                  '/favicon.ico'
+                );
+                
                 return updated;
               });
             });
@@ -108,6 +124,11 @@ export function useOrderNotifications() {
 
     checkForNewOrders();
   }, [orders, user]);
+
+  // Request browser notification permission on hook initialization
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   // Request browser notification permission
   const requestNotificationPermission = async () => {
@@ -137,7 +158,7 @@ export function useOrderNotifications() {
       notification.onshow = () => {
         // When notification is shown, update unread count
         setUnreadCount(prev => Math.max(0, prev - 1));
-        setHasUnread(prev => prev > 1);
+        setHasUnread(() => unreadCount > 1);
       };
 
       // Auto-dismiss after 5 seconds
@@ -202,7 +223,9 @@ export function useOrderNotifications() {
     hasUnread, 
     markAsRead, 
     markNotificationAsRead,
-    clearNotifications 
+    clearNotifications,
+    requestNotificationPermission,
+    createBrowserNotification
   };
 }
 

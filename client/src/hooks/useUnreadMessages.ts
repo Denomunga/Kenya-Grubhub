@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useHybridAuth } from '@/lib/hybrid-auth';
 import { useChat } from '@/lib/chatApi';
 import { apiFetch } from '@/lib/api';
 
 export function useUnreadMessages() {
-  const { user } = useAuth();
+  const { user } = useHybridAuth();
   const { getThreads } = useChat();
   const threads = getThreads();
   const [unreadCount, setUnreadCount] = useState(0);
