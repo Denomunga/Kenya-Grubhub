@@ -1,5 +1,5 @@
 import React from "react";
-import { useAuth, Role } from "@/lib/auth";
+import { useHybridAuth, Role } from "@/lib/hybrid-auth";
 import { formatPriceKSHS } from "@/lib/format";
 import { useData } from "@/lib/data";
 import { useLocation } from "wouter";
@@ -51,7 +51,7 @@ function playBeep() {
 }
 
 export default function Dashboard() {
-  const { user, isAdmin, isStaff, allUsers, updateUserRole, refreshAllUsers } = useAuth();
+  const { user, isAdmin, isStaff, allUsers, updateUserRole, refreshAllUsers } = useHybridAuth();
   const [, setLocation] = useLocation();
   const { 
     orders, updateOrderStatus, serverHealth, kpis
@@ -549,7 +549,7 @@ export default function Dashboard() {
 
 
 function ChangePhoneForm({ user, onDone }: { user: any; onDone?: () => void }) {
-  const { refreshAllUsers } = useAuth();
+  const { refreshAllUsers } = useHybridAuth();
   const { toast } = useToast();
   const [phone, setPhone] = React.useState(user.phone || '');
   const [verify, setVerify] = React.useState(false);

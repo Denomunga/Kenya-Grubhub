@@ -1,7 +1,7 @@
 import { useState, useContext, useEffect } from "react";
 import { DataContext } from "../lib/data";
 import type { MenuItem, Review } from "../lib/data";
-import { useAuth } from "@/lib/auth";
+import { useHybridAuth } from "@/lib/hybrid-auth";
 import { useLocation, useSearchParams } from "wouter";
 import ProductSearch from "@/components/search/ProductSearch";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
   setReviewRating: (rating: number) => void; 
   addReviewForProduct: (itemId: string, review: Omit<Review, "id" | "productId" | "date" | "userId"> & { userId?: string }) => Promise<Review>;
 }) {
-  const { user } = useAuth();
+  const { user } = useHybridAuth();
   const { toast } = useToast();
   const [reviewComment, setReviewComment] = useState("");
 
@@ -86,7 +86,7 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
 //
 export default function Menu() {
   const { menu, placeOrder, getReviewsForProduct, addReviewForProduct, removeReview, reviews } = useContext(DataContext)!;
-  const { user, isAuthenticated, isAdmin, isStaff } = useAuth();
+  const { user, isAuthenticated, isAdmin, isStaff } = useHybridAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [searchParams] = useSearchParams();

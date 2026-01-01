@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { ShoppingBag, MessageCircle, User, Plus, X, Sparkles } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
+import { useHybridAuth } from '@/lib/hybrid-auth';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
 import { useChristmas } from '@/lib/christmas';
 
@@ -15,7 +15,7 @@ interface FABProps {
 }
 
 const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useHybridAuth();
   const { isChristmasMode } = useChristmas();
   const { hasUnread, unreadCount, markAsRead } = useUnreadMessages();
   const [, setLocation] = useLocation();

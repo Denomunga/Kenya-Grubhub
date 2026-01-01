@@ -1,4 +1,4 @@
-import { useAuth } from '@/lib/auth';
+import { useHybridAuth } from '@/lib/hybrid-auth';
 import { useData } from '@/lib/data';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export default function OrdersPage() {
-  const { user } = useAuth();
+  const { user } = useHybridAuth();
   const { orders } = useData();
   const { notifications, markNotificationAsRead, clearNotifications } = useOrderNotifications();
 

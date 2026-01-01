@@ -1,11 +1,11 @@
-import { useAuth } from "@/lib/auth";
+import { useHybridAuth } from '@/lib/hybrid-auth';
 import { useChristmas } from "@/lib/christmas";
 import { Snowflake, Star, Gift } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
 export function ChristmasToggle() {
-  const { isAdmin } = useAuth();
+  const { isAdmin } = useHybridAuth();
   const { isChristmasMode, toggleChristmasMode } = useChristmas();
 
   if (!isAdmin) return null;

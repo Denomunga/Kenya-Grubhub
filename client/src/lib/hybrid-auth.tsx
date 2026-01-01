@@ -21,7 +21,7 @@ export interface User {
 }
 
 interface HybridAuthContextType {
-  // Auth0 methods only
+  // Auth0 methods
   user: User | null;
   loginWithRedirect: () => void;
   loginWithGoogle: () => void;
@@ -35,6 +35,14 @@ interface HybridAuthContextType {
   allUsers: User[];
   refreshAllUsers: () => Promise<void>;
   loading: boolean;
+  
+  // Legacy methods for compatibility (not implemented for Auth0)
+  updateProfile: (data: { name?: string; email?: string; avatar?: string }) => Promise<boolean>;
+  requestPasswordChange: () => Promise<boolean>;
+  requestPhoneChange: (newPhone: string) => Promise<boolean>;
+  confirmPasswordReset: (token: string, newPassword: string) => Promise<boolean>;
+  confirmPhoneChange: (token: string) => Promise<boolean>;
+  updateUserRole: (userId: string, newRole: Role, jobTitle?: string) => Promise<boolean>;
 }
 
 const HybridAuthContext = createContext<HybridAuthContextType | undefined>(undefined);
@@ -153,6 +161,61 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
     setSyncedUser(null);
   };
 
+  // Legacy method stubs for compatibility (not implemented for Auth0)
+  const updateProfile = async (_data: { name?: string; email?: string; avatar?: string }) => {
+    toast({ 
+      title: "Not Available", 
+      description: "Profile updates are managed through Auth0", 
+      variant: "destructive" 
+    });
+    return false;
+  };
+
+  const requestPasswordChange = async () => {
+    toast({ 
+      title: "Not Available", 
+      description: "Password changes are managed through Auth0", 
+      variant: "destructive" 
+    });
+    return false;
+  };
+
+  const requestPhoneChange = async (_newPhone: string) => {
+    toast({ 
+      title: "Not Available", 
+      description: "Phone changes are not available with Auth0", 
+      variant: "destructive" 
+    });
+    return false;
+  };
+
+  const confirmPasswordReset = async (_token: string, _newPassword: string) => {
+    toast({ 
+      title: "Not Available", 
+      description: "Password resets are managed through Auth0", 
+      variant: "destructive" 
+    });
+    return false;
+  };
+
+  const confirmPhoneChange = async (_token: string) => {
+    toast({ 
+      title: "Not Available", 
+      description: "Phone changes are not available with Auth0", 
+      variant: "destructive" 
+    });
+    return false;
+  };
+
+  const updateUserRole = async (_userId: string, _newRole: Role, _jobTitle?: string) => {
+    toast({ 
+      title: "Not Available", 
+      description: "Role changes are managed through Auth0", 
+      variant: "destructive" 
+    });
+    return false;
+  };
+
   return (
     <HybridAuthContext.Provider
       value={{
@@ -169,6 +232,12 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
         allUsers: [], // TODO: Implement admin users fetching
         refreshAllUsers: async () => {}, // TODO: Implement
         loading,
+        updateProfile,
+        requestPasswordChange,
+        requestPhoneChange,
+        confirmPasswordReset,
+        confirmPhoneChange,
+        updateUserRole,
       }}
     >
       {children}

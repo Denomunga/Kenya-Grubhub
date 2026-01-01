@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useAuth } from "@/lib/auth";
+import { useHybridAuth } from "@/lib/hybrid-auth";
 import { useData } from "@/lib/data";
 import { formatPriceKSHS, formatNumber } from "@/lib/format";
 import { useForm } from "react-hook-form";
@@ -31,7 +31,7 @@ const profileSchema = z.object({
 });
 
 export default function Profile() {
-  const { user, updateProfile, requestPasswordChange, requestPhoneChange } = useAuth();
+  const { user, updateProfile, requestPasswordChange, requestPhoneChange } = useHybridAuth();
   const { orders, cancelOrder, modifyOrder } = useData();
   const { toast } = useToast();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -266,7 +266,7 @@ export default function Profile() {
                     <p className="text-sm">Click the button below and check your email for the confirmation link to complete your password change.</p>
                     <div className="flex gap-2">
                       <Button onClick={async () => {
-                        const ok = await requestPasswordChange("");
+                        const ok = await requestPasswordChange();
                         if (ok) setPasswordDialogOpen(false);
                       }} className="flex-1">Send confirmation link</Button>
                       <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>

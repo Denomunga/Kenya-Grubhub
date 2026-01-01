@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/lib/auth";
+import { useHybridAuth } from "@/lib/hybrid-auth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useChristmas } from "@/lib/christmas";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
@@ -24,7 +24,7 @@ import { GlassCard, MagneticButton } from "@/components/ui/ProfessionalEffects";
 import "@/styles/design-system.css";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { user, logout, isAuthenticated, isAdmin, isStaff } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin, isStaff } = useHybridAuth();
   const { isChristmasMode } = useChristmas();
   const { hasUnread, unreadCount, markAsRead } = useUnreadMessages();
   useOrderNotifications();

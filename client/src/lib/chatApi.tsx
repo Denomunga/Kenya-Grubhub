@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
-import { useAuth } from "./auth";
+import { useHybridAuth } from '@/lib/hybrid-auth';
 import { apiFetch } from "./api";
 import { toast } from "sonner";
 
@@ -73,7 +73,7 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user } = useHybridAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [typingStatus, setTypingStatusState] = useState<Record<string, boolean>>({});

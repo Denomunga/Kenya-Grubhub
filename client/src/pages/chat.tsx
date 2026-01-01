@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useAuth } from "@/lib/auth";
+import { useHybridAuth } from "@/lib/hybrid-auth";
 import { useData } from "@/lib/data";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { ChatMessage } from "@/lib/data";
@@ -17,7 +17,7 @@ import { format } from "date-fns";
 import { useLocation } from "wouter";
 
 export default function Chat() {
-  const { user, isAuthenticated, isManager, isAdmin } = useAuth();
+  const { user, isAuthenticated, isManager, isAdmin } = useHybridAuth();
   const { messages, sendMessage, getThreads, markThreadAsRead, fetchMessages, fetchThreads } = useData();
   const { unreadCount, markAsRead: markNotificationsAsRead } = useUnreadMessages();
   const [inputValue, setInputValue] = useState("");

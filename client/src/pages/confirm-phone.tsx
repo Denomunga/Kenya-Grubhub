@@ -1,12 +1,12 @@
 import React from 'react';
 import { useLocation } from 'wouter';
-import { useAuth } from '@/lib/auth';
+import { useHybridAuth } from '@/lib/hybrid-auth';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ConfirmPhone() {
   const [, setLocation] = useLocation();
-  const { confirmPhoneChange } = useAuth();
+  const { confirmPhoneChange } = useHybridAuth();
   const { toast } = useToast();
 
   const params = new URLSearchParams(window.location.search);

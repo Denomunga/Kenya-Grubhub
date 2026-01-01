@@ -2,7 +2,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from "react
 import { io } from "socket.io-client";
 import { apiFetch } from "./api";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth";
+import { useHybridAuth } from '@/lib/hybrid-auth';
 import { useLocation } from "wouter";
 
 export interface MenuItem {
@@ -450,7 +450,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [kpis, setKpis] = useState<any>({ totalRevenue: 0, activeOrders: 0, ordersPerMinute: 0 });
 
   // Add missing variables for notifications
-  const { user } = useAuth();
+  const { user } = useHybridAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
