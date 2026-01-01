@@ -75,19 +75,30 @@ router.post('/sync-auth0', checkJwt, async (req: any, res: express.Response) => 
       await user.save();
     }
     
-    res.json({ 
-      success: true, 
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        username: user.username,
-        avatar: user.avatar,
-        phone: user.phone,
-        phoneVerified: user.phoneVerified,
-        jobTitle: user.jobTitle
+    // Create session for Auth0 user
+    req.session.userId = user._id.toString();
+    
+    // Save session and return response
+    req.session.save((err: any) => {
+      if (err) {
+        console.error('Session save error for Auth0 user:', err);
+        return res.status(500).json({ error: 'Session creation failed' });
       }
+      
+      res.json({ 
+        success: true, 
+        user: {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          username: user.username,
+          avatar: user.avatar,
+          phone: user.phone,
+          phoneVerified: user.phoneVerified,
+          jobTitle: user.jobTitle
+        }
+      });
     });
   } catch (error: any) {
     console.error('Auth0 sync error:', error);
