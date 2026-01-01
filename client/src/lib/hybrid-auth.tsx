@@ -58,6 +58,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
   } = useAuth0();
   
   const [syncedUser, setSyncedUser] = useState<User | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -160,7 +161,29 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await auth0Logout({ logoutParams: { returnTo: window.location.origin } });
     setSyncedUser(null);
+    setAllUsers([]);
   };
+
+  // Fetch all users for admin
+  const refreshAllUsers = async () => {
+    if (syncedUser?.role !== "admin") return;
+    try {
+      const response = await apiFetch("/api/users");
+      if (response.ok) {
+        const data = await response.json();
+        setAllUsers(data.users);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    }
+  };
+
+  // Refresh users when admin user logs in
+  useEffect(() => {
+    if (syncedUser?.role === "admin") {
+      refreshAllUsers();
+    }
+  }, [syncedUser?.role]);
 
   // Legacy method stubs for compatibility (not implemented for Auth0)
   const updateProfile = async (_data: { name?: string; email?: string; avatar?: string }) => {
@@ -230,8 +253,8 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
         isAdmin: currentUser?.role === "admin",
         isStaff: currentUser?.role === "staff" || currentUser?.role === "admin",
         isManager: currentUser?.role === "admin" || (currentUser?.role === "staff" && currentUser?.jobTitle === "Manager"),
-        allUsers: [], // TODO: Implement admin users fetching
-        refreshAllUsers: async () => {}, // TODO: Implement
+        allUsers,
+        refreshAllUsers,
         loading,
         updateProfile,
         requestPasswordChange,
