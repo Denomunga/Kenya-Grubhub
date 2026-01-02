@@ -3,7 +3,7 @@ import { ArrowRight, Sparkles, Gift, TreePine } from "lucide-react";
 import { Link } from 'wouter';
 import { motion } from "framer-motion";
 import { useChristmas } from "@/lib/christmas";
-import heroImage from "@assets/generated_images/abc.jpg";
+import heroImage from "@assets/generated_images/abcd.jpg";
 const HeroSection = () => {
   const { isChristmasMode } = useChristmas();
 
