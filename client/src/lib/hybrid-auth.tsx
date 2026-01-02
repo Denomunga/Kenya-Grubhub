@@ -187,93 +187,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [syncedUser?.role]);
 
-  // Legacy methods for compatibility
-  const login = async (username: string, password: string) => {
-    try {
-      const response = await apiFetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      if (data.success) {
-        setSyncedUser(data.user);
-        toast({ 
-          title: "Login Successful", 
-          description: `Welcome ${data.user.name}!` 
-        });
-        
-        // Role-based redirect
-        if (data.user.role === "admin" || data.user.role === "staff") {
-          setLocation("/dashboard");
-        } else {
-          setLocation("/");
-        }
-        return true;
-      }
-      return false;
-    } catch (error: any) {
-      console.error('Login failed:', error);
-      toast({ 
-        title: "Login Failed", 
-        description: error.message || "Invalid credentials", 
-        variant: "destructive" 
-      });
-      return false;
-    }
-  };
-
-  const register = async (username: string, email: string, password: string, name: string, phone?: string) => {
-    try {
-      const response = await apiFetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, email, password, name, phone }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
-
-      if (data.success) {
-        setSyncedUser(data.user);
-        toast({ 
-          title: "Registration Successful", 
-          description: `Welcome ${data.user.name}!` 
-        });
-        
-        // Role-based redirect
-        if (data.user.role === "admin" || data.user.role === "staff") {
-          setLocation("/dashboard");
-        } else {
-          setLocation("/");
-        }
-        return true;
-      }
-      return false;
-    } catch (error: any) {
-      console.error('Registration failed:', error);
-      toast({ 
-        title: "Registration Failed", 
-        description: error.message || "Could not create account", 
-        variant: "destructive" 
-      });
-      return false;
-    }
-  };
-
+  // Legacy method stubs for compatibility (not implemented for Auth0)
   const updateProfile = async (_data: { name?: string; email?: string; avatar?: string }) => {
     toast({ 
       title: "Not Available", 
@@ -328,10 +242,88 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
+  // Legacy login method for form-based authentication
+  const login = async (username: string, password: string) => {
+    try {
+      const response = await apiFetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Set the synced user from response
+        setSyncedUser(data.user);
+        toast({ 
+          title: "Login Successful", 
+          description: `Welcome back, ${data.user?.name || username}!` 
+        });
+        return true;
+      } else {
+        toast({ 
+          title: "Login Failed", 
+          description: data.message || "Invalid credentials", 
+          variant: "destructive" 
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({ 
+        title: "Login Failed", 
+        description: "Network error. Please try again.", 
+        variant: "destructive" 
+      });
+      return false;
+    }
+  };
+
+  // Legacy register method for form-based registration
+  const register = async (username: string, email: string, password: string, name: string, phone?: string) => {
+    try {
+      const response = await apiFetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username, email, password, name, phone }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Set the synced user from response
+        setSyncedUser(data.user);
+        toast({ 
+          title: "Registration Successful", 
+          description: `Welcome to KENYAN-HUB, ${name}!` 
+        });
+        return true;
+      } else {
+        toast({ 
+          title: "Registration Failed", 
+          description: data.message || "Registration failed", 
+          variant: "destructive" 
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({ 
+        title: "Registration Failed", 
+        description: "Network error. Please try again.", 
+        variant: "destructive" 
+      });
+      return false;
+    }
+  };
+
   return (
     <HybridAuthContext.Provider
       value={{
         user: currentUser,
+        login,
+        register,
         loginWithRedirect,
         loginWithGoogle,
         loginWithGitHub,
@@ -344,8 +336,6 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
         allUsers,
         refreshAllUsers,
         loading,
-        login,
-        register,
         updateProfile,
         requestPasswordChange,
         requestPhoneChange,
