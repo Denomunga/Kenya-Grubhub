@@ -23,8 +23,9 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
       process.env.CORS_ORIGIN || 
       process.env.FRONTEND_URL || 
       'https://kenya-grubhub-gx7x.vercel.app',
+      'https://kenya-grubhub-gx7x-46ng1iexk-denos-projects-1cfdba9d.vercel.app', // Your exact domain
       'https://kenya-grubhub.onrender.com',  // Add the correct client origin
-      /^https:\/\/kenya-grubhub-gx7x.*\.vercel\.app$/  // Wildcard pattern
+      /^https:\/\/kenya-grubhub-gx7x-.*\.vercel\.app$/  // Updated wildcard pattern
     ]
   : ['http://localhost:5173', 'http://localhost:3000'];
 
