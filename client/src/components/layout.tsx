@@ -162,7 +162,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </motion.div>
                   </div>
                 )}
-                WATHII
+                KENYAN-HUB
               </span>
             </motion.div>
           </Link>
@@ -325,7 +325,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <h2 className="text-2xl font-bold text-blue-600">
                       Navigation
                     </h2>
-                    <p className="text-xs text-muted-foreground mt-1">Explore WATHII</p>
+                    <p className="text-xs text-muted-foreground mt-1">Explore KENYAN-HUB</p>
                   </motion.div>
                   <motion.button
                     className="p-3 rounded-full bg-blue-100 hover:bg-blue-200 transition-all duration-300 border border-blue-200 shadow-lg hover:shadow-xl"
@@ -486,7 +486,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 transition={{ delay: 0.7, type: "spring", stiffness: 300 }}
               >
                 <div className="text-center">
-                  <div className="text-xs text-muted-foreground font-medium">WATHII</div>
+                  <div className="text-xs text-muted-foreground font-medium">KENYAN-HUB</div>
                   <div className="text-xs text-muted-foreground mt-1">Premium Kenyan Experience</div>
                 </div>
               </motion.div>
@@ -554,7 +554,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <UtensilsCrossed className="h-5 w-5 text-primary" />
                 )}
               </div>
-              <span className="font-heading text-xl font-bold">WATHII</span>
+              <span className="font-heading text-xl font-bold">KENYAN-HUB</span>
               {isChristmasMode && <span className="text-2xl">🎄</span>}
             </div>
             <p className={`${
@@ -630,9 +630,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             transition={{ duration: 0.5, delay: 0.5 }}
           >
             {isChristmasMode ? (
-              <>© 2024 WATHII. All rights reserved. 🎄 Wishing you a Merry Christmas and Happy New Year! 🎅</>
+              <>© 2024 KENYAN-HUB. All rights reserved. 🎄 Wishing you a Merry Christmas and Happy New Year! 🎅</>
             ) : (
-              <>© 2024 WATHII. All rights reserved.</>
+              <>© 2024 KENYAN-HUB. All rights reserved.</>
             )}
           </motion.p>
         </div>
