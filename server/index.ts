@@ -26,25 +26,44 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
       'https://kenya-grubhub-gx7x-46ng1iexk-denos-projects-1cfdba9d.vercel.app', // Your exact domain
       'https://kenya-grubhub.onrender.com',  // Add the correct client origin
       /^https:\/\/kenya-grubhub-gx7x-.*\.vercel\.app$/  // Updated wildcard pattern
-    ]
+    ].filter(Boolean) // Remove any empty/null values
   : ['http://localhost:5173', 'http://localhost:3000'];
 
 // Important: For wildcards, cors() needs a different approach
 app.use(cors({ 
   origin: function(origin, callback) {
+    console.log('CORS request from origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+    
     if (!origin) return callback(null, true);
+    
+    // Always allow your specific Vercel domains in production
+    if (process.env.NODE_ENV === 'production') {
+      const specificDomains = [
+        'https://kenya-grubhub-gx7x-46ng1iexk-denos-projects-1cfdba9d.vercel.app',
+        'https://kenya-grubhub-gx7x.vercel.app',
+        'https://kenya-grubhub.onrender.com'
+      ];
+      if (specificDomains.includes(origin)) {
+        console.log('CORS allowed for specific domain:', origin);
+        return callback(null, true);
+      }
+    }
     
     if (Array.isArray(allowedOrigins)) {
       for (const allowed of allowedOrigins) {
         if (typeof allowed === 'string' && origin === allowed) {
+          console.log('CORS allowed for string match:', origin);
           return callback(null, true);
         }
         if (allowed instanceof RegExp && allowed.test(origin)) {
+          console.log('CORS allowed for regex match:', origin);
           return callback(null, true);
         }
       }
     }
     
+    console.log('CORS blocked for origin:', origin);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
