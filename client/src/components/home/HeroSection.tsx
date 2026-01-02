@@ -147,7 +147,7 @@ const HeroSection = () => {
             {isChristmasMode ? (
               <span className="text-gradient bg-clip-text text-transparent bg-linear-to-r from-red-400 via-green-400 to-red-600 animate-pulse">🎄 Magical Christmas Collection</span>
             ) : (
-              <>DISCOVER THE STYLE OF <span className="text-gradient bg-clip-text text-transparent bg-linear-to-r from-yellow-400 bg-black">KENYA</span></>
+              <>Discover The Style Of <span className="text-gradient bg-clip-text text-transparent bg-linear-to-r from-yellow-400 bg-black">KENYA</span></>
             )}
           </motion.h1>
           <motion.p 
