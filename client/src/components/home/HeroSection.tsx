@@ -205,7 +205,7 @@ const HeroSection = () => {
                 }`}
               >
                 <Link href="/chat">
-                  {isChristmasMode ? '🎅 Book Holiday Experience' : 'Book Consultation'}
+                  {isChristmasMode ? '🎅 Ask for Holiday Discount' : 'ASK FOR DISCOUNT'}
                 </Link>
               </Button>
             </motion.div>

@@ -181,7 +181,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 markAsRead();
               }
             }}>
-              Chat with Admin
+              ASK FOR DISCOUNT
               {hasUnread && (
                 <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
