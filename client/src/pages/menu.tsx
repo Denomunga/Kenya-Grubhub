@@ -616,7 +616,7 @@ export default function Menu() {
                       </Button>
 
                       {/* Reviews and details */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-center gap-1">
                         {getReviewsForProduct(item.id).length > 0 && (
                           <div className="flex items-center gap-1">
                             <div className="flex">
