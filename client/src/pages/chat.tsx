@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
+import { formatPrice } from "@/lib/format";
 import { useLocation } from "wouter";
 
 export default function Chat() {
@@ -30,6 +31,17 @@ export default function Chat() {
 
   // Determine the current thread ID based on role
   const currentThreadId = (isAdmin || isManager) ? activeThreadId : user?.id;
+
+  // Effect to handle product context from sessionStorage
+  useEffect(() => {
+    const productContext = sessionStorage.getItem('chatProduct');
+    if (productContext && inputValue === '') {
+      const product = JSON.parse(productContext);
+      const message = `Hi! I'm interested in the "${product.name}" (priced at ${formatPrice(product.price)}). Is there any discount available or can we discuss the price?`;
+      setInputValue(message);
+      sessionStorage.removeItem('chatProduct');
+    }
+  }, [inputValue]);
 
   // Effect to auto-select first thread for admin if none selected and load messages
   useEffect(() => {
@@ -179,19 +191,35 @@ export default function Chat() {
       return;
     }
 
+    // Check for product context
+    let productId, productInfo;
+    const productContext = sessionStorage.getItem('chatProduct');
+    if (productContext) {
+      const product = JSON.parse(productContext);
+      productId = product.id;
+      productInfo = {
+        name: product.name,
+        price: product.price,
+        image: product.image
+      };
+      sessionStorage.removeItem('chatProduct');
+    }
+
     console.log('handleSend: Sending message', { 
       threadId: currentThreadId,
       userId: user.id,
       userName: user.name,
       userRole: user.role,
-      message: inputValue.trim()
+      message: inputValue.trim(),
+      productId,
+      productInfo
     });
 
     await sendMessage(currentThreadId, {
       id: user.id,
       name: user.name,
       role: user.role
-    }, inputValue);
+    }, inputValue.trim(), productId, productInfo);
     
     setInputValue("");
     // User is now at bottom after sending message
@@ -460,6 +488,25 @@ function ChatBubble({ message, isMe, showSenderName = false }: { message: ChatMe
       className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
     >
       <div className={`flex flex-col max-w-[80%] ${isMe ? "items-end" : "items-start"}`}>
+        {/* Product info display */}
+        {message.productInfo && (
+          <div className="mb-2 p-2 bg-muted/50 rounded-lg border">
+            <div className="flex items-center gap-2">
+              {message.productInfo.image && (
+                <img 
+                  src={message.productInfo.image} 
+                  alt={message.productInfo.name}
+                  className="w-8 h-8 object-cover rounded"
+                />
+              )}
+              <div className="text-xs">
+                <div className="font-medium">{message.productInfo.name}</div>
+                <div className="text-muted-foreground">{formatPrice(message.productInfo.price)}</div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {showSenderName && (
           <span className="text-[10px] text-muted-foreground ml-1 mb-1 font-medium flex items-center gap-1">
             {message.senderRole === "admin" && <Badge variant="outline" className="text-[8px] h-3 px-1 bg-primary/5">ADMIN</Badge>}

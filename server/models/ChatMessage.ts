@@ -8,6 +8,12 @@ export interface IChatMessage extends Document {
   text: string;
   isRead: boolean;
   encrypted: boolean;
+  productId?: string;
+  productInfo?: {
+    name: string;
+    price: number;
+    image?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +50,15 @@ const ChatMessageSchema = new Schema<IChatMessage>(
     encrypted: {
       type: Boolean,
       default: true,
+    },
+    productId: {
+      type: String,
+      required: false,
+    },
+    productInfo: {
+      name: { type: String, required: false },
+      price: { type: Number, required: false },
+      image: { type: String, required: false },
     },
   },
   {

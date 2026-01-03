@@ -94,6 +94,12 @@ export interface ChatMessage {
   timestamp: string;
   isRead: boolean;
   encrypted: boolean; // UI flag for E2EE simulation
+  productId?: string; // Reference to product being discussed
+  productInfo?: {
+    name: string;
+    price: number;
+    image?: string;
+  }; // Cached product info for display
 }
 
 export interface ChatThread {
@@ -135,7 +141,7 @@ interface DataContextType {
 
   // Chat Methods
   messages: ChatMessage[];
-  sendMessage: (threadId: string, sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => Promise<boolean>;
+  sendMessage: (threadId: string, sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string, productId?: string, productInfo?: { name: string; price: number; image?: string }) => Promise<boolean>;
   markThreadAsRead: (threadId: string, readerRole: "admin" | "staff" | "user") => Promise<boolean>;
   setTypingStatus: (threadId: string, isTyping: boolean) => void;
   getThreads: () => ChatThread[];
@@ -1349,7 +1355,7 @@ const fetchReviewsFromServer = async () => {
   const removeStaff = (id: string) => setStaff(staff.filter(s => s.id !== id));
 
   // Chat Methods - Real API Implementation
-  const sendMessage = async (threadId: string, _sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => {
+  const sendMessage = async (threadId: string, _sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string, productId?: string, productInfo?: { name: string; price: number; image?: string }) => {
     try {
       const trimmedText = text.trim();
       
@@ -1369,7 +1375,12 @@ const fetchReviewsFromServer = async () => {
         return false;
       }
       
-      const requestBody = JSON.stringify({ threadId, text: trimmedText });
+      const requestBody = JSON.stringify({ 
+        threadId, 
+        text: trimmedText,
+        productId,
+        productInfo
+      });
       
       const response = await apiFetch('/api/chat/messages', {
         method: 'POST',
@@ -1389,6 +1400,8 @@ const fetchReviewsFromServer = async () => {
           timestamp: data.message.timestamp,
           isRead: data.message.isRead,
           encrypted: data.message.encrypted,
+          productId: data.message.productId,
+          productInfo: data.message.productInfo,
         };
         
         setMessages(prev => [...prev, newMessage]);

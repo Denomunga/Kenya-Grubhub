@@ -128,6 +128,29 @@ export default function Menu() {
     setProductDetailOpen(true);
   };
 
+  const handleChatAboutProduct = (product: MenuItem) => {
+    if (!isAuthenticated) {
+      toast({ 
+        title: "Please login", 
+        description: "You need to be logged in to chat about products.", 
+        variant: "destructive" 
+      });
+      setLocation('/login');
+      return;
+    }
+
+    // Navigate to chat with product context
+    setLocation('/chat');
+    
+    // Store the product in sessionStorage to be picked up by chat component
+    sessionStorage.setItem('chatProduct', JSON.stringify({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image || product.images?.[0]
+    }));
+  };
+
   // Get unique categories from menu items
   const categories = ["All", ...Array.from(new Set(menu.map((item: MenuItem) => item.category)))];
 
@@ -507,6 +530,18 @@ export default function Menu() {
                       <ShoppingBag className="ml-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
                     </Button>
                   </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleChatAboutProduct(item);
+                    }}
+                    className="text-xs whitespace-nowrap"
+                  >
+                    💬 Ask About Price
+                  </Button>
 
                   <div className="w-44 text-right">
                     <div className="text-xs text-muted-foreground mb-1 flex items-center justify-end gap-1">

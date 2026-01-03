@@ -2033,12 +2033,14 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   // Send a message - Enhanced with validation and error handling
   app.post("/api/chat/messages", requireAuth, async (req: Request, res: Response) => {
     try {
-      const { threadId, text } = req.body;
+      const { threadId, text, productId, productInfo } = req.body;
       
       console.log('POST /api/chat/messages: Request received', {
         body: req.body,
         threadId,
         text,
+        productId,
+        productInfo,
         threadIdType: typeof threadId,
         textType: typeof text,
         textLength: text?.length,
@@ -2081,6 +2083,8 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         senderName: req.user!.name || 'Unknown User',
         senderRole: req.user!.role || 'user',
         text: sanitizedText,
+        productId,
+        productInfo,
         isRead: false,
         encrypted: true,
       });
@@ -2091,6 +2095,8 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         senderName: req.user!.name || 'Unknown User',
         senderRole: req.user!.role || 'user',
         text: sanitizedText,
+        productId,
+        productInfo,
         isRead: false,
         encrypted: true,
       });
@@ -2110,6 +2116,8 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         text: message.text,
         isRead: message.isRead,
         encrypted: message.encrypted,
+        productId: message.productId,
+        productInfo: message.productInfo,
         timestamp: message.createdAt.toISOString(),
       };
 
