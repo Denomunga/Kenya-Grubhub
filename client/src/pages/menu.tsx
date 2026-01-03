@@ -615,18 +615,6 @@ export default function Menu() {
                         💬 Ask About Price
                       </Button>
 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleQuickRating(item.id, 5);
-                        }}
-                        className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors"
-                      >
-                        ⭐ Quick 5★
-                      </Button>
-
                       {/* Reviews and details */}
                       <div className="flex items-center gap-2">
                         {getReviewsForProduct(item.id).length > 0 && (
@@ -652,18 +640,30 @@ export default function Menu() {
                           <span className="text-xs text-muted-foreground">No reviews</span>
                         )}
 
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => {
-                            setSelectedProductForDetail(item);
-                            setProductDetailOpen(true);
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuickRating(item.id, 5);
                           }}
-                          className="text-xs text-primary hover:text-primary/80 hover:bg-primary/5 transition-colors"
+                          className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors"
                         >
-                          View Details
+                          ⭐ Quick 5★
                         </Button>
                       </div>
+
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedProductForDetail(item);
+                          setProductDetailOpen(true);
+                        }}
+                        className="text-xs text-primary hover:text-primary/80 hover:bg-primary/5 transition-colors"
+                      >
+                        View Details
+                      </Button>
                     </div>
                   </div>
                 </CardFooter>
