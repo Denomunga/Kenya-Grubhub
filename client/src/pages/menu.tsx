@@ -849,126 +849,233 @@ export default function Menu() {
           )}
           
           {selectedProductForDetail && (
-            <div className="space-y-6">
-              {/* Product Images */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {selectedProductForDetail.images?.slice(0, 4).map((image, index) => (
-                  <div key={index} className="relative overflow-hidden rounded-lg">
-                    <img
-                      src={image}
-                      alt={`${selectedProductForDetail.name} ${index + 1}`}
-                      className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedProduct({
-                          images: selectedProductForDetail.images || [],
-                          name: selectedProductForDetail.name
-                        });
-                        setIsViewerOpen(true);
-                      }}
-                    />
-                  </div>
-                ))}
+            <div className="space-y-8">
+              {/* Hero Section with Images */}
+              <div className="relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-primary via-primary/50 to-transparent"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-linear-to-br from-gray-50/50 to-white rounded-xl border">
+                  {selectedProductForDetail.images?.slice(0, 4).map((image, index) => (
+                    <div key={index} className="relative overflow-hidden rounded-lg group">
+                      <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <img
+                        src={image}
+                        alt={`${selectedProductForDetail.name} ${index + 1}`}
+                        className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProduct({
+                            images: selectedProductForDetail.images || [],
+                            name: selectedProductForDetail.name
+                          });
+                          setIsViewerOpen(true);
+                        }}
+                      />
+                      <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                        Click to zoom
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Product Details */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Basic Information</h3>
-                  <div className="space-y-2">
-                    <p><span className="font-medium">Price:</span> {formatPrice(selectedProductForDetail.price)}</p>
-                    <p><span className="font-medium">Category:</span> {selectedProductForDetail.category}</p>
+                {/* Basic Information Card */}
+                <div className="bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM8 7a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 11-4 0 2 2 0 014 0zm-2 8a6 6 0 01-12 0h12z"/>
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-600">Price</span>
+                      <span className="font-bold text-lg text-primary">{formatPrice(selectedProductForDetail.price)}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-600">Category</span>
+                      <Badge variant="outline" className="bg-white">{selectedProductForDetail.category}</Badge>
+                    </div>
                     {selectedProductForDetail.subcategory && (
-                      <p><span className="font-medium">Subcategory:</span> {selectedProductForDetail.subcategory}</p>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-600">Subcategory</span>
+                        <Badge variant="secondary" className="text-xs">{selectedProductForDetail.subcategory}</Badge>
+                      </div>
                     )}
                     {selectedProductForDetail.brand && (
-                      <p><span className="font-medium">Brand:</span> {selectedProductForDetail.brand}</p>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-600">Brand</span>
+                        <span className="font-medium">{selectedProductForDetail.brand}</span>
+                      </div>
                     )}
                     {selectedProductForDetail.condition && (
-                      <p><span className="font-medium">Condition:</span> 
-                        <span className={`ml-1 px-2 py-1 rounded text-xs ${
-                          selectedProductForDetail.condition === 'new' ? 'bg-green-100 text-green-800' :
-                          selectedProductForDetail.condition === 'used' ? 'bg-orange-100 text-orange-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-600">Condition</span>
+                        <Badge className={`
+                          ${selectedProductForDetail.condition === 'new' ? 'bg-green-100 text-green-800 border-green-200' :
+                            selectedProductForDetail.condition === 'used' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                            'bg-blue-100 text-blue-800 border-blue-200'}
+                        `}>
                           {selectedProductForDetail.condition}
-                        </span>
-                      </p>
+                        </Badge>
+                      </div>
                     )}
-                    <p><span className="font-medium">Availability:</span> 
-                      <span className={`ml-1 px-2 py-1 rounded text-xs ${
-                        selectedProductForDetail.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-600">Availability</span>
+                      <Badge className={`
+                        ${selectedProductForDetail.available ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'}
+                      `}>
                         {selectedProductForDetail.available ? 'In Stock' : 'Out of Stock'}
-                      </span>
-                    </p>
+                      </Badge>
+                    </div>
                     {selectedProductForDetail.stock !== undefined && (
-                      <p><span className="font-medium">Stock Level:</span> 
-                        <span className={`ml-1 ${
-                          selectedProductForDetail.stock <= 5 ? 'text-orange-600 font-medium' : 'text-green-600'
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-600">Stock Level</span>
+                        <span className={`font-medium ${
+                          selectedProductForDetail.stock <= 5 ? 'text-orange-600' : 'text-green-600'
                         }`}>
                           {selectedProductForDetail.stock} units
-                          {selectedProductForDetail.stock <= 5 && ' (Low)'}
+                          {selectedProductForDetail.stock <= 5 && (
+                            <span className="ml-1 text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">Low</span>
+                          )}
                         </span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Physical Attributes</h3>
-                  <div className="space-y-2">
-                    {selectedProductForDetail.size && (
-                      <p><span className="font-medium">Size:</span> {selectedProductForDetail.size}</p>
-                    )}
-                    {selectedProductForDetail.color && (
-                      <p><span className="font-medium">Color:</span> {selectedProductForDetail.color}</p>
-                    )}
-                    {selectedProductForDetail.year && (
-                      <p><span className="font-medium">Year:</span> {selectedProductForDetail.year}</p>
-                    )}
-                    {selectedProductForDetail.material && (
-                      <p><span className="font-medium">Material:</span> {selectedProductForDetail.material}</p>
-                    )}
-                    {selectedProductForDetail.weight && (
-                      <p><span className="font-medium">Weight:</span> {selectedProductForDetail.weight} kg</p>
-                    )}
-                    {selectedProductForDetail.dimensions && (
-                      <p><span className="font-medium">Dimensions:</span> {selectedProductForDetail.dimensions.length}L × {selectedProductForDetail.dimensions.width}W × {selectedProductForDetail.dimensions.height}H cm</p>
-                    )}
-                    {selectedProductForDetail.location && (
-                      <div className="flex items-start gap-2">
-                        <span className="font-medium">Location:</span>
-                        <span>{selectedProductForDetail.location}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Product Metadata</h3>
-                  <div className="space-y-2">
-                    <p><span className="font-medium">Product ID:</span> {selectedProductForDetail.id}</p>
-                    <p><span className="font-medium">Image Count:</span> {(selectedProductForDetail.images || []).length} images</p>
-                    {selectedProductForDetail.image && !selectedProductForDetail.images && (
-                      <p><span className="font-medium">Legacy Image:</span> Available</p>
+                {/* Physical Attributes Card */}
+                <div className="bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-.5a1.5 1.5 0 000 3h.5a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-.5a1.5 1.5 0 00-3 0v.5a1 1 0 01-1 1H6a1 1 0 01-1-1v-3a1 1 0 00-1-1h-.5a1.5 1.5 0 010-3H4a1 1 0 001-1V6a1 1 0 011-1h3a1 1 0 001-1v-.5z"/>
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Physical Attributes</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {selectedProductForDetail.size && (
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-600">Size</span>
+                        <span className="font-medium">{selectedProductForDetail.size}</span>
+                      </div>
                     )}
-                    <p><span className="font-medium">Last Updated:</span> {new Date().toLocaleDateString()}</p>
+                    {selectedProductForDetail.color && (
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-600">Color</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded border border-gray-300" style={{ backgroundColor: selectedProductForDetail.color }}></div>
+                          <span className="font-medium">{selectedProductForDetail.color}</span>
+                        </div>
+                      </div>
+                    )}
+                    {selectedProductForDetail.year && (
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-600">Year</span>
+                        <span className="font-medium">{selectedProductForDetail.year}</span>
+                      </div>
+                    )}
+                    {selectedProductForDetail.material && (
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-600">Material</span>
+                        <span className="font-medium">{selectedProductForDetail.material}</span>
+                      </div>
+                    )}
+                    {selectedProductForDetail.weight && (
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-600">Weight</span>
+                        <span className="font-medium">{selectedProductForDetail.weight} kg</span>
+                      </div>
+                    )}
+                    {selectedProductForDetail.dimensions && (
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="text-sm font-medium text-gray-600 mb-1">Dimensions</div>
+                        <div className="font-medium">
+                          {selectedProductForDetail.dimensions.length}L × {selectedProductForDetail.dimensions.width}W × {selectedProductForDetail.dimensions.height}H cm
+                        </div>
+                      </div>
+                    )}
+                    {selectedProductForDetail.location && (
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="text-sm font-medium text-gray-600 mb-1">Location</div>
+                        <div className="font-medium">{selectedProductForDetail.location}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Product Metadata Card */}
+                <div className="bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000 2H6a2 2 0 100 4h2a2 2 0 100-4h-.5a1 1 0 000-2H8a2 2 0 012-2h2a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/>
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Product Metadata</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-600">Product ID</span>
+                      <code className="text-xs bg-gray-200 px-2 py-1 rounded font-mono">{selectedProductForDetail.id}</code>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-600">Image Count</span>
+                      <span className="font-medium">{(selectedProductForDetail.images || []).length} images</span>
+                    </div>
+                    {selectedProductForDetail.image && !selectedProductForDetail.images && (
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-600">Legacy Image</span>
+                        <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">Available</Badge>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-600">Last Updated</span>
+                      <span className="font-medium">{new Date().toLocaleDateString()}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Specifications */}
               {selectedProductForDetail.specifications && Object.keys(selectedProductForDetail.specifications).length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Specifications</h3>
+                <div className="bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Specifications</h3>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {Object.entries(selectedProductForDetail.specifications).map(([key, value]) => (
-                      <div key={key} className="space-y-1">
-                        <p><span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span> {String(value)}</p>
+                      <div key={key} className="p-3 bg-gray-50 rounded-lg">
+                        <div className="text-sm font-medium text-gray-600 mb-1 capitalize">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}
+                        </div>
+                        <div className="font-medium text-gray-900">
+                          {String(value).length > 20 ? (
+                            <span className="block">{String(value)}</span>
+                          ) : (
+                            <span>{String(value)}</span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
+                  {Object.keys(selectedProductForDetail.specifications).length > 4 && (
+                    <div className="mt-4 text-center">
+                      <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
+                        +{Object.keys(selectedProductForDetail.specifications).length - 4} more specifications
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               )}
 
