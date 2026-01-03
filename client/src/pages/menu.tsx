@@ -450,9 +450,12 @@ export default function Menu() {
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.2 }}
             >
-              <Card className="h-full flex flex-col overflow-hidden card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow cursor-pointer"
+              <Card className="h-full flex flex-col overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer group"
                   onClick={() => handleProductClick(item)}>
-                <div className="h-48 overflow-hidden relative">
+                {/* Colored header accent */}
+                <div className="h-1 bg-linear-to-r from-primary to-primary/60"></div>
+                
+                <div className="h-48 overflow-hidden relative bg-linear-to-br from-gray-50 to-gray-100">
                   <ProductImage
                     images={item.images || (item.image ? [item.image] : [])}
                     productName={item.name}
@@ -466,12 +469,12 @@ export default function Menu() {
                     </div>
                   )}
                 </div>
-                <CardContent className="p-6 flex-1">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-bold font-heading">{item.name}</h3>
-                    <span className="font-bold text-primary whitespace-nowrap">{formatPriceKSHS(item.price)}</span>
+                <CardContent className="p-6 flex-1 bg-white">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-lg font-bold font-heading group-hover:text-primary transition-colors">{item.name}</h3>
+                    <span className="font-bold text-primary whitespace-nowrap text-lg">{formatPriceKSHS(item.price)}</span>
                   </div>
-                  <p className="text-muted-foreground text-sm mb-4">{item.description}</p>
+                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{item.description}</p>
                   
                   {/* Additional Product Information */}
                   <div className="flex flex-wrap gap-2 mb-3">
@@ -584,7 +587,7 @@ export default function Menu() {
                     </div>
                   )}
                 </CardContent>
-                <CardFooter className="p-6 pt-0 flex gap-3 items-center">
+                <CardFooter className="p-6 pt-0 flex gap-3 items-center bg-gray-50/30 border-t border-gray-100">
                   <div className="flex-1">
                     <Button 
                       className="w-full group" 
