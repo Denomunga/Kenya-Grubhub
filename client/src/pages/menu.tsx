@@ -584,85 +584,81 @@ export default function Menu() {
                     </div>
                   )}
                 </CardContent>
-                <CardFooter className="p-6 pt-0">
-                  <div className="flex items-center gap-3 w-full">
-                    {/* Primary action - Add to Order */}
-                    <div className="flex-1">
+                <CardFooter className="p-6 pt-0 flex gap-3 items-center">
+                  <div className="flex-1">
+                    <Button 
+                      className="w-full group" 
+                      disabled={!item.available}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToCart(item);
+                      }}
+                    >
+                      Add to Order
+                      <ShoppingBag className="ml-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
+                    </Button>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleChatAboutProduct(item);
+                    }}
+                    className="text-xs whitespace-nowrap"
+                  >
+                    💬 Ask About Price
+                  </Button>
+
+                  <div className="w-44 text-right">
+                    <div className="text-xs text-muted-foreground mb-1 flex items-center justify-end gap-1">
+                      {getReviewsForProduct(item.id).length > 0 && (
+                        <>
+                          <div className="flex items-center">
+                            {[...Array(5)].map((_, i) => (
+                              <svg
+                                key={i}
+                                className={`w-3 h-3 ${i < Math.round(getReviewsForProduct(item.id).reduce((acc, r) => acc + r.rating, 0) / getReviewsForProduct(item.id).length) ? 'text-yellow-400' : 'text-gray-300'}`}
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                            ))}
+                          </div>
+                          <span>({getReviewsForProduct(item.id).length})</span>
+                        </>
+                      )}
+                      {getReviewsForProduct(item.id).length === 0 && (
+                        <span>No reviews yet</span>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
                       <Button 
-                        className="w-full group" 
-                        disabled={!item.available}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addToCart(item);
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs"
+                        onClick={() => {
+                          setSelectedProductForDetail(item);
+                          setProductDetailOpen(true);
                         }}
                       >
-                        Add to Order
-                        <ShoppingBag className="ml-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
+                        View Details
                       </Button>
-                    </div>
-
-                    {/* Secondary actions */}
-                    <div className="flex items-center gap-2">
+                      
+                      {/* Quick 5★ button - placed here to avoid ruining layout */}
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleChatAboutProduct(item);
+                          handleQuickRating(item.id, 5);
                         }}
-                        className="text-xs whitespace-nowrap hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                        className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors"
+                        title="Quick 5-star rating"
                       >
-                        💬 Ask About Price
-                      </Button>
-
-                      {/* Reviews and details */}
-                      <div className="flex flex-col items-center gap-1">
-                        {getReviewsForProduct(item.id).length > 0 && (
-                          <div className="flex items-center gap-1">
-                            <div className="flex">
-                              {[...Array(5)].map((_, i) => (
-                                <svg
-                                  key={i}
-                                  className={`w-3 h-3 ${i < Math.round(getReviewsForProduct(item.id).reduce((acc, r) => acc + r.rating, 0) / getReviewsForProduct(item.id).length) ? 'text-yellow-400' : 'text-gray-300'}`}
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                              ))}
-                            </div>
-                            <span className="text-xs text-muted-foreground font-medium">
-                              ({getReviewsForProduct(item.id).length})
-                            </span>
-                          </div>
-                        )}
-                        {getReviewsForProduct(item.id).length === 0 && (
-                          <span className="text-xs text-muted-foreground">No reviews</span>
-                        )}
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleQuickRating(item.id, 5);
-                          }}
-                          className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors"
-                        >
-                          ⭐ Quick 5★
-                        </Button>
-                      </div>
-
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          setSelectedProductForDetail(item);
-                          setProductDetailOpen(true);
-                        }}
-                        className="text-xs text-primary hover:text-primary/80 hover:bg-primary/5 transition-colors"
-                      >
-                        View Details
+                        ⭐
                       </Button>
                     </div>
                   </div>
