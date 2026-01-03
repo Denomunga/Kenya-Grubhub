@@ -602,18 +602,6 @@ export default function Menu() {
                     </Button>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleChatAboutProduct(item);
-                    }}
-                    className="text-xs whitespace-nowrap"
-                  >
-                    💬 Ask About Price
-                  </Button>
-
                   <div className="w-44 text-right">
                     <div className="text-xs text-muted-foreground mb-1 flex items-center justify-end gap-1">
                       {getReviewsForProduct(item.id).length > 0 && (
