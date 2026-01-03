@@ -189,7 +189,7 @@ export default function Menu() {
   };
 
   const handleQuickRating = async (productId: string, rating: number) => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
       toast({ 
         title: "Please login", 
         description: "You need to be logged in to rate products.", 
@@ -584,8 +584,9 @@ export default function Menu() {
                     </div>
                   )}
                 </CardContent>
-                <CardFooter className="p-6 pt-0 flex gap-3 items-center">
-                  <div className="flex-1">
+                <CardFooter className="p-6 pt-0 space-y-4">
+                  {/* Primary action - Add to Order */}
+                  <div className="w-full">
                     <Button 
                       className="w-full group" 
                       disabled={!item.available}
@@ -599,35 +600,41 @@ export default function Menu() {
                     </Button>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleChatAboutProduct(item);
-                    }}
-                    className="text-xs whitespace-nowrap"
-                  >
-                    💬 Ask About Price
-                  </Button>
+                  {/* Secondary actions row */}
+                  <div className="flex items-center justify-between w-full">
+                    {/* Action buttons */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleChatAboutProduct(item);
+                        }}
+                        className="text-xs whitespace-nowrap hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                      >
+                        💬 Ask About Price
+                      </Button>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleQuickRating(item.id, 5);
-                    }}
-                    className="text-xs whitespace-nowrap"
-                  >
-                    ⭐ Quick 5★
-                  </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleQuickRating(item.id, 5);
+                        }}
+                        className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors"
+                      >
+                        ⭐ Quick 5★
+                      </Button>
+                    </div>
 
-                  <div className="w-44 text-right">
-                    <div className="text-xs text-muted-foreground mb-1 flex items-center justify-end gap-1">
+                    {/* Reviews and details */}
+                    <div className="flex items-center gap-3">
+                      {/* Review count and rating */}
                       {getReviewsForProduct(item.id).length > 0 && (
-                        <>
-                          <div className="flex items-center">
+                        <div className="flex items-center gap-1">
+                          <div className="flex">
                             {[...Array(5)].map((_, i) => (
                               <svg
                                 key={i}
@@ -639,24 +646,28 @@ export default function Menu() {
                               </svg>
                             ))}
                           </div>
-                          <span>({getReviewsForProduct(item.id).length})</span>
-                        </>
+                          <span className="text-xs text-muted-foreground font-medium">
+                            ({getReviewsForProduct(item.id).length})
+                          </span>
+                        </div>
                       )}
                       {getReviewsForProduct(item.id).length === 0 && (
-                        <span>No reviews yet</span>
+                        <span className="text-xs text-muted-foreground">No reviews yet</span>
                       )}
+
+                      {/* View Details button */}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedProductForDetail(item);
+                          setProductDetailOpen(true);
+                        }}
+                        className="text-xs text-primary hover:text-primary/80 hover:bg-primary/5 transition-colors"
+                      >
+                        View Details
+                      </Button>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => {
-                        setSelectedProductForDetail(item);
-                        setProductDetailOpen(true);
-                      }}
-                    >
-                      View Details
-                    </Button>
                   </div>
                 </CardFooter>
               </Card>
