@@ -584,26 +584,25 @@ export default function Menu() {
                     </div>
                   )}
                 </CardContent>
-                <CardFooter className="p-6 pt-0 space-y-4">
-                  {/* Primary action - Add to Order */}
-                  <div className="w-full">
-                    <Button 
-                      className="w-full group" 
-                      disabled={!item.available}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addToCart(item);
-                      }}
-                    >
-                      Add to Order
-                      <ShoppingBag className="ml-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
-                    </Button>
-                  </div>
+                <CardFooter className="p-6 pt-0">
+                  <div className="flex items-center gap-3 w-full">
+                    {/* Primary action - Add to Order */}
+                    <div className="flex-1">
+                      <Button 
+                        className="w-full group" 
+                        disabled={!item.available}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart(item);
+                        }}
+                      >
+                        Add to Order
+                        <ShoppingBag className="ml-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
+                      </Button>
+                    </div>
 
-                  {/* Secondary actions row */}
-                  <div className="flex items-center justify-between w-full">
-                    {/* Action buttons */}
-                    <div className="flex gap-2">
+                    {/* Secondary actions */}
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -627,46 +626,44 @@ export default function Menu() {
                       >
                         ⭐ Quick 5★
                       </Button>
-                    </div>
 
-                    {/* Reviews and details */}
-                    <div className="flex items-center gap-3">
-                      {/* Review count and rating */}
-                      {getReviewsForProduct(item.id).length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <div className="flex">
-                            {[...Array(5)].map((_, i) => (
-                              <svg
-                                key={i}
-                                className={`w-3 h-3 ${i < Math.round(getReviewsForProduct(item.id).reduce((acc, r) => acc + r.rating, 0) / getReviewsForProduct(item.id).length) ? 'text-yellow-400' : 'text-gray-300'}`}
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                            ))}
+                      {/* Reviews and details */}
+                      <div className="flex items-center gap-2">
+                        {getReviewsForProduct(item.id).length > 0 && (
+                          <div className="flex items-center gap-1">
+                            <div className="flex">
+                              {[...Array(5)].map((_, i) => (
+                                <svg
+                                  key={i}
+                                  className={`w-3 h-3 ${i < Math.round(getReviewsForProduct(item.id).reduce((acc, r) => acc + r.rating, 0) / getReviewsForProduct(item.id).length) ? 'text-yellow-400' : 'text-gray-300'}`}
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                            </div>
+                            <span className="text-xs text-muted-foreground font-medium">
+                              ({getReviewsForProduct(item.id).length})
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground font-medium">
-                            ({getReviewsForProduct(item.id).length})
-                          </span>
-                        </div>
-                      )}
-                      {getReviewsForProduct(item.id).length === 0 && (
-                        <span className="text-xs text-muted-foreground">No reviews yet</span>
-                      )}
+                        )}
+                        {getReviewsForProduct(item.id).length === 0 && (
+                          <span className="text-xs text-muted-foreground">No reviews</span>
+                        )}
 
-                      {/* View Details button */}
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => {
-                          setSelectedProductForDetail(item);
-                          setProductDetailOpen(true);
-                        }}
-                        className="text-xs text-primary hover:text-primary/80 hover:bg-primary/5 transition-colors"
-                      >
-                        View Details
-                      </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            setSelectedProductForDetail(item);
+                            setProductDetailOpen(true);
+                          }}
+                          className="text-xs text-primary hover:text-primary/80 hover:bg-primary/5 transition-colors"
+                        >
+                          View Details
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardFooter>
