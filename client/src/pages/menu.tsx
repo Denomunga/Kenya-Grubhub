@@ -37,24 +37,39 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
   const { user } = useHybridAuth();
   const { toast } = useToast();
   const [reviewComment, setReviewComment] = useState("");
+  const [isRatingOnly, setIsRatingOnly] = useState(false);
 
   const handleSubmit = async () => {
     if (!user) {
       toast({ title: "Please login", description: "You must be logged in to post a review.", variant: "destructive" });
       return;
     }
-//
-    const comment = reviewComment.trim();
-    
-    if (!comment) {
-      toast({ title: "Write a comment", description: "Please enter a short comment before submitting.", variant: "destructive" });
-      return;
+
+    // If not rating-only, validate comment
+    if (!isRatingOnly) {
+      const comment = reviewComment.trim();
+      if (!comment) {
+        toast({ title: "Write a comment", description: "Please enter a short comment before submitting.", variant: "destructive" });
+        return;
+      }
     }
 
     try {
-      await addReviewForProduct(itemId, { userId: user.id, user: user.name, rating: reviewRating, comment });
+      const reviewData: any = {
+        userId: user.id,
+        user: user.name,
+        rating: reviewRating
+      };
+      
+      // Only add comment if not rating-only or if comment exists
+      if (!isRatingOnly && reviewComment.trim()) {
+        reviewData.comment = reviewComment.trim();
+      }
+
+      await addReviewForProduct(itemId, reviewData);
       setReviewComment("");
       setReviewRating(5);
+      setIsRatingOnly(false);
       toast({ title: "Thank you", description: "Your review has been submitted." });
     } catch (error) {
       toast({ title: "Error", description: `Failed to submit review: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
@@ -68,15 +83,37 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
         {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} star{n>1?"s":""}</option>)}
       </select>
 
-      <label className="text-sm font-medium">Comment</label>
-      <Textarea 
-        value={reviewComment}
-        onChange={(e) => setReviewComment(e.target.value)}
-        placeholder="Share your experience..." 
-      />
+      {/* Rating Only Toggle */}
+      <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
+        <input 
+          type="checkbox" 
+          id="ratingOnly"
+          checked={isRatingOnly}
+          onChange={(e) => setIsRatingOnly(e.target.checked)}
+          className="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
+        />
+        <label htmlFor="ratingOnly" className="text-sm font-medium cursor-pointer">
+          ⭐ Rating only (no comment required)
+        </label>
+      </div>
+
+      {/* Comment field - only show if not rating-only */}
+      {!isRatingOnly && (
+        <>
+          <label className="text-sm font-medium">Comment</label>
+          <Textarea 
+            value={reviewComment}
+            onChange={(e) => setReviewComment(e.target.value)}
+            placeholder="Share your experience..." 
+            className="min-h-20"
+          />
+        </>
+      )}
 
       <div className="flex justify-end">
-        <Button onClick={handleSubmit} className="mt-2">Submit Review</Button>
+        <Button onClick={handleSubmit} className="mt-2">
+          {isRatingOnly ? "Submit Rating" : "Submit Review"}
+        </Button>
       </div>
     </div>
   );
@@ -149,6 +186,37 @@ export default function Menu() {
       price: product.price,
       image: product.image || product.images?.[0]
     }));
+  };
+
+  const handleQuickRating = async (productId: string, rating: number) => {
+    if (!isAuthenticated) {
+      toast({ 
+        title: "Please login", 
+        description: "You need to be logged in to rate products.", 
+        variant: "destructive" 
+      });
+      setLocation('/login');
+      return;
+    }
+
+    try {
+      await addReviewForProduct(productId, {
+        userId: user.id,
+        user: user.name,
+        rating
+        // No comment - rating only
+      });
+      toast({ 
+        title: "Thank you!", 
+        description: `Your ${rating}-star rating has been submitted.` 
+      });
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: `Failed to submit rating: ${error instanceof Error ? error.message : 'Unknown error'}`, 
+        variant: "destructive" 
+      });
+    }
   };
 
   // Get unique categories from menu items
@@ -543,6 +611,18 @@ export default function Menu() {
                     💬 Ask About Price
                   </Button>
 
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleQuickRating(item.id, 5);
+                    }}
+                    className="text-xs whitespace-nowrap"
+                  >
+                    ⭐ Quick 5★
+                  </Button>
+
                   <div className="w-44 text-right">
                     <div className="text-xs text-muted-foreground mb-1 flex items-center justify-end gap-1">
                       {getReviewsForProduct(item.id).length > 0 && (
@@ -603,7 +683,12 @@ export default function Menu() {
                       <>
                         <div className="text-sm font-medium">By: {r.user}</div>
                         <div className="text-sm text-muted-foreground">{new Date(r.date).toLocaleString()}</div>
-                        <div className="mt-2 p-3 rounded border bg-muted/30">{r.comment}</div>
+                        {r.comment && (
+                          <div className="mt-2 p-3 rounded border bg-muted/30">{r.comment}</div>
+                        )}
+                        {!r.comment && (
+                          <div className="mt-2 p-3 rounded border bg-muted/30 italic text-muted-foreground">Rating only - no comment provided</div>
+                        )}
                         <div className="mt-2">
                           <label className="text-sm font-medium block mb-1">Reason</label>
                           <select value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)} className="w-full rounded-md border px-3 py-2">
@@ -882,7 +967,11 @@ export default function Menu() {
                           </div>
                         </div>
                         <div className="text-sm text-yellow-400 mt-1">{Array(r.rating).fill("★").join("")}</div>
-                        <div className="text-sm text-muted-foreground mt-2">{r.comment}</div>
+                        {r.comment ? (
+                          <div className="text-sm text-muted-foreground mt-2">{r.comment}</div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground mt-2 italic">Rating only - no comment provided</div>
+                        )}
                       </div>
                     ))
                   )}

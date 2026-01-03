@@ -883,12 +883,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Rating must be a number between 1 and 5" });
       }
 
-      // Validate and sanitize comment
-      if (!comment || typeof comment !== "string" || comment.trim().length === 0) {
-        return res.status(400).json({ message: "Comment is required" });
+      // Validate and sanitize comment (optional now)
+      if (comment && (typeof comment !== "string" || comment.trim().length === 0)) {
+        return res.status(400).json({ message: "Comment must be a non-empty string if provided" });
       }
       
-      if (comment.trim().length > 1000) {
+      if (comment && comment.trim().length > 1000) {
         return res.status(400).json({ message: "Comment must be less than 1000 characters" });
       }
 
@@ -903,20 +903,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You have already reviewed this product" });
       }
 
-      // Sanitize comment - remove HTML/JS tags and excessive whitespace
-      const sanitizedComment = comment.trim()
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
-        .replace(/<[^>]*>/g, '') // Remove HTML tags
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .substring(0, 1000); // Ensure max length
+      // Sanitize comment - remove HTML/JS tags and excessive whitespace (optional)
+      let sanitizedComment;
+      if (comment) {
+        sanitizedComment = comment.trim()
+          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+          .replace(/<[^>]*>/g, '') // Remove HTML tags
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .substring(0, 1000); // Ensure max length
+      }
 
-      const review = await Review.create({
+      const reviewData: any = {
         productId: sanitizedProductId,
         userId: req.user!._id.toString(),
         userName: req.user!.name || "Anonymous",
         rating: Math.min(5, Math.max(1, rating)), // Ensure rating is 1-5
-        comment: sanitizedComment,
-      });
+      };
+      
+      // Only add comment if it exists
+      if (sanitizedComment) {
+        reviewData.comment = sanitizedComment;
+      }
+
+      const review = await Review.create(reviewData);
 
       const reviewResponse = {
         id: review._id.toString(),

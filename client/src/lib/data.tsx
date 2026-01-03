@@ -50,7 +50,7 @@ export interface Review {
   userId?: string; // optional for mock data
   user: string; // display name
   rating: number;
-  comment: string;
+  comment?: string;
   date: string;
   deletedReason?: string;
   deletedNote?: string;

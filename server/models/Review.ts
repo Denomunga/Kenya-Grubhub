@@ -5,7 +5,7 @@ export interface IReview extends Document {
   userId: string;
   userName: string;
   rating: number;
-  comment: string;
+  comment?: string;
   // soft-delete metadata
   deletedAt?: Date;
   deletedById?: string;
@@ -23,7 +23,7 @@ const ReviewSchema = new Schema<IReview>(
     userId: { type: String, required: true },
     userName: { type: String, required: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
-    comment: { type: String, required: true, trim: true },
+    comment: { type: String, required: false, trim: true },
     deletedAt: { type: Date },
     deletedById: { type: String },
     deletedByName: { type: String },
