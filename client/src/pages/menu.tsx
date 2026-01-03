@@ -924,10 +924,10 @@ export default function Menu() {
                 <div className="space-y-6">
                   {/* Product Header */}
                   <div>
-                    <h1 className="text-3xl font-bold text-blue-800 mb-2">
+                    <h1 className="text-3xl font-bold text-blue-900 mb-2">
                       {selectedProductForDetail.name}
                     </h1>
-                    <p className="text-gray-600 text-lg leading-relaxed">
+                    <p className="text-black text-lg leading-relaxed">
                       {selectedProductForDetail.description}
                     </p>
                   </div>
