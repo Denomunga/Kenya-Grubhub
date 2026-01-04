@@ -501,9 +501,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Fetch menu from server function
   const fetchMenuFromServer = async () => {
     try {
+      console.log('🔄 Fetching menu from server...');
       const resMenu = await apiFetch('/api/menu');
+      console.log('📡 Server response status:', resMenu.status);
+      
       if (resMenu.ok) {
         const d = await resMenu.json();
+        console.log('📦 Server response data:', d);
+        console.log('📊 Menu items count:', d.menu?.length || 0);
+        
         if (Array.isArray(d.menu)) {
           setMenu(d.menu.map((m: any) => ({
             id: m.id,
@@ -528,11 +534,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
             weight: m.weight,
             dimensions: m.dimensions
           })));
+          console.log('✅ Menu updated with', d.menu.length, 'items');
           return true;
         }
       }
     } catch (err) {
-      console.warn('Failed to fetch menu from server:', err);
+      console.warn('❌ Failed to fetch menu from server:', err);
     }
     return false;
   };
@@ -540,10 +547,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Try to fetch server-side menu/news/orders if available and override local mock data
   useEffect(() => {
     (async () => {
+      console.log('🚀 Initial data loading started...');
       const menuLoaded = await fetchMenuFromServer();
       
       // Fallback to initial data only if server fetch failed
       if (!menuLoaded) {
+        console.log('⚠️ Server fetch failed, using INITIAL_MENU with', INITIAL_MENU.length, 'items');
         setMenu(INITIAL_MENU);
       }
 
@@ -722,6 +731,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Remove localStorage saving to prioritize server data from MongoDB
 
   const addMenuItem = async (item: MenuItem) => {
+    console.log('➕ Adding menu item:', item.name);
     // Try to persist server-side first
     try {
       const resp = await apiFetch('/api/menu', {
@@ -750,8 +760,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }),
       });
 
+      console.log('📤 Add item response status:', resp.status);
+
       if (resp.ok) {
         const data = await resp.json();
+        console.log('✅ Item created successfully:', data);
         const p = data.product;
         // Add server-created item to local state
         const serverItem: MenuItem = {
@@ -776,17 +789,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
           weight: p.weight,
           dimensions: p.dimensions
         };
-        setMenu(prev => [...prev, serverItem]);
+        setMenu(prev => {
+          console.log('📝 Current menu length before add:', prev.length);
+          const newMenu = [...prev, serverItem];
+          console.log('📝 New menu length after add:', newMenu.length);
+          return newMenu;
+        });
         
         // Refetch menu from server to ensure consistency across all components
+        console.log('🔄 Refetching menu after add...');
         await fetchMenuFromServer();
         
         return serverItem;
       } else {
         const errorData = await resp.json();
+        console.error('❌ Failed to create menu item:', errorData);
         throw new Error(errorData.message || 'Failed to create menu item');
       }
     } catch (err) {
+      console.error('❌ Error in addMenuItem:', err);
       throw err; // Don't fallback to local storage - show error
     }
   };
