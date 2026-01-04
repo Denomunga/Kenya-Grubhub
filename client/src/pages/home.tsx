@@ -25,6 +25,7 @@ interface NewsItem {
 
 export default function Home() {
   const { menu, reviews, fetchReviewsFromServer, news } = useData(); // ✅ Use global news state
+  console.log('🏠 Home page - menu state:', menu.length, 'items:', menu.map(m => ({ id: m.id, name: m.name })));
   const [, setLocation] = useLocation();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchedProducts, setSearchedProducts] = useState<any[]>([]);

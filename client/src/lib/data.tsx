@@ -555,6 +555,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         console.log('⚠️ Server fetch failed, using INITIAL_MENU with', INITIAL_MENU.length, 'items');
         setMenu(INITIAL_MENU);
       }
+      
+      // Force a second fetch after a delay to ensure we have the latest data
+      setTimeout(async () => {
+        console.log('🔄 Forced refetch after 2 seconds...');
+        await fetchMenuFromServer();
+      }, 2000);
 
       try {
         const resOrders = await apiFetch('/api/orders');
