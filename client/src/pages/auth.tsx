@@ -127,7 +127,7 @@ export default function AuthPage() {
             <CardContent className="space-y-6">
               <Button 
                 onClick={handleLogin}
-                className="w-full h-12 bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium transition-all duration-300 group shadow-lg hover:shadow-xl"
+                className="w-full h-12 bg-linear-to-r from-blue-600 to-purple-600! hover:from-blue-700! hover:to-purple-700! text-white! font-medium transition-all duration-300 group shadow-lg hover:shadow-xl border-0"
                 size="lg"
               >
                 Create Account or Login
