@@ -84,7 +84,7 @@ export default function Login() {
             </div>
             
             <h2 className="text-5xl font-serif font-bold mb-6 leading-tight">
-              Experience Authentic <span className="text-transparent bg-clip-text bg-linear-to-r from-yellow-400 to-orange-400">Kenyan Style</span>
+              Experience              <span className="text-transparent bg-clip-text bg-linear-to-r from-yellow-400 to-orange-400">Kenyan Style</span>
             </h2>
             
             <p className="text-xl text-white/90 mb-8 leading-relaxed">
