@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useMemo } from "react";
 import { DataContext } from "../lib/data";
 import type { MenuItem, Review } from "../lib/data";
 import { useHybridAuth } from "@/lib/hybrid-auth";
@@ -224,8 +224,11 @@ export default function Menu() {
   const categories = ["All", ...Array.from(new Set(menu.map((item: MenuItem) => item.category)))];
 
   // Use searched products if available, otherwise use category filtering
-  const displayProducts = searchedProducts.length > 0 ? searchedProducts : 
-    (activeCategory === "All" ? menu : menu.filter((item: MenuItem) => item.category === activeCategory));
+  const displayProducts = useMemo(() => {
+    const baseItems = searchedProducts.length > 0 ? searchedProducts : menu;
+    if (activeCategory === "All") return baseItems;
+    return baseItems.filter((item: MenuItem) => item.category?.toLowerCase() === activeCategory.toLowerCase());
+  }, [menu, activeCategory, searchedProducts]);
 
   const addToCart = (item: MenuItem) => {
     if (!isAuthenticated) {
