@@ -10,15 +10,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-gradient-to-r from-primary to-secondary text-primary-foreground border-0 shadow-lg hover:shadow-xl hover:shadow-primary/25 hover:-translate-y-1 active:translate-y-0 active:shadow-md before:absolute before:inset-0 before:bg-gradient-to-r before:from-white/10 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-300 luminous-glow",
+          "bg-linear-to-r from-primary to-secondary text-primary-foreground border-0 shadow-lg hover:shadow-xl hover:shadow-primary/25 hover:-translate-y-1 active:translate-y-0 active:shadow-md before:absolute before:inset-0 before:bg-linear-to-r before:from-white/10 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-300 luminous-glow",
         destructive:
-          "bg-gradient-to-r from-destructive to-destructive/80 text-destructive-foreground border-0 shadow-lg hover:shadow-xl hover:shadow-destructive/25 hover:-translate-y-1 active:translate-y-0 active:shadow-md before:absolute before:inset-0 before:bg-gradient-to-r before:from-white/10 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-300 luminous-glow",
+          "bg-linear-to-r from-destructive to-destructive/80 text-destructive-foreground border-0 shadow-lg hover:shadow-xl hover:shadow-destructive/25 hover:-translate-y-1 active:translate-y-0 active:shadow-md before:absolute before:inset-0 before:bg-linear-to-r before:from-white/10 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-300 luminous-glow",
         outline:
           "border-2 border-gradient bg-background/50 backdrop-blur-sm shadow-md hover:bg-accent hover:text-accent-foreground hover:shadow-lg hover:-translate-y-1 active:translate-y-0 active:shadow-md hover:border-primary/50 transition-all duration-300 border-animated-gradient",
         secondary:
-          "bg-gradient-to-r from-secondary to-secondary/80 text-secondary-foreground border-0 shadow-lg hover:shadow-xl hover:shadow-secondary/25 hover:-translate-y-1 active:translate-y-0 active:shadow-md before:absolute before:inset-0 before:bg-gradient-to-r before:from-white/10 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-300 luminous-glow",
+          "bg-linear-to-r from-secondary to-secondary/80 text-secondary-foreground border-0 shadow-lg hover:shadow-xl hover:shadow-secondary/25 hover:-translate-y-1 active:translate-y-0 active:shadow-md before:absolute before:inset-0 before:bg-linear-to-r before:from-white/10 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-300 luminous-glow",
         ghost:
-          "hover:bg-gradient-to-r hover:from-primary/10 hover:to-secondary/10 hover:text-primary hover:shadow-md active:bg-accent/50 rounded-lg transition-all duration-300 magnetic",
+          "hover:bg-linear-to-r hover:from-primary/10 hover:to-secondary/10 hover:text-primary hover:shadow-md active:bg-accent/50 rounded-lg transition-all duration-300 magnetic",
         link: "text-primary underline-offset-4 hover:underline hover:text-primary/80 transition-all duration-300 hover:underline-thick hover-letter-spacing",
       },
       size: {

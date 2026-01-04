@@ -19,7 +19,7 @@ export function Skeleton({
   lines = 3 
 }: SkeletonProps) {
 
-  const baseClasses = "bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%] animate-shimmer rounded";
+  const baseClasses = "bg-linear-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%] animate-shimmer rounded";
 
   if (variant === 'text') {
     return (
