@@ -182,13 +182,10 @@ export default function Login() {
               </div>
 
               {/* Universal Login Button */}
-              <Button
+              <button
                 onClick={handleUniversalLogin}
-                className="w-full! h-12! bg-blue-600! hover:bg-blue-700! text-white! font-medium! transition-all! duration-300! group! shadow-lg! hover:shadow-xl! border-0!"
-                style={{
-                  background: 'linear-gradient(to right, #2563eb, #7c3aed) !important',
-                  color: 'white !important'
-                }}
+                className="w-full h-12 bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium transition-all duration-300 group shadow-lg hover:shadow-xl border-0 rounded-lg flex items-center justify-center"
+                type="button"
                 disabled={authState === 'loading'}
               >
                 {authState === 'loading' ? (
@@ -202,7 +199,7 @@ export default function Login() {
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
-              </Button>
+              </button>
 
               {/* Status Messages */}
               <AnimatePresence>
