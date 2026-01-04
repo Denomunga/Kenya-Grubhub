@@ -1486,7 +1486,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     try {
       // Exclude soft-deleted news items by default
       const items = await News.find({ deletedAt: { $exists: false } }).sort({ createdAt: -1 });
-      const response = items.map(n => ({ id: n._id.toString(), title: n.title, content: n.content, author: n.author, date: n.date, image: n.image }));
+      const response = items.map(n => ({ id: n._id.toString(), title: n.title, content: n.content, author: n.author, date: n.date, image: n.image, views: n.views || 0 }));
       res.json({ news: response });
     } catch (err) {
       console.error("Get news error:", err);
@@ -1604,7 +1604,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       const na = await NewsAudit.create({ newsId: found._id.toString(), action: 'restored', byId: req.user!._id.toString(), byName: req.user!.name, note: auditNote });
       try { (app as any).locals.io?.emit('audit:news', na); } catch (err) {}
 
-      res.json({ news: { id: found._id.toString(), title: found.title, content: found.content, author: found.author, date: found.date, image: found.image } });
+      res.json({ news: { id: found._id.toString(), title: found.title, content: found.content, author: found.author, date: found.date, image: found.image, views: found.views || 0 } });
     } catch (err) {
       console.error('Restore news error:', err);
       res.status(500).json({ message: 'Failed to restore news' });
@@ -1710,7 +1710,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       const na = await NewsAudit.create({ newsId: found._id.toString(), action: 'viewed', byId, byName, note: `views=${updated?.views ?? 0}` });
       try { (app as any).locals.io?.emit('audit:news', na); } catch (err) {}
 
-      res.json({ success: true });
+      res.json({ success: true, views: updated?.views || 0 });
     } catch (err) {
       console.error('News view audit error:', err);
       res.status(500).json({ message: 'Failed to record view' });

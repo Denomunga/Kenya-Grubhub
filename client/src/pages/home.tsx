@@ -8,7 +8,7 @@ import FeaturedDishes from "@/components/home/FeaturedDishes";
 import InteractiveMap from "@/components/home/InteractiveMap";
 import ProductSearch from "@/components/search/ProductSearch";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, MapPin, CheckCircle, AlertCircle } from "lucide-react";
+import { ArrowRight, Clock, MapPin, CheckCircle, AlertCircle, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -583,6 +583,12 @@ export default function Home() {
                       <div className="flex items-center gap-2 text-sm text-blue-600 font-medium mb-4">
                         <Clock className="h-4 w-4" />
                         <span>{item.date ? new Date(item.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No date'}</span>
+                        {typeof item.views === 'number' && (
+                          <span className="flex items-center gap-1 text-slate-600">
+                            <Eye className="h-4 w-4" />
+                            <span>{item.views.toLocaleString()}</span>
+                          </span>
+                        )}
                       </div>
                       <h3 className="text-xl font-bold mb-4 font-heading line-clamp-2 group-hover:text-blue-600 transition-colors duration-300">{item.title}</h3>
                       <p className="text-muted-foreground mb-6 line-clamp-3 flex-1 leading-relaxed">{item.content}</p>
