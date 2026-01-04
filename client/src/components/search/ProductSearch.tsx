@@ -29,7 +29,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
   const [filters, setFilters] = useState<SearchFilters>({
     query: '',
     category: 'all',
-    priceRange: { min: 0, max: 10000000 },
+    priceRange: { min: 0, max: 1000000000 },
     condition: 'all',
     brand: '',
     location: '',
@@ -116,7 +116,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
     setFilters({
       query: '',
       category: 'all',
-      priceRange: { min: 0, max: 10000000 },
+      priceRange: { min: 0, max: 1000000000 },
       condition: 'all',
       brand: '',
       location: '',
@@ -138,7 +138,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
     let count = 0;
     if (filters.query) count++;
     if (filters.category !== 'all') count++;
-    if (filters.priceRange.min > 0 || filters.priceRange.max < 10000000) count++;
+    if (filters.priceRange.min > 0 || filters.priceRange.max < 1000000000) count++;
     if (filters.condition !== 'all') count++;
     if (filters.brand) count++;
     if (filters.location) count++;
@@ -263,7 +263,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                         value={filters.priceRange.max}
                         onChange={(e) => updateFilter('priceRange', { 
                           ...filters.priceRange, 
-                          max: parseInt(e.target.value) || 10000000 
+                          max: parseInt(e.target.value) || 1000000000 
                         })}
                         className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                       />
