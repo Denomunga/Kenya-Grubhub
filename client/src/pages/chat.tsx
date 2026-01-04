@@ -244,11 +244,11 @@ export default function Chat() {
   // RENDER: Admin / Manager View (Inbox + Chat)
   if (isAdmin || isManager) {
     return (
-      <div className="container mx-auto px-4 py-8 h-[85vh] particle-container gradient-mesh">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 min-h-screen particle-container gradient-mesh">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 h-[calc(100vh-2rem)] lg:h-[85vh]">
           
           {/* Left Panel: Thread List */}
-          <Card className="md:col-span-1 flex flex-col h-full card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow overflow-hidden">
+          <Card className="lg:col-span-1 flex flex-col h-full card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow overflow-hidden">
             <CardHeader className="bg-muted/30 pb-4">
               <div className="flex items-center justify-between mb-2">
                 <CardTitle className="text-lg">Inbox</CardTitle>
@@ -320,7 +320,7 @@ export default function Chat() {
           </Card>
 
           {/* Right Panel: Chat Interface */}
-          <Card className="md:col-span-2 flex flex-col h-full border-none shadow-lg overflow-hidden">
+          <Card className="lg:col-span-2 flex flex-col h-full border-none shadow-lg overflow-hidden">
             {activeThreadId ? (
               <>
                 <CardHeader className="bg-background border-b py-4 flex flex-row items-center justify-between">
@@ -349,8 +349,8 @@ export default function Chat() {
                 
                 <CardContent className="flex-1 p-0 bg-muted/10 relative">
                   <div className="absolute inset-0 flex flex-col">
-                    <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-                      <div className="flex flex-col gap-4 pb-4">
+                    <ScrollArea ref={scrollAreaRef} className="flex-1 p-2 sm:p-4">
+                      <div className="flex flex-col gap-3 sm:gap-4 pb-4">
                         <div className="text-center my-4">
                           <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full border border-yellow-200">
                             <Lock className="h-3 w-3 inline mr-1" />
@@ -378,7 +378,7 @@ export default function Chat() {
                   </div>
                 </CardContent>
 
-                <CardFooter className="p-4 bg-background border-t">
+                <CardFooter className="p-3 sm:p-4 bg-background border-t">
                   <form 
                     className="flex w-full gap-2"
                     onSubmit={(e) => { e.preventDefault(); handleSend(); }}
@@ -387,9 +387,9 @@ export default function Chat() {
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
                       placeholder={`Reply to ${threads.find(t => t.id === activeThreadId)?.userName}...`}
-                      className="flex-1"
+                      className="flex-1 text-sm"
                     />
-                    <Button type="submit" size="icon">
+                    <Button type="submit" size="icon" className="shrink-0">
                       <Send className="h-4 w-4" />
                     </Button>
                   </form>
@@ -408,8 +408,8 @@ export default function Chat() {
 
   // RENDER: User View (Simple Chat)
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl h-[85vh]">
-      <Card className="h-full flex flex-col border-none shadow-xl overflow-hidden">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 min-h-screen">
+      <Card className="h-[calc(100vh-2rem)] sm:h-[85vh] flex flex-col border-none shadow-xl overflow-hidden">
         <CardHeader className="bg-primary text-primary-foreground py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -432,8 +432,8 @@ export default function Chat() {
         
         <CardContent className="flex-1 p-0 bg-muted/10 relative">
           <div className="absolute inset-0 flex flex-col">
-            <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-              <div className="flex flex-col gap-4 pb-4">
+            <ScrollArea ref={scrollAreaRef} className="flex-1 p-2 sm:p-4">
+              <div className="flex flex-col gap-3 sm:gap-4 pb-4">
                 <div className="text-center my-6">
                   <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-background shadow-sm text-xs text-muted-foreground border">
                     <Lock className="h-3 w-3" />
@@ -458,7 +458,7 @@ export default function Chat() {
           </div>
         </CardContent>
 
-        <CardFooter className="p-4 bg-background border-t">
+        <CardFooter className="p-3 sm:p-4 bg-background border-t">
           <form 
             className="flex w-full gap-2"
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}
@@ -467,9 +467,9 @@ export default function Chat() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Type a message..."
-              className="flex-1"
+              className="flex-1 text-sm"
             />
-            <Button type="submit" size="icon" className="bg-primary hover:bg-primary/90">
+            <Button type="submit" size="icon" className="bg-primary hover:bg-primary/90 shrink-0">
               <Send className="h-4 w-4" />
             </Button>
           </form>
@@ -487,7 +487,7 @@ function ChatBubble({ message, isMe, showSenderName = false }: { message: ChatMe
       animate={{ opacity: 1, y: 0 }}
       className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
     >
-      <div className={`flex flex-col max-w-[80%] ${isMe ? "items-end" : "items-start"}`}>
+      <div className={`flex flex-col max-w-[85%] sm:max-w-[80%] ${isMe ? "items-end" : "items-start"}`}>
         {/* Product info display */}
         {message.productInfo && (
           <div className="mb-2 p-2 bg-muted/50 rounded-lg border">
@@ -516,12 +516,12 @@ function ChatBubble({ message, isMe, showSenderName = false }: { message: ChatMe
         )}
         
         <div className={`
-          px-4 py-2 rounded-2xl shadow-sm relative group
+          px-3 sm:px-4 py-2 sm:py-3 rounded-2xl shadow-sm relative group
           ${isMe 
             ? "bg-primary text-primary-foreground rounded-br-none" 
             : "bg-white text-foreground border rounded-bl-none"}
         `}>
-          <p className="text-sm leading-relaxed">{message.text}</p>
+          <p className="text-sm sm:text-sm leading-relaxed wrap-break-word">{message.text}</p>
           
           <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${isMe ? "opacity-70" : "opacity-40"}`}>
              {(() => {
