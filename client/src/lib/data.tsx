@@ -115,6 +115,7 @@ interface DataContextType {
   addMenuItem: (item: MenuItem) => Promise<MenuItem | void>;
   deleteMenuItem: (id: string) => void;
   updateMenuItem: (item: MenuItem) => Promise<void>;
+  fetchMenuFromServer: () => Promise<boolean>;
 
   news: NewsItem[];
   getNewsById: (id: string) => Promise<NewsItem | null>;
@@ -497,46 +498,50 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [user]); 
 
+  // Fetch menu from server function
+  const fetchMenuFromServer = async () => {
+    try {
+      const resMenu = await apiFetch('/api/menu');
+      if (resMenu.ok) {
+        const d = await resMenu.json();
+        if (Array.isArray(d.menu)) {
+          setMenu(d.menu.map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            description: m.description,
+            price: m.price,
+            category: m.category,
+            subcategory: m.subcategory,
+            brand: m.brand,
+            condition: m.condition,
+            specifications: m.specifications,
+            images: m.images || [],
+            image: m.images?.[0] || '',
+            available: m.available,
+            stock: m.stock,
+            location: m.location,
+            tags: m.tags,
+            size: m.size,
+            color: m.color,
+            year: m.year,
+            material: m.material,
+            weight: m.weight,
+            dimensions: m.dimensions
+          })));
+          return true;
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch menu from server:', err);
+    }
+    return false;
+  };
+
   // Try to fetch server-side menu/news/orders if available and override local mock data
   useEffect(() => {
     (async () => {
-      let menuLoaded = false;
+      const menuLoaded = await fetchMenuFromServer();
       
-      try {
-        const resMenu = await apiFetch('/api/menu');
-        if (resMenu.ok) {
-          const d = await resMenu.json();
-          if (Array.isArray(d.menu)) {
-            setMenu(d.menu.map((m: any) => ({
-              id: m.id,
-              name: m.name,
-              description: m.description,
-              price: m.price,
-              category: m.category,
-              subcategory: m.subcategory,
-              brand: m.brand,
-              condition: m.condition,
-              specifications: m.specifications,
-              images: m.images || [],
-              image: m.images?.[0] || '',
-              available: m.available,
-              stock: m.stock,
-              location: m.location,
-              tags: m.tags,
-              size: m.size,
-              color: m.color,
-              year: m.year,
-              material: m.material,
-              weight: m.weight,
-              dimensions: m.dimensions
-            })));
-            menuLoaded = true;
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to fetch menu from server, using initial data');
-      }
-
       // Fallback to initial data only if server fetch failed
       if (!menuLoaded) {
         setMenu(INITIAL_MENU);
@@ -748,7 +753,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (resp.ok) {
         const data = await resp.json();
         const p = data.product;
-        // Add the server-created item to local state
+        // Add server-created item to local state
         const serverItem: MenuItem = {
           id: p.id,
           name: p.name,
@@ -772,13 +777,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
           dimensions: p.dimensions
         };
         setMenu(prev => [...prev, serverItem]);
+        
+        // Refetch menu from server to ensure consistency across all components
+        await fetchMenuFromServer();
+        
         return serverItem;
       } else {
         const errorData = await resp.json();
         throw new Error(errorData.message || 'Failed to create menu item');
       }
     } catch (err) {
-      throw err; // Don't fallback to local storage - show the error
+      throw err; // Don't fallback to local storage - show error
     }
   };
   const deleteMenuItem = async (id: string) => {
@@ -790,6 +799,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
               });
       if (resp.ok) {
         setMenu(prev => prev.filter(i => i.id !== id));
+        // Refetch menu from server to ensure consistency across all components
+        await fetchMenuFromServer();
         return;
       }
     }
@@ -827,6 +838,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         });
         throw new Error('Failed to update item');
       }
+      
+      // Refetch menu from server to ensure consistency across all components
+      await fetchMenuFromServer();
     } catch (error) {
       console.error('Error updating menu item:', error);
       // Keep local changes even if server fails
@@ -1564,7 +1578,7 @@ const fetchReviewsFromServer = async () => {
 
   return (
     <DataContext.Provider value={{
-      menu, addMenuItem, deleteMenuItem, updateMenuItem,
+      menu, addMenuItem, deleteMenuItem, updateMenuItem, fetchMenuFromServer,
       news, addNews, updateNews, deleteNews, getNewsById, updateNewsViews,
       reviews, getReviewsForProduct, addReviewForProduct, removeReview, fetchReviewsFromServer,
       orders, placeOrder, updateOrderStatus, cancelOrder, modifyOrder,
