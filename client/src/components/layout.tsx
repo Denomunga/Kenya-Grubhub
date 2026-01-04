@@ -31,19 +31,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const NavLink = ({ href, children }: { href: string; children: React.ReactNode; onClick?: () => void }) => {
+  const NavLink = ({ href, children, isDiscountButton = false }: { href: string; children: React.ReactNode; onClick?: () => void; isDiscountButton?: boolean }) => {
     const isActive = location === href;
     return (
       <Link href={href}>
         <motion.div 
           className={`cursor-pointer text-sm font-bold transition-all duration-300 relative px-4 py-2 rounded-xl card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow ${
-            isActive 
-              ? isChristmasMode 
-                ? 'bg-red-100 text-red-800 shadow-xl border-red-300 hover:bg-red-200' 
-                : 'bg-blue-100 text-blue-800 shadow-xl border-blue-300 hover:bg-blue-200'
-              : isChristmasMode
-                ? "bg-white text-red-700 hover:bg-red-50 border-2 border-red-600 hover:border-red-700"
-                : "bg-white text-blue-700 hover:bg-blue-50 border-2 border-blue-600 hover:border-blue-700"
+            isDiscountButton
+              ? 'bg-blue-600! text-white! border-0 shadow-lg hover:shadow-xl hover:bg-blue-700!'
+              : isActive 
+                ? isChristmasMode 
+                  ? 'bg-red-100 text-red-800 shadow-xl border-red-300 hover:bg-red-200' 
+                  : 'bg-blue-100 text-blue-800 shadow-xl border-blue-300 hover:bg-blue-200'
+                : isChristmasMode
+                  ? "bg-white text-red-700 hover:bg-red-50 border-2 border-red-600 hover:border-red-700"
+                  : "bg-white text-blue-700 hover:bg-blue-50 border-2 border-blue-600 hover:border-blue-700"
           }`}
           whileHover={{ scale: 1.02, x: 5 }}
           whileTap={{ scale: 0.98 }}
@@ -180,7 +182,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 // For users, clear notifications when entering chat
                 markAsRead();
               }
-            }}>
+            }} isDiscountButton>
               ASK FOR DISCOUNT
               {hasUnread && (
                 <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
@@ -343,7 +345,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 {[
                   { href: "/", label: "Home", icon: "🏠", desc: "Welcome page" },
                   { href: "/menu", label: "Products", icon: "🛍️", desc: "Browse items" },
-                  { href: "/chat", label: "Chat", icon: "💬", desc: "Talk to staff" },
+                  { href: "/chat", label: "ASK FOR DISCOUNT", icon: "💬", desc: "Talk to staff", special: true },
                   ...(isAdmin || isStaff ? [{ href: "/dashboard", label: "Dashboard", icon: "📊", desc: "Admin panel", special: true }] : [])
                 ].map((item, index) => (
                   <motion.div

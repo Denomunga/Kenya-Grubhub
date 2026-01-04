@@ -841,7 +841,7 @@ export default function Menu() {
                   handleChatAboutProduct(selectedProductForDetail);
                   setProductDetailOpen(false);
                 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600! hover:bg-blue-700! text-white! border-0 shadow-lg hover:shadow-xl"
               >
                 💬 Ask About Price
               </Button>
@@ -1021,7 +1021,7 @@ export default function Menu() {
                       handleChatAboutProduct(selectedProductForDetail);
                       setProductDetailOpen(false);
                     }}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg"
+                    className="w-full bg-blue-600! hover:bg-blue-700! text-white! py-3 text-lg border-0 shadow-lg hover:shadow-xl"
                   >
                     💬 Ask About Price
                   </Button>
