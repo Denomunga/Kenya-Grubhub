@@ -2014,7 +2014,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
               const userVersion = m.encryptedVersions.find((v: any) => v.recipientId === req.user!._id.toString());
               if (userVersion) {
                 try {
-                  decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, req.user!._id.toString());
+                  decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, userVersion.recipientId);
                   decryptedSuccessfully = true;
                 } catch (userDecryptError) {
                   console.error('User decryption failed:', userDecryptError);
@@ -2276,7 +2276,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
               const userVersion = m.encryptedVersions.find((v: any) => v.recipientId === req.user!._id.toString());
               if (userVersion) {
                 try {
-                  decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, req.user!._id.toString());
+                  decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, userVersion.recipientId);
                   decryptedSuccessfully = true;
                 } catch (userDecryptError) {
                   console.error('User decryption failed:', userDecryptError);
