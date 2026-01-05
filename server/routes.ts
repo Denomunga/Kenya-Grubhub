@@ -1989,7 +1989,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
             // Admin/Staff: Try admin version first, then individual versions
             if (m.adminEncryptedText) {
               try {
-                decryptedText = decryptMessageForAdmin(m.adminEncryptedText, threadId);
+                decryptedText = decryptMessageForAdmin(m.adminEncryptedText, m.threadId);
                 decryptedSuccessfully = true;
               } catch (adminDecryptError) {
                 console.error('Admin decryption failed:', adminDecryptError);
@@ -2027,7 +2027,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
           if (!decryptedSuccessfully) {
             try {
               // Try legacy thread-specific decryption
-              decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
+              decryptedText = decryptMessageForThread(m.text, m.threadId, m.senderId);
               decryptedSuccessfully = true;
             } catch (legacyError) {
               // Try even older legacy decryption
