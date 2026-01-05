@@ -2170,7 +2170,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         senderId: req.user!._id.toString(),
         senderName: req.user!.name || 'Unknown User',
         senderRole: req.user!.role || 'user',
-        text: sanitizedText, // Store plain text for now, will be removed in production
+        text: '', // Don't store plain text - only encrypted versions
         isRead: false,
         encrypted: true,
         encryptedVersions,
@@ -2506,7 +2506,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         senderId: req.user!._id.toString(),
         senderName: req.user!.name || 'Unknown User',
         senderRole: req.user!.role || 'user',
-        text: sanitizedText, // Store plain text for now, will be removed in production
+        text: '', // Don't store plain text - only encrypted versions
         isRead: false,
         encrypted: true,
         encryptedVersions,

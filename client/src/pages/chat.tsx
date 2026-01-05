@@ -16,7 +16,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { formatPrice } from "@/lib/format";
 import { useLocation } from "wouter";
-import { decryptMessage, decryptMessageForThread, decryptMessageForRecipient, decryptMessageForAdmin } from "@/utils/encryption";
+import { decryptMessage, decryptMessageForThread } from "@/utils/encryption";
 
 export default function Chat() {
   const { user, isAuthenticated, isManager, isAdmin } = useHybridAuth();
@@ -205,16 +205,6 @@ export default function Chat() {
       };
       sessionStorage.removeItem('chatProduct');
     }
-
-    console.log('handleSend: Sending message', { 
-      threadId: currentThreadId,
-      userId: user.id,
-      userName: user.name,
-      userRole: user.role,
-      message: inputValue.trim(),
-      productId,
-      productInfo
-    });
 
     await sendMessage(currentThreadId, {
       id: user.id,
