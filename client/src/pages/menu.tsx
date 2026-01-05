@@ -123,7 +123,6 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
 //
 export default function Menu() {
   const { menu, placeOrder, getReviewsForProduct, addReviewForProduct, removeReview, reviews } = useContext(DataContext)!;
-  console.log('🍽 Menu page - menu state:', menu.length, 'items:', menu.map(m => ({ id: m.id, name: m.name })));
   const { user, isAuthenticated, isAdmin, isStaff } = useHybridAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
