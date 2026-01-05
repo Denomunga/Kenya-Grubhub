@@ -1984,11 +1984,8 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
           
           // Try thread-specific decryption first
           try {
-            if (req.user!.role === 'admin' || req.user!.role === 'staff') {
-              decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
-            } else {
-              decryptedText = decryptMessageForThread(m.text, threadId, req.user!._id.toString());
-            }
+            // ALWAYS use the original sender's ID for decryption, regardless of who is reading
+            decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
             decryptedSuccessfully = true;
           } catch (decryptError) {
             console.error('Thread-specific decryption failed, trying legacy decryption:', decryptError);
@@ -2157,11 +2154,8 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
           
           // Try thread-specific decryption first
           try {
-            if (req.user!.role === 'admin' || req.user!.role === 'staff') {
-              decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
-            } else {
-              decryptedText = decryptMessageForThread(m.text, threadId, req.user!._id.toString());
-            }
+            // ALWAYS use the original sender's ID for decryption, regardless of who is reading
+            decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
             decryptedSuccessfully = true;
           } catch (decryptError) {
             console.error('Thread-specific decryption failed, trying legacy decryption:', decryptError);
