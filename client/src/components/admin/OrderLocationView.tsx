@@ -57,13 +57,14 @@ export default function OrderLocationView({
       return;
     }
     
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.location.latitude)},${encodeURIComponent(order.location.longitude)}`;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${order.location.latitude},${order.location.longitude}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const getDirectionsUrl = () => {
     if (!order.location?.latitude || !order.location?.longitude) return '#';
-    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.location.latitude)},${encodeURIComponent(order.location.longitude)}`;
+    const destination = `${order.location.latitude},${order.location.longitude}`;
+    return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
   };
 
   const getPhoneUrl = () => {
@@ -90,7 +91,7 @@ export default function OrderLocationView({
 
   const handleEmailCustomer = () => {
     if (order.userEmail) {
-      window.open(`mailto:${encodeURIComponent(order.userEmail)}`, '_blank', 'noopener,noreferrer');
+      window.open(getEmailUrl(), '_blank', 'noopener,noreferrer');
     } else {
       toast({
         title: "No Email Address",
@@ -191,7 +192,7 @@ export default function OrderLocationView({
               <Button 
                 size="sm" 
                 variant="outline"
-                onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.location?.address || '')}`, '_blank', 'noopener,noreferrer')}
+                onClick={() => window.open(getDirectionsUrl(), '_blank', 'noopener,noreferrer')}
               >
                 <MapPin className="h-4 w-4 mr-1" />
                 View on Map

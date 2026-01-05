@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { useHybridAuth } from '@/lib/hybrid-auth';
 import { apiFetch } from "./api";
 import { toast } from "sonner";
+import { encryptMessageForThread } from "@/utils/encryption";
 
 // Helper function with retry-after and exponential backoff for chat
 const fetchChatWithRetry = async (url: string, maxRetries: number = 3) => {
@@ -62,7 +63,7 @@ export interface ChatThread {
 
 interface ChatContextType {
   messages: ChatMessage[];
-  sendMessage: (threadId: string, sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string) => Promise<void>;
+  sendMessage: (threadId: string, sender: { id: string, name: string, role: "admin" | "staff" | "user" }, text: string, productId?: string, productInfo?: any) => Promise<void>;
   markThreadAsRead: (threadId: string, readerRole: "admin" | "staff" | "user") => Promise<void>;
   setTypingStatus: (threadId: string, isTyping: boolean) => void;
   getThreads: () => ChatThread[];
@@ -169,18 +170,30 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const sendMessage = async (
     threadId: string,
-    _sender: { id: string, name: string, role: "admin" | "staff" | "user" },
-    text: string
+    sender: { id: string, name: string, role: "admin" | "staff" | "user" },
+    text: string,
+    productId?: string,
+    productInfo?: any
   ) => {
     try {
+      // Encrypt the message before sending
+      let encryptedText = text;
+      try {
+        encryptedText = encryptMessageForThread(text, threadId, sender.id);
+      } catch (encryptError) {
+        console.error('Failed to encrypt message client-side:', encryptError);
+        // Continue with plain text if encryption fails (server will encrypt)
+      }
+
       const response = await apiFetch(`/api/chat/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ threadId, text }),
+        body: JSON.stringify({ threadId, text: encryptedText, productId, productInfo }),
       });
 
       if (response.ok) {
         const data = await response.json();
+        // The server returns decrypted text for the sender
         setMessages(prev => [...prev, data.message]);
         
         // Refresh threads for admin/staff to update last message

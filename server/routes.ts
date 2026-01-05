@@ -34,6 +34,56 @@ import {
 } from "./middleware/security";
 import { csrfProtection } from "./middleware/csrf";
 import { auth0Router } from "./routes/auth0";
+import { 
+  validateThreadAccess, 
+  validateThreadParticipation, 
+  filterMessagesByAccess
+} from "./middleware/threadAccess";
+import { 
+  encryptMessageForThread, 
+  decryptMessageForThread
+} from "./utils/encryption";
+
+// Inline middleware functions to avoid import issues
+const requireThreadAccess = async (req: Request, res: Response, next: Function) => {
+  try {
+    const { threadId } = req.params;
+    
+    if (!threadId) {
+      return res.status(400).json({ message: 'Thread ID is required' });
+    }
+
+    const hasAccess = await validateThreadAccess(req, threadId);
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'Access denied to this thread' });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Thread access middleware error:', error);
+    res.status(500).json({ message: 'Failed to validate thread access' });
+  }
+};
+
+const requireThreadParticipation = async (req: Request, res: Response, next: Function) => {
+  try {
+    const { threadId } = req.params;
+    
+    if (!threadId) {
+      return res.status(400).json({ message: 'Thread ID is required' });
+    }
+
+    const canParticipate = await validateThreadParticipation(req, threadId);
+    if (!canParticipate) {
+      return res.status(403).json({ message: 'You cannot participate in this thread' });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Thread participation middleware error:', error);
+    res.status(500).json({ message: 'Failed to validate thread participation' });
+  }
+};
 
 import cors from "cors";
 
@@ -1916,22 +1966,46 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       res.status(500).json({ message: 'Failed to modify order' });
     }
   });
-  app.get("/api/chat/threads/:threadId/messages", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/chat/threads/:threadId/messages", requireAuth, requireThreadAccess, async (req: Request, res: Response) => {
     try {
       const { threadId } = req.params;
       const messages = await ChatMessage.find({ threadId }).sort({ createdAt: 1 });
       
-      const messagesResponse = messages.map(m => ({
-        id: m._id.toString(),
-        threadId: m.threadId,
-        senderId: m.senderId,
-        senderName: m.senderName,
-        senderRole: m.senderRole,
-        text: m.text,
-        isRead: m.isRead,
-        encrypted: m.encrypted,
-        timestamp: m.createdAt.toISOString(),
-      }));
+      // Filter messages based on user access
+      const filteredMessages = filterMessagesByAccess(messages, req.user, threadId);
+      
+      const messagesResponse = filteredMessages.map(m => {
+        let decryptedText = m.text;
+        
+        // Only decrypt if the message is actually encrypted
+        if (m.encrypted && m.text) {
+          try {
+            // For admin/staff, use thread-specific decryption
+            if (req.user!.role === 'admin' || req.user!.role === 'staff') {
+              decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
+            } else {
+              // For regular users, decrypt with their own key
+              decryptedText = decryptMessageForThread(m.text, threadId, req.user!._id.toString());
+            }
+          } catch (decryptError) {
+            console.error('Failed to decrypt message:', decryptError);
+            // If decryption fails, return the encrypted text as fallback
+            decryptedText = m.text;
+          }
+        }
+        
+        return {
+          id: m._id.toString(),
+          threadId: m.threadId,
+          senderId: m.senderId,
+          senderName: m.senderName,
+          senderRole: m.senderRole,
+          text: decryptedText,
+          isRead: m.isRead,
+          encrypted: m.encrypted,
+          timestamp: m.createdAt.toISOString(),
+        };
+      });
 
       res.json({ messages: messagesResponse });
     } catch (error) {
@@ -1941,7 +2015,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   });
 
   // POST endpoint for sending messages to a specific thread (alternative endpoint)
-  app.post("/api/chat/threads/:threadId/messages", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/chat/threads/:threadId/messages", requireAuth, requireThreadParticipation, async (req: Request, res: Response) => {
     try {
       const { threadId } = req.params;
       const { text } = req.body;
@@ -1964,6 +2038,21 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       // Sanitize input
       const sanitizedText = text.trim().substring(0, 1000);
 
+      // Encrypt the message
+      let encryptedText;
+      try {
+        if (req.user!.role === 'admin' || req.user!.role === 'staff') {
+          // Admin/staff encrypt with their own key for the thread
+          encryptedText = encryptMessageForThread(sanitizedText, threadId, req.user!._id.toString());
+        } else {
+          // Regular users encrypt with their user ID as key
+          encryptedText = encryptMessageForThread(sanitizedText, threadId, req.user!._id.toString());
+        }
+      } catch (encryptError) {
+        console.error('Failed to encrypt message:', encryptError);
+        return res.status(500).json({ message: "Failed to encrypt message" });
+      }
+
       // Ensure MongoDB indexes exist for performance and uniqueness
       try {
         await ChatMessage.collection.createIndexes([
@@ -1980,7 +2069,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         senderId: req.user!._id.toString(),
         senderName: req.user!.name || 'Unknown User',
         senderRole: req.user!.role || 'user',
-        text: sanitizedText,
+        text: encryptedText,
         isRead: false,
         encrypted: true,
       });
@@ -1991,7 +2080,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         senderId: message.senderId,
         senderName: message.senderName,
         senderRole: message.senderRole,
-        text: message.text,
+        text: sanitizedText, // Return decrypted text to sender
         isRead: message.isRead,
         encrypted: message.encrypted,
         timestamp: message.createdAt.toISOString(),
@@ -2028,11 +2117,43 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         return res.status(400).json({ message: "Thread ID is required" });
       }
 
+      // Validate thread access
+      const hasAccess = await validateThreadAccess(req, threadId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied to this thread" });
+      }
+
       const messages = await ChatMessage.find({ threadId })
         .sort({ createdAt: 1 })
         .limit(50); // Limit to last 50 messages
 
-      res.json({ messages });
+      // Filter messages based on user access
+      const filteredMessages = filterMessagesByAccess(messages, req.user, threadId);
+      
+      // Decrypt messages
+      const decryptedMessages = filteredMessages.map(m => {
+        let decryptedText = m.text;
+        
+        if (m.encrypted && m.text) {
+          try {
+            if (req.user!.role === 'admin' || req.user!.role === 'staff') {
+              decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
+            } else {
+              decryptedText = decryptMessageForThread(m.text, threadId, req.user!._id.toString());
+            }
+          } catch (decryptError) {
+            console.error('Failed to decrypt message:', decryptError);
+            decryptedText = m.text; // Fallback to encrypted text
+          }
+        }
+        
+        return {
+          ...m.toObject(),
+          text: decryptedText
+        };
+      });
+
+      res.json({ messages: decryptedMessages });
     } catch (error) {
       console.error("Get messages error:", error);
       res.status(500).json({ message: "Failed to get messages" });
@@ -2067,6 +2188,12 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         return res.status(400).json({ message: "Valid thread ID is required" });
       }
 
+      // Validate thread access
+      const canParticipate = await validateThreadParticipation(req, threadId);
+      if (!canParticipate) {
+        return res.status(403).json({ message: "You cannot participate in this thread" });
+      }
+
       // Validate text length
       if (text.trim().length > 1000) {
         return res.status(400).json({ message: "Message cannot exceed 1000 characters" });
@@ -2075,15 +2202,17 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       // Sanitize input
       const sanitizedText = text.trim().substring(0, 1000);
 
-      // Ensure MongoDB indexes exist for performance and uniqueness
+      // Encrypt the message
+      let encryptedText;
       try {
-        await ChatMessage.collection.createIndexes([
-          { key: { threadId: 1, createdAt: -1 } },
-          { key: { senderId: 1 } },
-          { key: { senderRole: 1 } }
-        ]);
-      } catch (indexError) {
-        console.warn('Index creation warning:', indexError);
+        if (req.user!.role === 'admin' || req.user!.role === 'staff') {
+          encryptedText = encryptMessageForThread(sanitizedText, threadId, req.user!._id.toString());
+        } else {
+          encryptedText = encryptMessageForThread(sanitizedText, threadId, req.user!._id.toString());
+        }
+      } catch (encryptError) {
+        console.error('Failed to encrypt message:', encryptError);
+        return res.status(500).json({ message: "Failed to encrypt message" });
       }
 
       console.log('POST /api/chat/messages: Creating message in MongoDB', {
@@ -2098,12 +2227,23 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         encrypted: true,
       });
 
+      // Ensure MongoDB indexes exist for performance and uniqueness
+      try {
+        await ChatMessage.collection.createIndexes([
+          { key: { threadId: 1, createdAt: -1 } },
+          { key: { senderId: 1 } },
+          { key: { senderRole: 1 } }
+        ]);
+      } catch (indexError) {
+        console.warn('Index creation warning:', indexError);
+      }
+
       const message = await ChatMessage.create({
         threadId,
         senderId: req.user!._id.toString(),
         senderName: req.user!.name || 'Unknown User',
         senderRole: req.user!.role || 'user',
-        text: sanitizedText,
+        text: encryptedText,
         productId,
         productInfo,
         isRead: false,
@@ -2122,7 +2262,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         senderId: message.senderId,
         senderName: message.senderName,
         senderRole: message.senderRole,
-        text: message.text,
+        text: sanitizedText, // Return decrypted text to sender
         isRead: message.isRead,
         encrypted: message.encrypted,
         productId: message.productId,
@@ -2153,7 +2293,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   });
 
   // Mark messages as read - Enhanced with better error handling
-  app.patch("/api/chat/threads/:threadId/read", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/chat/threads/:threadId/read", requireAuth, requireThreadAccess, async (req: Request, res: Response) => {
     try {
       const { threadId } = req.params;
       const { readerRole } = req.body;
@@ -2163,58 +2303,41 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         body: req.body,
         threadId,
         readerRole,
-        threadIdType: typeof threadId,
-        readerRoleType: typeof readerRole,
-        user: req.user
+        userRole: req.user!.role,
+        userId: req.user!._id.toString()
       });
 
-      // Validate threadId
-      if (!threadId || typeof threadId !== 'string') {
-        console.error('Invalid threadId:', threadId);
-        return res.status(400).json({ message: "Valid thread ID is required" });
-      }
-
-      // Validate readerRole
-      if (!readerRole || !["admin", "staff", "user"].includes(readerRole)) {
-        console.error('Invalid readerRole:', readerRole);
+      if (!readerRole || !['admin', 'staff', 'user'].includes(readerRole)) {
         return res.status(400).json({ message: "Valid reader role is required" });
       }
 
-      // Mark messages as read based on who is reading
-      let updateFilter: any = { threadId, isRead: false };
-      
+      // Validate that the user can mark messages as read in this thread
+      const hasAccess = await validateThreadAccess(req, threadId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied to this thread" });
+      }
+
+      // Update messages based on reader role
+      const updateFilter: any = { threadId };
+      const updateData: any = { isRead: true };
+
       if (readerRole === "admin" || readerRole === "staff") {
-        // Admin/Staff marks user messages as read
+        // Admin/staff mark user messages as read
         updateFilter.senderRole = "user";
-      } else {
-        // User marks admin/staff messages as read
+      } else if (readerRole === "user") {
+        // Users mark admin/staff messages as read
         updateFilter.senderRole = { $in: ["admin", "staff"] };
       }
 
-      const result = await ChatMessage.updateMany(
-        updateFilter,
-        { isRead: true }
-      );
+      const result = await ChatMessage.updateMany(updateFilter, updateData);
 
-      console.log(`Marked ${result.modifiedCount} messages as read in thread ${threadId} by ${readerRole}`);
-      
-      // ✅ Emit real-time read status update to all connected clients
-      try {
-        (app as any).locals.io?.emit('chat:read', {
-          threadId: threadId,
-          readerRole: readerRole,
-          count: result.modifiedCount,
-          timestamp: new Date().toISOString()
-        });
-        console.log('Chat read status emitted via socket.io');
-      } catch (socketError) {
-        console.warn('Failed to emit chat read status via socket.io:', socketError);
-      }
-      
+      console.log(`PATCH /api/chat/threads/${threadId}/read: Updated ${result.modifiedCount} messages as read`);
+
       res.json({ 
-        message: "Messages marked as read", 
-        count: result.modifiedCount,
-        threadId 
+        success: true, 
+        messagesUpdated: result.modifiedCount,
+        threadId,
+        readerRole
       });
     } catch (error) {
       console.error("Mark as read error:", error);
