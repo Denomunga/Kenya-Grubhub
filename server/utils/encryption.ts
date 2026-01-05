@@ -6,20 +6,12 @@ const ENCRYPTION_KEY = process.env.MESSAGE_ENCRYPTION_KEY || 'default-encryption
 /**
  * Encrypts a message using AES encryption
  * @param text - The plain text message to encrypt
- * @returns Encrypted string with IV prepended
+ * @returns Encrypted string
  */
 export function encryptMessage(text: string): string {
   try {
-    const iv = CryptoJS.lib.WordArray.random(16); // 128-bit IV
-    const encrypted = CryptoJS.AES.encrypt(text, ENCRYPTION_KEY, {
-      iv: iv,
-      mode: CryptoJS.mode.CBC,
-      padding: CryptoJS.pad.Pkcs7
-    });
-    
-    // Combine IV and encrypted data
-    const combined = iv.concat(encrypted.ciphertext);
-    return combined.toString(CryptoJS.enc.Base64);
+    const encrypted = CryptoJS.AES.encrypt(text, ENCRYPTION_KEY);
+    return encrypted.toString();
   } catch (error) {
     console.error('Encryption error:', error);
     throw new Error('Failed to encrypt message');
@@ -28,32 +20,16 @@ export function encryptMessage(text: string): string {
 
 /**
  * Decrypts a message using AES encryption
- * @param encryptedText - The encrypted message with IV prepended
+ * @param encryptedText - The encrypted message
  * @returns Decrypted plain text message
  */
 export function decryptMessage(encryptedText: string): string {
   try {
-    const combined = CryptoJS.enc.Base64.parse(encryptedText);
-    
-    // Extract IV (first 16 bytes) and ciphertext
-    const iv = CryptoJS.lib.WordArray.create(combined.words.slice(0, 4));
-    const ciphertext = CryptoJS.lib.WordArray.create(combined.words.slice(4));
-    
-    const decrypted = CryptoJS.AES.decrypt(
-      { ciphertext: ciphertext } as CryptoJS.lib.CipherParams,
-      ENCRYPTION_KEY,
-      {
-        iv: iv,
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
-      }
-    );
-    
+    const decrypted = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
     const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
     if (!decryptedText) {
       throw new Error('Decryption resulted in empty text');
     }
-    
     return decryptedText;
   } catch (error) {
     throw new Error('Failed to decrypt message');
@@ -71,18 +47,19 @@ export function isValidEncryptedFormat(encryptedText: string): boolean {
       return false;
     }
     
-    // Basic checks for encrypted format
-    const base64Regex = /^[A-Za-z0-9+/=]+$/;
-    if (!base64Regex.test(encryptedText)) return false;
+    // Check if it starts with the CryptoJS AES prefix
+    if (!encryptedText.startsWith('U2FsdGVkX1')) {
+      return false;
+    }
     
-    // Check minimum length (encrypted messages should be longer due to IV)
-    if (encryptedText.length < 24) return false; // Minimum for 16-byte IV + some data
-    
-    // Try to parse as Base64
-    const parsed = CryptoJS.enc.Base64.parse(encryptedText);
-    if (parsed.sigBytes < 16) return false; // At least 16 bytes for IV
-    
-    return true;
+    // Try to decrypt a test string to see if it's valid
+    try {
+      const testDecrypt = CryptoJS.AES.decrypt(encryptedText, 'test-key');
+      // If it doesn't throw an error, it's valid format
+      return true;
+    } catch (e) {
+      return false;
+    }
   } catch (error) {
     return false;
   }
@@ -118,15 +95,8 @@ export function encryptMessageForRecipient(text: string, threadId: string, recip
   const recipientKey = generateThreadKey(threadId, recipientId);
   
   try {
-    const iv = CryptoJS.lib.WordArray.random(16);
-    const encrypted = CryptoJS.AES.encrypt(text, recipientKey, {
-      iv: iv,
-      mode: CryptoJS.mode.CBC,
-      padding: CryptoJS.pad.Pkcs7
-    });
-    
-    const combined = iv.concat(encrypted.ciphertext);
-    return combined.toString(CryptoJS.enc.Base64);
+    const encrypted = CryptoJS.AES.encrypt(text, recipientKey);
+    return encrypted.toString();
   } catch (error) {
     console.error('Recipient encryption error:', error);
     throw new Error('Failed to encrypt message for recipient');
@@ -150,21 +120,7 @@ export function decryptMessageForRecipient(encryptedText: string, threadId: stri
   const recipientKey = generateThreadKey(threadId, recipientId);
   
   try {
-    const combined = CryptoJS.enc.Base64.parse(encryptedText);
-    
-    const iv = CryptoJS.lib.WordArray.create(combined.words.slice(0, 4));
-    const ciphertext = CryptoJS.lib.WordArray.create(combined.words.slice(4));
-    
-    const decrypted = CryptoJS.AES.decrypt(
-      { ciphertext: ciphertext } as CryptoJS.lib.CipherParams,
-      recipientKey,
-      {
-        iv: iv,
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
-      }
-    );
-    
+    const decrypted = CryptoJS.AES.decrypt(encryptedText, recipientKey);
     const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
     
     // If decryption results in empty text, it means the key doesn't match
@@ -199,15 +155,8 @@ export function encryptMessageForAdmin(text: string, threadId: string): string {
   const adminKey = generateAdminMasterKey(threadId);
   
   try {
-    const iv = CryptoJS.lib.WordArray.random(16);
-    const encrypted = CryptoJS.AES.encrypt(text, adminKey, {
-      iv: iv,
-      mode: CryptoJS.mode.CBC,
-      padding: CryptoJS.pad.Pkcs7
-    });
-    
-    const combined = iv.concat(encrypted.ciphertext);
-    return combined.toString(CryptoJS.enc.Base64);
+    const encrypted = CryptoJS.AES.encrypt(text, adminKey);
+    return encrypted.toString();
   } catch (error) {
     console.error('Admin encryption error:', error);
     throw new Error('Failed to encrypt message for admin');
@@ -230,21 +179,7 @@ export function decryptMessageForAdmin(encryptedText: string, threadId: string):
   const adminKey = generateAdminMasterKey(threadId);
   
   try {
-    const combined = CryptoJS.enc.Base64.parse(encryptedText);
-    
-    const iv = CryptoJS.lib.WordArray.create(combined.words.slice(0, 4));
-    const ciphertext = CryptoJS.lib.WordArray.create(combined.words.slice(4));
-    
-    const decrypted = CryptoJS.AES.decrypt(
-      { ciphertext: ciphertext } as CryptoJS.lib.CipherParams,
-      adminKey,
-      {
-        iv: iv,
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
-      }
-    );
-    
+    const decrypted = CryptoJS.AES.decrypt(encryptedText, adminKey);
     const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
     if (!decryptedText) {
       throw new Error('Admin decryption resulted in empty text');
@@ -268,15 +203,8 @@ export function encryptMessageForThread(text: string, threadId: string, userId: 
   const threadKey = generateThreadKey(threadId, userId);
   
   try {
-    const iv = CryptoJS.lib.WordArray.random(16);
-    const encrypted = CryptoJS.AES.encrypt(text, threadKey, {
-      iv: iv,
-      mode: CryptoJS.mode.CBC,
-      padding: CryptoJS.pad.Pkcs7
-    });
-    
-    const combined = iv.concat(encrypted.ciphertext);
-    return combined.toString(CryptoJS.enc.Base64);
+    const encrypted = CryptoJS.AES.encrypt(text, threadKey);
+    return encrypted.toString();
   } catch (error) {
     console.error('Thread encryption error:', error);
     throw new Error('Failed to encrypt message for thread');
@@ -300,21 +228,7 @@ export function decryptMessageForThread(encryptedText: string, threadId: string,
   const threadKey = generateThreadKey(threadId, userId);
   
   try {
-    const combined = CryptoJS.enc.Base64.parse(encryptedText);
-    
-    const iv = CryptoJS.lib.WordArray.create(combined.words.slice(0, 4));
-    const ciphertext = CryptoJS.lib.WordArray.create(combined.words.slice(4));
-    
-    const decrypted = CryptoJS.AES.decrypt(
-      { ciphertext: ciphertext } as CryptoJS.lib.CipherParams,
-      threadKey,
-      {
-        iv: iv,
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
-      }
-    );
-    
+    const decrypted = CryptoJS.AES.decrypt(encryptedText, threadKey);
     const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
     if (!decryptedText) {
       throw new Error('Thread decryption resulted in empty text');
