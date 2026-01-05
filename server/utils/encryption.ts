@@ -72,10 +72,19 @@ export function isValidEncryptedFormat(encryptedText: string): boolean {
       return false;
     }
     
-    // Try to decrypt - if it fails, it's not valid
-    decryptMessage(encryptedText);
+    // Basic checks for encrypted format
+    const base64Regex = /^[A-Za-z0-9+/=]+$/;
+    if (!base64Regex.test(encryptedText)) return false;
+    
+    // Check minimum length (encrypted messages should be longer due to IV)
+    if (encryptedText.length < 24) return false; // Minimum for 16-byte IV + some data
+    
+    // Try to parse as Base64
+    const parsed = CryptoJS.enc.Base64.parse(encryptedText);
+    if (parsed.sigBytes < 16) return false; // At least 16 bytes for IV
+    
     return true;
-  } catch {
+  } catch (error) {
     return false;
   }
 }
@@ -124,6 +133,12 @@ export function encryptMessageForThread(text: string, threadId: string, userId: 
  * @returns Decrypted plain text message
  */
 export function decryptMessageForThread(encryptedText: string, threadId: string, userId: string): string {
+  // Check if this is a legacy plain text message (not encrypted)
+  if (!isValidEncryptedFormat(encryptedText)) {
+    // Return as-is for legacy messages
+    return encryptedText;
+  }
+  
   const threadKey = generateThreadKey(threadId, userId);
   
   try {

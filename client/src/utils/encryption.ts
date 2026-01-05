@@ -124,6 +124,12 @@ export function encryptMessageForThread(text: string, threadId: string, userId: 
  * @returns Decrypted plain text message
  */
 export function decryptMessageForThread(encryptedText: string, threadId: string, userId: string): string {
+  // Check if this is a legacy plain text message (not encrypted)
+  if (!isValidEncryptedFormat(encryptedText)) {
+    // Return as-is for legacy messages
+    return encryptedText;
+  }
+  
   const threadKey = generateThreadKey(threadId, userId);
   
   try {
