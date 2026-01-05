@@ -68,23 +68,41 @@ export function decryptMessage(encryptedText: string): string {
  */
 export function isValidEncryptedFormat(encryptedText: string): boolean {
   try {
+    console.log('Validating encrypted format:', encryptedText);
+    console.log('Length:', encryptedText.length);
+    
     if (!encryptedText || typeof encryptedText !== 'string') {
+      console.log('Failed: not a string');
       return false;
     }
     
     // Basic checks for encrypted format
     const base64Regex = /^[A-Za-z0-9+/=]+$/;
-    if (!base64Regex.test(encryptedText)) return false;
+    const isBase64 = base64Regex.test(encryptedText);
+    console.log('Is base64 format:', isBase64);
+    if (!isBase64) {
+      console.log('Failed: not base64 format');
+      return false;
+    }
     
     // Check minimum length (encrypted messages should be longer due to IV)
-    if (encryptedText.length < 24) return false; // Minimum for 16-byte IV + some data
+    if (encryptedText.length < 24) {
+      console.log('Failed: too short (< 24 chars)');
+      return false; // Minimum for 16-byte IV + some data
+    }
     
     // Try to parse as Base64
     const parsed = CryptoJS.enc.Base64.parse(encryptedText);
-    if (parsed.sigBytes < 16) return false; // At least 16 bytes for IV
+    console.log('Parsed sigBytes:', parsed.sigBytes);
+    if (parsed.sigBytes < 16) {
+      console.log('Failed: parsed bytes < 16');
+      return false; // At least 16 bytes for IV
+    }
     
+    console.log('Passed validation as encrypted format');
     return true;
   } catch (error) {
+    console.log('Failed with error:', error);
     return false;
   }
 }
@@ -142,6 +160,9 @@ export function encryptMessageForRecipient(text: string, threadId: string, recip
  * @returns Decrypted plain text message
  */
 export function decryptMessageForRecipient(encryptedText: string, threadId: string, recipientId: string): string {
+  console.log('Input encrypted text:', encryptedText);
+  console.log('Is valid encrypted format:', isValidEncryptedFormat(encryptedText));
+  
   // Check if this is a legacy plain text message (not encrypted)
   if (!isValidEncryptedFormat(encryptedText)) {
     // Return as-is for legacy messages
