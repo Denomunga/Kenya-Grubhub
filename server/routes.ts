@@ -2000,7 +2000,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
             if (!decryptedSuccessfully && m.encryptedVersions) {
               for (const version of m.encryptedVersions) {
                 try {
-                  decryptedText = decryptMessageForRecipient(version.encryptedText, threadId, version.recipientId);
+                  decryptedText = decryptMessageForRecipient(version.encryptedText, m.threadId, version.recipientId);
                   decryptedSuccessfully = true;
                   break;
                 } catch (recipientDecryptError) {
@@ -2014,7 +2014,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
               const userVersion = m.encryptedVersions.find((v: any) => v.recipientId === req.user!._id.toString());
               if (userVersion) {
                 try {
-                  decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, userVersion.recipientId);
+                  decryptedText = decryptMessageForRecipient(userVersion.encryptedText, m.threadId, userVersion.recipientId);
                   decryptedSuccessfully = true;
                 } catch (userDecryptError) {
                   // Silent fallback to legacy decryption
@@ -2261,7 +2261,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
             if (!decryptedSuccessfully && m.encryptedVersions) {
               for (const version of m.encryptedVersions) {
                 try {
-                  decryptedText = decryptMessageForRecipient(version.encryptedText, threadId, version.recipientId);
+                  decryptedText = decryptMessageForRecipient(version.encryptedText, m.threadId, version.recipientId);
                   decryptedSuccessfully = true;
                   break;
                 } catch (recipientDecryptError) {
@@ -2275,7 +2275,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
               const userVersion = m.encryptedVersions.find((v: any) => v.recipientId === req.user!._id.toString());
               if (userVersion) {
                 try {
-                  decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, userVersion.recipientId);
+                  decryptedText = decryptMessageForRecipient(userVersion.encryptedText, m.threadId, userVersion.recipientId);
                   decryptedSuccessfully = true;
                 } catch (userDecryptError) {
                   // Silent fallback to legacy decryption
