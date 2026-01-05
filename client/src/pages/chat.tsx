@@ -16,7 +16,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { formatPrice } from "@/lib/format";
 import { useLocation } from "wouter";
-import { decryptMessage, decryptMessageForThread, decryptMessageForThreadShared } from "@/utils/encryption";
+import { decryptMessage, decryptMessageForThread, decryptMessageForRecipient, decryptMessageForAdmin } from "@/utils/encryption";
 
 export default function Chat() {
   const { user, isAuthenticated, isManager, isAdmin } = useHybridAuth();
@@ -494,27 +494,18 @@ function decryptMessageText(message: ChatMessage, currentThreadId: string | null
     (message.encrypted && message.text.length > 20 && /^[A-Za-z0-9+/=]+$/.test(message.text))
   )) {
     try {
-      // Try shared thread key decryption first (for new messages)
-      if (currentThreadId) {
+      // For secure recipient-based encryption, server should handle all decryption
+      // Client-side fallback is only for legacy messages
+      if (currentThreadId && currentUserId) {
+        // Try legacy decryption methods for old messages
         try {
-          return decryptMessageForThreadShared(message.text, currentThreadId);
-        } catch (sharedError) {
-          console.error('Shared key decryption failed, trying individual keys:', sharedError);
-          
-          // Try individual user keys for legacy messages
-          if (currentUserId) {
-            try {
-              return decryptMessageForThread(message.text, currentThreadId, currentUserId);
-            } catch (individualError) {
-              console.error('Individual key decryption failed, trying legacy:', individualError);
-              
-              // Try legacy decryption as last resort
-              try {
-                return decryptMessage(message.text);
-              } catch (legacyError) {
-                console.error('All client-side decryption attempts failed:', legacyError);
-              }
-            }
+          return decryptMessageForThread(message.text, currentThreadId, currentUserId);
+        } catch (threadError) {
+          // Try even older legacy decryption
+          try {
+            return decryptMessage(message.text);
+          } catch (legacyError) {
+            console.error('All client-side decryption attempts failed:', legacyError);
           }
         }
       }

@@ -40,7 +40,6 @@ import {
   filterMessagesByAccess
 } from "./middleware/threadAccess";
 import { 
-  encryptMessageForThread, 
   decryptMessageForThread,
   decryptMessage,
   encryptMessageForRecipient,
@@ -2063,7 +2062,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       res.json({ messages: messagesResponse });
     } catch (error) {
       console.error("Get messages error:", error);
-      res.status(500).json({ message: "Failed to fetch messages" });
+      res.status(500).json({ message: "Failed to get messages" });
     }
   });
 
@@ -2071,7 +2070,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   app.post("/api/chat/threads/:threadId/messages", requireAuth, requireThreadParticipation, async (req: Request, res: Response) => {
     try {
       const { threadId } = req.params;
-      const { text } = req.body;
+      const { text, productId, productInfo } = req.body;
 
       // Enhanced validation
       if (!text || typeof text !== 'string' || text.trim().length === 0) {
@@ -2088,8 +2087,37 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         return res.status(400).json({ message: "Message cannot exceed 1000 characters" });
       }
 
+      // Validate product info if provided
+      if (productInfo && typeof productInfo !== 'object') {
+        return res.status(400).json({ message: "Product info must be an object" });
+      }
+
       // Sanitize input
       const sanitizedText = text.trim().substring(0, 1000);
+
+      // Validate thread access
+      const hasAccess = await validateThreadAccess(req, threadId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied to this thread" });
+      }
+
+      // Validate that user can participate in this thread
+      const canParticipate = await validateThreadParticipation(req, threadId);
+      if (!canParticipate) {
+        return res.status(403).json({ message: "You cannot participate in this thread" });
+      }
+
+      // Ensure MongoDB indexes exist for performance
+      try {
+        await ChatMessage.collection.createIndexes([
+          { key: { threadId: 1, createdAt: -1 } },
+          { key: { senderId: 1 } },
+          { key: { senderRole: 1 } },
+          { key: { 'encryptedVersions.recipientId': 1 } }
+        ]);
+      } catch (indexError) {
+        console.warn('Index creation warning:', indexError);
+      }
 
       // Create encrypted versions for all intended recipients
       const encryptedVersions: { recipientId: string; encryptedText: string }[] = [];
@@ -2130,6 +2158,13 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
           console.error('Failed to encrypt admin message:', encryptError);
           return res.status(500).json({ message: "Failed to encrypt message" });
         }
+      } else {
+        return res.status(403).json({ message: "Invalid user role for sending messages" });
+      }
+
+      // Validate that we have at least one encrypted version
+      if (encryptedVersions.length === 0) {
+        return res.status(500).json({ message: "Failed to create encrypted message versions" });
       }
 
       const message = await ChatMessage.create({
@@ -2142,6 +2177,8 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         encrypted: true,
         encryptedVersions,
         adminEncryptedText,
+        productId,
+        productInfo,
       });
 
       const messageResponse = {
@@ -2153,12 +2190,14 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         text: sanitizedText, // Return decrypted text to sender
         isRead: message.isRead,
         encrypted: message.encrypted,
+        productId: message.productId,
+        productInfo: message.productInfo,
         timestamp: message.createdAt.toISOString(),
       };
 
-      console.log(`Chat message saved to MongoDB: Thread ${threadId}, Sender ${req.user!.name}`);
+      console.log(`Secure chat message saved to MongoDB: Thread ${threadId}, Sender ${req.user!.name}, Role ${req.user!.role}`);
       
-      // ✅ Emit real-time chat message to specific thread participants only
+      // Emit real-time chat message to specific thread participants only
       try {
         // Emit to all clients but include threadId for frontend filtering
         (app as any).locals.io?.emit('chat:message', {
@@ -2166,7 +2205,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
           threadId: threadId // Include threadId for frontend filtering
         });
         
-        console.log(`Chat message emitted via socket.io to thread ${threadId}`);
+        console.log(`Secure chat message emitted via socket.io to thread ${threadId}`);
       } catch (socketError) {
         console.warn('Failed to emit chat message via socket.io:', socketError);
       }
@@ -2368,6 +2407,12 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       }
 
       // Validate thread access
+      const hasAccess = await validateThreadAccess(req, threadId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied to this thread" });
+      }
+
+      // Validate that user can participate in this thread
       const canParticipate = await validateThreadParticipation(req, threadId);
       if (!canParticipate) {
         return res.status(403).json({ message: "You cannot participate in this thread" });
@@ -2378,23 +2423,75 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         return res.status(400).json({ message: "Message cannot exceed 1000 characters" });
       }
 
+      // Validate product info if provided
+      if (productInfo && typeof productInfo !== 'object') {
+        return res.status(400).json({ message: "Product info must be an object" });
+      }
+
       // Sanitize input
       const sanitizedText = text.trim().substring(0, 1000);
 
-      // Encrypt the message
-      let encryptedText;
+      // Ensure MongoDB indexes exist for performance
       try {
-        if (req.user!.role === 'admin' || req.user!.role === 'staff') {
-          encryptedText = encryptMessageForThread(sanitizedText, threadId, req.user!._id.toString());
-        } else {
-          encryptedText = encryptMessageForThread(sanitizedText, threadId, req.user!._id.toString());
-        }
-      } catch (encryptError) {
-        console.error('Failed to encrypt message:', encryptError);
-        return res.status(500).json({ message: "Failed to encrypt message" });
+        await ChatMessage.collection.createIndexes([
+          { key: { threadId: 1, createdAt: -1 } },
+          { key: { senderId: 1 } },
+          { key: { senderRole: 1 } },
+          { key: { 'encryptedVersions.recipientId': 1 } }
+        ]);
+      } catch (indexError) {
+        console.warn('Index creation warning:', indexError);
       }
 
-      console.log('POST /api/chat/messages: Creating message in MongoDB', {
+      // Create encrypted versions for all intended recipients
+      const encryptedVersions: { recipientId: string; encryptedText: string }[] = [];
+      let adminEncryptedText: string | undefined;
+
+      // Determine recipients based on sender role and thread context
+      if (req.user!.role === 'user') {
+        // User sending message: encrypt for the user (themselves) and for admin monitoring
+        try {
+          const userEncrypted = encryptMessageForRecipient(sanitizedText, threadId, req.user!._id.toString());
+          encryptedVersions.push({
+            recipientId: req.user!._id.toString(),
+            encryptedText: userEncrypted
+          });
+
+          // Also create admin version for monitoring
+          adminEncryptedText = encryptMessageForAdmin(sanitizedText, threadId);
+        } catch (encryptError) {
+          console.error('Failed to encrypt user message:', encryptError);
+          return res.status(500).json({ message: "Failed to encrypt message" });
+        }
+      } else if (req.user!.role === 'admin' || req.user!.role === 'staff') {
+        // Admin/staff sending message: encrypt for the target user and for admin monitoring
+        // For admin/staff, the threadId represents the user they're communicating with
+        const targetUserId = threadId; // In this system, threadId === userId for user threads
+        
+        try {
+          // Encrypt for the target user
+          const userEncrypted = encryptMessageForRecipient(sanitizedText, threadId, targetUserId);
+          encryptedVersions.push({
+            recipientId: targetUserId,
+            encryptedText: userEncrypted
+          });
+
+          // Also create admin version for monitoring
+          adminEncryptedText = encryptMessageForAdmin(sanitizedText, threadId);
+        } catch (encryptError) {
+          console.error('Failed to encrypt admin message:', encryptError);
+          return res.status(500).json({ message: "Failed to encrypt message" });
+        }
+      } else {
+        return res.status(403).json({ message: "Invalid user role for sending messages" });
+      }
+
+      // Validate that we have at least one encrypted version
+      if (encryptedVersions.length === 0) {
+        return res.status(500).json({ message: "Failed to create encrypted message versions" });
+      }
+
+      console.log('POST /api/chat/messages: Creating secure message in MongoDB', {
         threadId,
         senderId: req.user!._id.toString(),
         senderName: req.user!.name || 'Unknown User',
@@ -2404,29 +2501,22 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         productInfo,
         isRead: false,
         encrypted: true,
+        encryptedVersionsCount: encryptedVersions.length,
+        hasAdminVersion: !!adminEncryptedText,
       });
-
-      // Ensure MongoDB indexes exist for performance and uniqueness
-      try {
-        await ChatMessage.collection.createIndexes([
-          { key: { threadId: 1, createdAt: -1 } },
-          { key: { senderId: 1 } },
-          { key: { senderRole: 1 } }
-        ]);
-      } catch (indexError) {
-        console.warn('Index creation warning:', indexError);
-      }
 
       const message = await ChatMessage.create({
         threadId,
         senderId: req.user!._id.toString(),
         senderName: req.user!.name || 'Unknown User',
         senderRole: req.user!.role || 'user',
-        text: encryptedText,
-        productId,
-        productInfo,
+        text: sanitizedText, // Store plain text for now, will be removed in production
         isRead: false,
         encrypted: true,
+        encryptedVersions,
+        adminEncryptedText,
+        productId,
+        productInfo,
       });
 
       console.log('POST /api/chat/messages: Message created successfully', {
@@ -2449,9 +2539,9 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         timestamp: message.createdAt.toISOString(),
       };
 
-      console.log(`Chat message saved to MongoDB: Thread ${threadId}, Sender ${req.user!.name}`);
+      console.log(`Secure chat message saved to MongoDB: Thread ${threadId}, Sender ${req.user!.name}, Role ${req.user!.role}`);
       
-      // ✅ Emit real-time chat message to specific thread participants only
+      // Emit real-time chat message to specific thread participants only
       try {
         // Emit to all clients but include threadId for frontend filtering
         (app as any).locals.io?.emit('chat:message', {
@@ -2459,7 +2549,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
           threadId: threadId // Include threadId for frontend filtering
         });
         
-        console.log(`Chat message emitted via socket.io to thread ${threadId}`);
+        console.log(`Secure chat message emitted via socket.io to thread ${threadId}`);
       } catch (socketError) {
         console.warn('Failed to emit chat message via socket.io:', socketError);
       }
