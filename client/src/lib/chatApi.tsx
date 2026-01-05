@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { useHybridAuth } from '@/lib/hybrid-auth';
 import { apiFetch } from "./api";
 import { toast } from "sonner";
-import { encryptMessageForThread } from "@/utils/encryption";
+import { encryptMessageForThreadShared } from "@/utils/encryption";
 
 // Helper function with retry-after and exponential backoff for chat
 const fetchChatWithRetry = async (url: string, maxRetries: number = 3) => {
@@ -171,16 +171,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const sendMessage = async (
     threadId: string,
-    sender: { id: string, name: string, role: "admin" | "staff" | "user" },
+    _sender: { id: string, name: string, role: "admin" | "staff" | "user" },
     text: string,
     productId?: string,
     productInfo?: any
   ) => {
     try {
-      // Encrypt the message before sending
+      // Encrypt the message before sending using shared thread key
       let encryptedText = text;
       try {
-        encryptedText = encryptMessageForThread(text, threadId, sender.id);
+        encryptedText = encryptMessageForThreadShared(text, threadId);
       } catch (encryptError) {
         console.error('Failed to encrypt message client-side:', encryptError);
         // Continue with plain text if encryption fails (server will encrypt)

@@ -72,22 +72,108 @@ export function isValidEncryptedFormat(encryptedText: string): boolean {
       return false;
     }
     
-    // Try to decrypt - if it fails, it's not valid
-    decryptMessage(encryptedText);
+    // Basic checks for encrypted format
+    const base64Regex = /^[A-Za-z0-9+/=]+$/;
+    if (!base64Regex.test(encryptedText)) return false;
+    
+    // Check minimum length (encrypted messages should be longer due to IV)
+    if (encryptedText.length < 24) return false; // Minimum for 16-byte IV + some data
+    
+    // Try to parse as Base64
+    const parsed = CryptoJS.enc.Base64.parse(encryptedText);
+    if (parsed.sigBytes < 16) return false; // At least 16 bytes for IV
+    
     return true;
-  } catch {
+  } catch (error) {
     return false;
   }
 }
 
 /**
- * Generates a secure key for thread-specific encryption
+ * Generates a secure key for thread-specific encryption (individual user key)
  * @param threadId - The thread ID
  * @param userId - The user ID
- * @returns Thread-specific encryption key
+ * @returns Thread-specific encryption key for individual user
  */
 export function generateThreadKey(threadId: string, userId: string): string {
   return CryptoJS.SHA256(`${threadId}:${userId}:${ENCRYPTION_KEY}`).toString();
+}
+
+/**
+ * Generates a shared thread key that all participants can use
+ * @param threadId - The thread ID
+ * @returns Shared thread encryption key
+ */
+export function generateSharedThreadKey(threadId: string): string {
+  return CryptoJS.SHA256(`${threadId}:shared:${ENCRYPTION_KEY}`).toString();
+}
+
+/**
+ * Encrypts a message for a specific thread using shared key
+ * @param text - The plain text message
+ * @param threadId - The thread ID
+ * @returns Thread-specific encrypted message using shared key
+ */
+export function encryptMessageForThreadShared(text: string, threadId: string): string {
+  const threadKey = generateSharedThreadKey(threadId);
+  
+  try {
+    const iv = CryptoJS.lib.WordArray.random(16);
+    const encrypted = CryptoJS.AES.encrypt(text, threadKey, {
+      iv: iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7
+    });
+    
+    const combined = iv.concat(encrypted.ciphertext);
+    return combined.toString(CryptoJS.enc.Base64);
+  } catch (error) {
+    console.error('Shared thread encryption error:', error);
+    throw new Error('Failed to encrypt message for shared thread');
+  }
+}
+
+/**
+ * Decrypts a message for a specific thread using shared key
+ * @param encryptedText - The encrypted message
+ * @param threadId - The thread ID
+ * @returns Decrypted plain text message
+ */
+export function decryptMessageForThreadShared(encryptedText: string, threadId: string): string {
+  // Check if this is a legacy plain text message (not encrypted)
+  if (!isValidEncryptedFormat(encryptedText)) {
+    // Return as-is for legacy messages
+    return encryptedText;
+  }
+  
+  const threadKey = generateSharedThreadKey(threadId);
+  
+  try {
+    const combined = CryptoJS.enc.Base64.parse(encryptedText);
+    
+    const iv = CryptoJS.lib.WordArray.create(combined.words.slice(0, 4));
+    const ciphertext = CryptoJS.lib.WordArray.create(combined.words.slice(4));
+    
+    const decrypted = CryptoJS.AES.decrypt(
+      { ciphertext: ciphertext } as CryptoJS.lib.CipherParams,
+      threadKey,
+      {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      }
+    );
+    
+    const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+    if (!decryptedText) {
+      throw new Error('Shared thread decryption resulted in empty text');
+    }
+    
+    return decryptedText;
+  } catch (error) {
+    console.error('Shared thread decryption error:', error);
+    throw new Error('Failed to decrypt message for shared thread');
+  }
 }
 
 /**

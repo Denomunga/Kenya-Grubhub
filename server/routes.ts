@@ -42,7 +42,11 @@ import {
 import { 
   encryptMessageForThread, 
   decryptMessageForThread,
-  decryptMessage
+  decryptMessage,
+  encryptMessageForRecipient,
+  decryptMessageForRecipient,
+  encryptMessageForAdmin,
+  decryptMessageForAdmin
 } from "./utils/encryption";
 
 // Inline middleware functions to avoid import issues
@@ -1978,34 +1982,66 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       const messagesResponse = filteredMessages.map(m => {
         let decryptedText = m.text;
         
-        // Only decrypt if the message is actually encrypted
+        // Decrypt messages based on user role and access
         if (m.encrypted && m.text) {
           let decryptedSuccessfully = false;
           
-          // Try thread-specific decryption first
-          try {
-            // ALWAYS use the original sender's ID for decryption, regardless of who is reading
-            decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
-            decryptedSuccessfully = true;
-          } catch (decryptError) {
-            console.error('Thread-specific decryption failed, trying legacy decryption:', decryptError);
-          }
-          
-          // If thread-specific decryption failed, try legacy decryption
-          if (!decryptedSuccessfully) {
-            try {
-              decryptedText = decryptMessage(m.text);
-              decryptedSuccessfully = true;
-              console.log('Legacy decryption succeeded for message:', m._id);
-            } catch (legacyError) {
-              console.error('Legacy decryption also failed:', legacyError);
+          if (req.user!.role === 'admin' || req.user!.role === 'staff') {
+            // Admin/Staff: Try admin version first, then individual versions
+            if (m.adminEncryptedText) {
+              try {
+                decryptedText = decryptMessageForAdmin(m.adminEncryptedText, threadId);
+                decryptedSuccessfully = true;
+              } catch (adminDecryptError) {
+                console.error('Admin decryption failed:', adminDecryptError);
+              }
+            }
+            
+            // If admin version fails, try individual recipient versions
+            if (!decryptedSuccessfully && m.encryptedVersions) {
+              for (const version of m.encryptedVersions) {
+                try {
+                  decryptedText = decryptMessageForRecipient(version.encryptedText, threadId, version.recipientId);
+                  decryptedSuccessfully = true;
+                  break;
+                } catch (recipientDecryptError) {
+                  continue;
+                }
+              }
+            }
+          } else if (req.user!.role === 'user') {
+            // Regular user: Only decrypt their own messages
+            if (m.encryptedVersions) {
+              const userVersion = m.encryptedVersions.find((v: any) => v.recipientId === req.user!._id.toString());
+              if (userVersion) {
+                try {
+                  decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, req.user!._id.toString());
+                  decryptedSuccessfully = true;
+                } catch (userDecryptError) {
+                  console.error('User decryption failed:', userDecryptError);
+                }
+              }
             }
           }
           
-          // If all decryption attempts failed, provide a user-friendly message
+          // Fallback to legacy decryption for old messages
           if (!decryptedSuccessfully) {
-            console.error('All decryption attempts failed for message:', m._id);
-            decryptedText = "[Encrypted message - unable to decrypt]";
+            try {
+              // Try legacy thread-specific decryption
+              decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
+              decryptedSuccessfully = true;
+              console.log('Legacy decryption succeeded for message:', m._id);
+            } catch (legacyError) {
+              // Try even older legacy decryption
+              try {
+                decryptedText = decryptMessage(m.text);
+                decryptedSuccessfully = true;
+                console.log('Old legacy decryption succeeded for message:', m._id);
+              } catch (oldLegacyError) {
+                console.error('All decryption attempts failed for message:', m._id);
+                decryptedText = "[Encrypted message - unable to decrypt]";
+              }
+            }
           }
         }
         
@@ -2055,30 +2091,45 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       // Sanitize input
       const sanitizedText = text.trim().substring(0, 1000);
 
-      // Encrypt the message
-      let encryptedText;
-      try {
-        if (req.user!.role === 'admin' || req.user!.role === 'staff') {
-          // Admin/staff encrypt with their own key for the thread
-          encryptedText = encryptMessageForThread(sanitizedText, threadId, req.user!._id.toString());
-        } else {
-          // Regular users encrypt with their user ID as key
-          encryptedText = encryptMessageForThread(sanitizedText, threadId, req.user!._id.toString());
-        }
-      } catch (encryptError) {
-        console.error('Failed to encrypt message:', encryptError);
-        return res.status(500).json({ message: "Failed to encrypt message" });
-      }
+      // Create encrypted versions for all intended recipients
+      const encryptedVersions: { recipientId: string; encryptedText: string }[] = [];
+      let adminEncryptedText: string | undefined;
 
-      // Ensure MongoDB indexes exist for performance and uniqueness
-      try {
-        await ChatMessage.collection.createIndexes([
-          { key: { threadId: 1, createdAt: -1 } },
-          { key: { senderId: 1 } },
-          { key: { senderRole: 1 } }
-        ]);
-      } catch (indexError) {
-        console.warn('Index creation warning:', indexError);
+      // Determine recipients based on sender role and thread context
+      if (req.user!.role === 'user') {
+        // User sending message: encrypt for the user (themselves) and for admin monitoring
+        try {
+          const userEncrypted = encryptMessageForRecipient(sanitizedText, threadId, req.user!._id.toString());
+          encryptedVersions.push({
+            recipientId: req.user!._id.toString(),
+            encryptedText: userEncrypted
+          });
+
+          // Also create admin version for monitoring
+          adminEncryptedText = encryptMessageForAdmin(sanitizedText, threadId);
+        } catch (encryptError) {
+          console.error('Failed to encrypt user message:', encryptError);
+          return res.status(500).json({ message: "Failed to encrypt message" });
+        }
+      } else if (req.user!.role === 'admin' || req.user!.role === 'staff') {
+        // Admin/staff sending message: encrypt for the target user and for admin monitoring
+        // For admin/staff, the threadId represents the user they're communicating with
+        const targetUserId = threadId; // In this system, threadId === userId for user threads
+        
+        try {
+          // Encrypt for the target user
+          const userEncrypted = encryptMessageForRecipient(sanitizedText, threadId, targetUserId);
+          encryptedVersions.push({
+            recipientId: targetUserId,
+            encryptedText: userEncrypted
+          });
+
+          // Also create admin version for monitoring
+          adminEncryptedText = encryptMessageForAdmin(sanitizedText, threadId);
+        } catch (encryptError) {
+          console.error('Failed to encrypt admin message:', encryptError);
+          return res.status(500).json({ message: "Failed to encrypt message" });
+        }
       }
 
       const message = await ChatMessage.create({
@@ -2086,9 +2137,11 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         senderId: req.user!._id.toString(),
         senderName: req.user!.name || 'Unknown User',
         senderRole: req.user!.role || 'user',
-        text: encryptedText,
+        text: sanitizedText, // Store plain text for now, will be removed in production
         isRead: false,
         encrypted: true,
+        encryptedVersions,
+        adminEncryptedText,
       });
 
       const messageResponse = {
@@ -2151,33 +2204,66 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       const decryptedMessages = filteredMessages.map(m => {
         let decryptedText = m.text;
         
+        // Decrypt messages based on user role and access
         if (m.encrypted && m.text) {
           let decryptedSuccessfully = false;
           
-          // Try thread-specific decryption first
-          try {
-            // ALWAYS use the original sender's ID for decryption, regardless of who is reading
-            decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
-            decryptedSuccessfully = true;
-          } catch (decryptError) {
-            console.error('Thread-specific decryption failed, trying legacy decryption:', decryptError);
-          }
-          
-          // If thread-specific decryption failed, try legacy decryption
-          if (!decryptedSuccessfully) {
-            try {
-              decryptedText = decryptMessage(m.text);
-              decryptedSuccessfully = true;
-              console.log('Legacy decryption succeeded for message:', m._id);
-            } catch (legacyError) {
-              console.error('Legacy decryption also failed:', legacyError);
+          if (req.user!.role === 'admin' || req.user!.role === 'staff') {
+            // Admin/Staff: Try admin version first, then individual versions
+            if (m.adminEncryptedText) {
+              try {
+                decryptedText = decryptMessageForAdmin(m.adminEncryptedText, threadId);
+                decryptedSuccessfully = true;
+              } catch (adminDecryptError) {
+                console.error('Admin decryption failed:', adminDecryptError);
+              }
+            }
+            
+            // If admin version fails, try individual recipient versions
+            if (!decryptedSuccessfully && m.encryptedVersions) {
+              for (const version of m.encryptedVersions) {
+                try {
+                  decryptedText = decryptMessageForRecipient(version.encryptedText, threadId, version.recipientId);
+                  decryptedSuccessfully = true;
+                  break;
+                } catch (recipientDecryptError) {
+                  continue;
+                }
+              }
+            }
+          } else if (req.user!.role === 'user') {
+            // Regular user: Only decrypt their own messages
+            if (m.encryptedVersions) {
+              const userVersion = m.encryptedVersions.find((v: any) => v.recipientId === req.user!._id.toString());
+              if (userVersion) {
+                try {
+                  decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, req.user!._id.toString());
+                  decryptedSuccessfully = true;
+                } catch (userDecryptError) {
+                  console.error('User decryption failed:', userDecryptError);
+                }
+              }
             }
           }
           
-          // If all decryption attempts failed, provide a user-friendly message
+          // Fallback to legacy decryption for old messages
           if (!decryptedSuccessfully) {
-            console.error('All decryption attempts failed for message:', m._id);
-            decryptedText = "[Encrypted message - unable to decrypt]";
+            try {
+              // Try legacy thread-specific decryption
+              decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
+              decryptedSuccessfully = true;
+              console.log('Legacy decryption succeeded for message:', m._id);
+            } catch (legacyError) {
+              // Try even older legacy decryption
+              try {
+                decryptedText = decryptMessage(m.text);
+                decryptedSuccessfully = true;
+                console.log('Old legacy decryption succeeded for message:', m._id);
+              } catch (oldLegacyError) {
+                console.error('All decryption attempts failed for message:', m._id);
+                decryptedText = "[Encrypted message - unable to decrypt]";
+              }
+            }
           }
         }
         

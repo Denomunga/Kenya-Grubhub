@@ -90,13 +90,169 @@ export function isValidEncryptedFormat(encryptedText: string): boolean {
 }
 
 /**
- * Generates a secure key for thread-specific encryption
+ * Generates a secure key for thread-specific encryption (individual user key)
  * @param threadId - The thread ID
  * @param userId - The user ID
- * @returns Thread-specific encryption key
+ * @returns Thread-specific encryption key for individual user
  */
 export function generateThreadKey(threadId: string, userId: string): string {
   return CryptoJS.SHA256(`${threadId}:${userId}:${ENCRYPTION_KEY}`).toString();
+}
+
+/**
+ * Generates a shared thread key that all participants can use
+ * @param threadId - The thread ID
+ * @returns Shared thread encryption key
+ */
+export function generateSharedThreadKey(threadId: string): string {
+  return CryptoJS.SHA256(`${threadId}:shared:${ENCRYPTION_KEY}`).toString();
+}
+
+/**
+ * Encrypts a message for a specific recipient in a thread
+ * @param text - The plain text message
+ * @param threadId - The thread ID
+ * @param recipientId - The recipient user ID
+ * @returns Recipient-specific encrypted message
+ */
+export function encryptMessageForRecipient(text: string, threadId: string, recipientId: string): string {
+  const recipientKey = generateThreadKey(threadId, recipientId);
+  
+  try {
+    const iv = CryptoJS.lib.WordArray.random(16);
+    const encrypted = CryptoJS.AES.encrypt(text, recipientKey, {
+      iv: iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7
+    });
+    
+    const combined = iv.concat(encrypted.ciphertext);
+    return combined.toString(CryptoJS.enc.Base64);
+  } catch (error) {
+    console.error('Recipient encryption error:', error);
+    throw new Error('Failed to encrypt message for recipient');
+  }
+}
+
+/**
+ * Decrypts a message for a specific recipient in a thread
+ * @param encryptedText - The encrypted message
+ * @param threadId - The thread ID
+ * @param recipientId - The recipient user ID
+ * @returns Decrypted plain text message
+ */
+export function decryptMessageForRecipient(encryptedText: string, threadId: string, recipientId: string): string {
+  // Check if this is a legacy plain text message (not encrypted)
+  if (!isValidEncryptedFormat(encryptedText)) {
+    // Return as-is for legacy messages
+    return encryptedText;
+  }
+  
+  const recipientKey = generateThreadKey(threadId, recipientId);
+  
+  try {
+    const combined = CryptoJS.enc.Base64.parse(encryptedText);
+    
+    const iv = CryptoJS.lib.WordArray.create(combined.words.slice(0, 4));
+    const ciphertext = CryptoJS.lib.WordArray.create(combined.words.slice(4));
+    
+    const decrypted = CryptoJS.AES.decrypt(
+      { ciphertext: ciphertext } as CryptoJS.lib.CipherParams,
+      recipientKey,
+      {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      }
+    );
+    
+    const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+    if (!decryptedText) {
+      throw new Error('Recipient decryption resulted in empty text');
+    }
+    
+    return decryptedText;
+  } catch (error) {
+    console.error('Recipient decryption error:', error);
+    throw new Error('Failed to decrypt message for recipient');
+  }
+}
+
+/**
+ * Generates an admin master key for thread monitoring
+ * @param threadId - The thread ID
+ * @returns Admin master key for the thread
+ */
+export function generateAdminMasterKey(threadId: string): string {
+  return CryptoJS.SHA256(`${threadId}:admin:master:${ENCRYPTION_KEY}`).toString();
+}
+
+/**
+ * Encrypts a message for admin monitoring
+ * @param text - The plain text message
+ * @param threadId - The thread ID
+ * @returns Admin-encrypted message
+ */
+export function encryptMessageForAdmin(text: string, threadId: string): string {
+  const adminKey = generateAdminMasterKey(threadId);
+  
+  try {
+    const iv = CryptoJS.lib.WordArray.random(16);
+    const encrypted = CryptoJS.AES.encrypt(text, adminKey, {
+      iv: iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7
+    });
+    
+    const combined = iv.concat(encrypted.ciphertext);
+    return combined.toString(CryptoJS.enc.Base64);
+  } catch (error) {
+    console.error('Admin encryption error:', error);
+    throw new Error('Failed to encrypt message for admin');
+  }
+}
+
+/**
+ * Decrypts a message for admin monitoring
+ * @param encryptedText - The encrypted message
+ * @param threadId - The thread ID
+ * @returns Decrypted plain text message
+ */
+export function decryptMessageForAdmin(encryptedText: string, threadId: string): string {
+  // Check if this is a legacy plain text message (not encrypted)
+  if (!isValidEncryptedFormat(encryptedText)) {
+    // Return as-is for legacy messages
+    return encryptedText;
+  }
+  
+  const adminKey = generateAdminMasterKey(threadId);
+  
+  try {
+    const combined = CryptoJS.enc.Base64.parse(encryptedText);
+    
+    const iv = CryptoJS.lib.WordArray.create(combined.words.slice(0, 4));
+    const ciphertext = CryptoJS.lib.WordArray.create(combined.words.slice(4));
+    
+    const decrypted = CryptoJS.AES.decrypt(
+      { ciphertext: ciphertext } as CryptoJS.lib.CipherParams,
+      adminKey,
+      {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      }
+    );
+    
+    const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+    if (!decryptedText) {
+      throw new Error('Admin decryption resulted in empty text');
+    }
+    
+    return decryptedText;
+  } catch (error) {
+    console.error('Admin decryption error:', error);
+    throw new Error('Failed to decrypt message for admin');
+  }
 }
 
 /**
