@@ -56,7 +56,6 @@ export function decryptMessage(encryptedText: string): string {
     
     return decryptedText;
   } catch (error) {
-    console.error('Decryption error:', error);
     throw new Error('Failed to decrypt message');
   }
 }
@@ -176,8 +175,7 @@ export function decryptMessageForRecipient(encryptedText: string, threadId: stri
     
     return decryptedText;
   } catch (error: any) {
-    // If decryption fails, it could be due to key mismatch or corruption
-    // Let the caller handle the fallback to legacy decryption
+    // Silent error - let caller handle fallback
     throw new Error('Failed to decrypt message for recipient: ' + error.message);
   }
 }

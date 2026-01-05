@@ -25,7 +25,6 @@ interface NewsItem {
 
 export default function Home() {
   const { menu, reviews, fetchReviewsFromServer, news } = useData(); // ✅ Use global news state
-  console.log('🏠 Home page - menu state:', menu.length, 'items:', menu.map(m => ({ id: m.id, name: m.name })));
   const [, setLocation] = useLocation();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchedProducts, setSearchedProducts] = useState<any[]>([]);
@@ -35,7 +34,7 @@ export default function Home() {
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
   // const [news, setNews] = useState<NewsItem[]>([]); // ❌ Remove local news state
   const [businessLocation, setBusinessLocation] = useState<any>(null);
-  const [locationLoading, setLocationLoading] = useState(true);
+  const [locationLoading, setLocationLoading] = useState(false);
   
   // Newsletter state
   const [email, setEmail] = useState('');
@@ -83,28 +82,6 @@ export default function Home() {
   );
   
   
-  // Fetch business location
-  useEffect(() => {
-    const fetchBusinessLocation = async () => {
-      try {
-        const response = await fetch('/api/business-location');
-        if (response.ok) {
-          const data = await response.json();
-          setBusinessLocation(data);
-        } else {
-          // Business location is optional - don't show error
-          setBusinessLocation(null);
-        }
-      } catch (error) {
-        // Business location is optional - don't show error
-        setBusinessLocation(null);
-      } finally {
-        setLocationLoading(false);
-      }
-    };
-    
-    fetchBusinessLocation();
-  }, []);
 
   // ✅ News is now fetched from global DataContext, no need for local fetching
   useEffect(() => {

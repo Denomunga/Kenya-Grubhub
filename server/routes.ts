@@ -2017,7 +2017,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
                   decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, userVersion.recipientId);
                   decryptedSuccessfully = true;
                 } catch (userDecryptError) {
-                  console.error('User decryption failed:', userDecryptError);
+                  // Silent fallback to legacy decryption
                 }
               }
             }
@@ -2029,15 +2029,13 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
               // Try legacy thread-specific decryption
               decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
               decryptedSuccessfully = true;
-              console.log('Legacy decryption succeeded for message:', m._id);
             } catch (legacyError) {
               // Try even older legacy decryption
               try {
                 decryptedText = decryptMessage(m.text);
                 decryptedSuccessfully = true;
-                console.log('Old legacy decryption succeeded for message:', m._id);
               } catch (oldLegacyError) {
-                console.error('All decryption attempts failed for message:', m._id);
+                // All decryption attempts failed - return placeholder
                 decryptedText = "[Encrypted message - unable to decrypt]";
               }
             }
@@ -2279,7 +2277,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
                   decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, userVersion.recipientId);
                   decryptedSuccessfully = true;
                 } catch (userDecryptError) {
-                  console.error('User decryption failed:', userDecryptError);
+                  // Silent fallback to legacy decryption
                 }
               }
             }
@@ -2291,15 +2289,13 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
               // Try legacy thread-specific decryption
               decryptedText = decryptMessageForThread(m.text, threadId, m.senderId);
               decryptedSuccessfully = true;
-              console.log('Legacy decryption succeeded for message:', m._id);
             } catch (legacyError) {
               // Try even older legacy decryption
               try {
                 decryptedText = decryptMessage(m.text);
                 decryptedSuccessfully = true;
-                console.log('Old legacy decryption succeeded for message:', m._id);
               } catch (oldLegacyError) {
-                console.error('All decryption attempts failed for message:', m._id);
+                // All decryption attempts failed - return placeholder
                 decryptedText = "[Encrypted message - unable to decrypt]";
               }
             }
