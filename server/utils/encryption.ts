@@ -68,41 +68,23 @@ export function decryptMessage(encryptedText: string): string {
  */
 export function isValidEncryptedFormat(encryptedText: string): boolean {
   try {
-    console.log('Validating encrypted format:', encryptedText);
-    console.log('Length:', encryptedText.length);
-    
     if (!encryptedText || typeof encryptedText !== 'string') {
-      console.log('Failed: not a string');
       return false;
     }
     
     // Basic checks for encrypted format
     const base64Regex = /^[A-Za-z0-9+/=]+$/;
-    const isBase64 = base64Regex.test(encryptedText);
-    console.log('Is base64 format:', isBase64);
-    if (!isBase64) {
-      console.log('Failed: not base64 format');
-      return false;
-    }
+    if (!base64Regex.test(encryptedText)) return false;
     
     // Check minimum length (encrypted messages should be longer due to IV)
-    if (encryptedText.length < 24) {
-      console.log('Failed: too short (< 24 chars)');
-      return false; // Minimum for 16-byte IV + some data
-    }
+    if (encryptedText.length < 24) return false; // Minimum for 16-byte IV + some data
     
     // Try to parse as Base64
     const parsed = CryptoJS.enc.Base64.parse(encryptedText);
-    console.log('Parsed sigBytes:', parsed.sigBytes);
-    if (parsed.sigBytes < 16) {
-      console.log('Failed: parsed bytes < 16');
-      return false; // At least 16 bytes for IV
-    }
+    if (parsed.sigBytes < 16) return false; // At least 16 bytes for IV
     
-    console.log('Passed validation as encrypted format');
     return true;
   } catch (error) {
-    console.log('Failed with error:', error);
     return false;
   }
 }
@@ -160,18 +142,13 @@ export function encryptMessageForRecipient(text: string, threadId: string, recip
  * @returns Decrypted plain text message
  */
 export function decryptMessageForRecipient(encryptedText: string, threadId: string, recipientId: string): string {
-  console.log('Input encrypted text:', encryptedText);
-  console.log('Is valid encrypted format:', isValidEncryptedFormat(encryptedText));
-  
   // Check if this is a legacy plain text message (not encrypted)
   if (!isValidEncryptedFormat(encryptedText)) {
     // Return as-is for legacy messages
-    console.log('Message is not in encrypted format, returning as plain text');
     return encryptedText;
   }
   
   const recipientKey = generateThreadKey(threadId, recipientId);
-  console.log('Attempting recipient decryption with key:', recipientKey.substring(0, 10) + '...');
   
   try {
     const combined = CryptoJS.enc.Base64.parse(encryptedText);
@@ -190,16 +167,18 @@ export function decryptMessageForRecipient(encryptedText: string, threadId: stri
     );
     
     const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
-    console.log('Decrypted text length:', decryptedText.length, 'content:', decryptedText);
     
+    // If decryption results in empty text, it means the key doesn't match
+    // This can happen if the message was encrypted with a different key
     if (!decryptedText) {
-      throw new Error('Recipient decryption resulted in empty text');
+      throw new Error('Recipient decryption resulted in empty text - key mismatch');
     }
     
     return decryptedText;
-  } catch (error) {
-    console.error('Recipient decryption error:', error);
-    throw new Error('Failed to decrypt message for recipient');
+  } catch (error: any) {
+    // If decryption fails, it could be due to key mismatch or corruption
+    // Let the caller handle the fallback to legacy decryption
+    throw new Error('Failed to decrypt message for recipient: ' + error.message);
   }
 }
 
