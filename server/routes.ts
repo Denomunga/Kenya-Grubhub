@@ -2120,6 +2120,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       // Create encrypted versions for all intended recipients
       const encryptedVersions: { recipientId: string; encryptedText: string }[] = [];
       let adminEncryptedText: string | undefined;
+      let userEncrypted: string | undefined;
 
       // Determine recipients based on sender role and thread context
       if (req.user!.role === 'user') {
@@ -2170,7 +2171,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         senderId: req.user!._id.toString(),
         senderName: req.user!.name || 'Unknown User',
         senderRole: req.user!.role || 'user',
-        text: '', // Don't store plain text - only encrypted versions
+        text: userEncrypted || adminEncryptedText || '', // Store sender's encrypted version
         isRead: false,
         encrypted: true,
         encryptedVersions,
@@ -2442,6 +2443,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       // Create encrypted versions for all intended recipients
       const encryptedVersions: { recipientId: string; encryptedText: string }[] = [];
       let adminEncryptedText: string | undefined;
+      let userEncrypted: string | undefined;
 
       // Determine recipients based on sender role and thread context
       if (req.user!.role === 'user') {
@@ -2506,7 +2508,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         senderId: req.user!._id.toString(),
         senderName: req.user!.name || 'Unknown User',
         senderRole: req.user!.role || 'user',
-        text: '', // Don't store plain text - only encrypted versions
+        text: userEncrypted || adminEncryptedText || '', // Store sender's encrypted version
         isRead: false,
         encrypted: true,
         encryptedVersions,
