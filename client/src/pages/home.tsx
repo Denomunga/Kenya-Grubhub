@@ -34,7 +34,7 @@ export default function Home() {
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
   // const [news, setNews] = useState<NewsItem[]>([]); // ❌ Remove local news state
   const [businessLocation, setBusinessLocation] = useState<any>(null);
-  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(true);
   
   // Newsletter state
   const [email, setEmail] = useState('');
@@ -80,6 +80,29 @@ export default function Home() {
     Math.min(900, Math.max(400, 400 + scrollY / 10)), 
     [scrollY]
   );
+  
+  // Fetch business location
+  useEffect(() => {
+    const fetchBusinessLocation = async () => {
+      try {
+        const response = await fetch('/api/business-location');
+        if (response.ok) {
+          const data = await response.json();
+          setBusinessLocation(data);
+        } else {
+          // Business location is optional - don't show error
+          setBusinessLocation(null);
+        }
+      } catch (error) {
+        // Business location is optional - don't show error
+        setBusinessLocation(null);
+      } finally {
+        setLocationLoading(false);
+      }
+    };
+    
+    fetchBusinessLocation();
+  }, []);
   
   
 

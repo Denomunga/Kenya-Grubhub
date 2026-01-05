@@ -35,7 +35,7 @@ const shouldFilterMessage = (message: any[]) => {
     msgStr.includes('Too Many Requests') || 
     msgStr.includes('Failed to load resource') ||
     msgStr.includes('server responded with a status of 429') ||
-    msgStr.includes('server responded with a status of 404') ||
+    msgStr.includes('server responded with a status of 404') && msgStr.includes('business-location') === false ||
     msgStr.includes('GET') && msgStr.includes('429') ||
     msgStr.includes('kenya-grubhub.onrender.com/api/') ||
     msgStr.includes('fetchWithCSRF') ||
