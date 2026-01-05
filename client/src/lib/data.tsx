@@ -92,6 +92,7 @@ export interface ChatMessage {
   senderRole: "admin" | "staff" | "user";
   text: string;
   timestamp: string;
+  createdAt?: string; // Added to match server model
   isRead: boolean;
   encrypted: boolean; // UI flag for E2EE simulation
   productId?: string; // Reference to product being discussed

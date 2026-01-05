@@ -16,6 +16,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { formatPrice } from "@/lib/format";
 import { useLocation } from "wouter";
+import { decryptMessage, decryptMessageForThread } from "@/utils/encryption";
 
 export default function Chat() {
   const { user, isAuthenticated, isManager, isAdmin } = useHybridAuth();
@@ -294,7 +295,11 @@ export default function Chat() {
                               {thread.userName}
                             </span>
                             {thread.lastMessage && (() => {
-                              const date = new Date(thread.lastMessage.timestamp);
+                              // Handle both timestamp and createdAt fields
+                              const timeField = thread.lastMessage.timestamp || thread.lastMessage.createdAt;
+                              if (!timeField) return null;
+                              
+                              const date = new Date(timeField);
                               const isValid = !isNaN(date.getTime());
                               return isValid ? (
                                 <span className="text-[10px] text-muted-foreground">
@@ -369,6 +374,7 @@ export default function Chat() {
                               message={msg} 
                               isMe={isMe}
                               showSenderName={true}
+                              threadId={activeThreadId}
                             />
                           );
                         })}
@@ -449,6 +455,7 @@ export default function Chat() {
                       message={msg} 
                       isMe={isMe}
                       showSenderName={!isMe}
+                      threadId={currentThreadId}
                     />
                   );
                 })}
@@ -479,8 +486,45 @@ export default function Chat() {
   );
 }
 
+// Helper function to decrypt messages on client side
+function decryptMessageText(message: ChatMessage, currentThreadId: string | null, currentUserId: string | undefined): string {
+  // If message appears to be undecrypted server-side, try client-side decryption
+  if (message.text && (
+    message.text === "[Encrypted message - unable to decrypt]" ||
+    (message.encrypted && message.text.length > 20 && /^[A-Za-z0-9+/=]+$/.test(message.text))
+  )) {
+    try {
+      // Try thread-specific decryption first
+      if (currentThreadId && currentUserId) {
+        try {
+          return decryptMessageForThread(message.text, currentThreadId, currentUserId);
+        } catch (threadError) {
+          // Try legacy decryption
+          try {
+            return decryptMessage(message.text);
+          } catch (legacyError) {
+            console.error('Client-side decryption failed:', legacyError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Client-side decryption error:', error);
+    }
+  }
+  
+  return message.text;
+}
+
 // Helper Component for Chat Bubbles
-function ChatBubble({ message, isMe, showSenderName = false }: { message: ChatMessage, isMe: boolean, showSenderName?: boolean }) {
+function ChatBubble({ message, isMe, showSenderName = false, threadId = null }: { 
+  message: ChatMessage, 
+  isMe: boolean, 
+  showSenderName?: boolean,
+  threadId?: string | null 
+}) {
+  const { user } = useHybridAuth();
+  const decryptedText = decryptMessageText(message, threadId, user?.id);
+  
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -521,11 +565,15 @@ function ChatBubble({ message, isMe, showSenderName = false }: { message: ChatMe
             ? "bg-primary text-primary-foreground rounded-br-none" 
             : "bg-white text-foreground border rounded-bl-none"}
         `}>
-          <p className="text-sm sm:text-sm leading-relaxed wrap-break-word">{message.text}</p>
+          <p className="text-sm sm:text-sm leading-relaxed wrap-break-word">{decryptedText}</p>
           
           <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${isMe ? "opacity-70" : "opacity-40"}`}>
              {(() => {
-               const date = new Date(message.timestamp);
+               // Handle both timestamp and createdAt fields
+               const timeField = message.timestamp || message.createdAt;
+               if (!timeField) return "Invalid time";
+               
+               const date = new Date(timeField);
                const isValid = !isNaN(date.getTime());
                return isValid ? format(date, "HH:mm") : "Invalid time";
              })()}

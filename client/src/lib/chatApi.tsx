@@ -48,7 +48,8 @@ export interface ChatMessage {
   senderName: string;
   senderRole: "admin" | "staff" | "user";
   text: string;
-  timestamp: string;
+  timestamp?: string;
+  createdAt?: string;
   isRead: boolean;
   encrypted: boolean;
 }
