@@ -2018,6 +2018,8 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
           text: decryptedText,
           isRead: m.isRead,
           encrypted: m.encrypted,
+          productId: m.productId,
+          productInfo: m.productInfo,
           timestamp: m.createdAt.toISOString(),
         };
       });
@@ -2180,8 +2182,17 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
         }
         
         return {
-          ...m.toObject(),
-          text: decryptedText
+          id: m._id.toString(),
+          threadId: m.threadId,
+          senderId: m.senderId,
+          senderName: m.senderName,
+          senderRole: m.senderRole,
+          text: decryptedText,
+          isRead: m.isRead,
+          encrypted: m.encrypted,
+          productId: m.productId,
+          productInfo: m.productInfo,
+          timestamp: m.createdAt.toISOString(),
         };
       });
 
