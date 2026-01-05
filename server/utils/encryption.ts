@@ -145,10 +145,12 @@ export function decryptMessageForRecipient(encryptedText: string, threadId: stri
   // Check if this is a legacy plain text message (not encrypted)
   if (!isValidEncryptedFormat(encryptedText)) {
     // Return as-is for legacy messages
+    console.log('Message is not in encrypted format, returning as plain text');
     return encryptedText;
   }
   
   const recipientKey = generateThreadKey(threadId, recipientId);
+  console.log('Attempting recipient decryption with key:', recipientKey.substring(0, 10) + '...');
   
   try {
     const combined = CryptoJS.enc.Base64.parse(encryptedText);
@@ -167,6 +169,8 @@ export function decryptMessageForRecipient(encryptedText: string, threadId: stri
     );
     
     const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+    console.log('Decrypted text length:', decryptedText.length, 'content:', decryptedText);
+    
     if (!decryptedText) {
       throw new Error('Recipient decryption resulted in empty text');
     }

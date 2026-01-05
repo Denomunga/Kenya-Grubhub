@@ -2011,9 +2011,13 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
           } else if (req.user!.role === 'user') {
             // Regular user: Only decrypt their own messages
             if (m.encryptedVersions) {
+              console.log('Message encrypted versions:', m.encryptedVersions.length);
+              console.log('Current user ID:', req.user!._id.toString());
               const userVersion = m.encryptedVersions.find((v: any) => v.recipientId === req.user!._id.toString());
+              console.log('Found user version:', !!userVersion);
               if (userVersion) {
                 try {
+                  console.log('Attempting decryption with recipient ID:', userVersion.recipientId);
                   decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, userVersion.recipientId);
                   decryptedSuccessfully = true;
                 } catch (userDecryptError) {
@@ -2273,9 +2277,13 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
           } else if (req.user!.role === 'user') {
             // Regular user: Only decrypt their own messages
             if (m.encryptedVersions) {
+              console.log('Message encrypted versions:', m.encryptedVersions.length);
+              console.log('Current user ID:', req.user!._id.toString());
               const userVersion = m.encryptedVersions.find((v: any) => v.recipientId === req.user!._id.toString());
+              console.log('Found user version:', !!userVersion);
               if (userVersion) {
                 try {
+                  console.log('Attempting decryption with recipient ID:', userVersion.recipientId);
                   decryptedText = decryptMessageForRecipient(userVersion.encryptedText, threadId, userVersion.recipientId);
                   decryptedSuccessfully = true;
                 } catch (userDecryptError) {
