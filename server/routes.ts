@@ -2192,6 +2192,56 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     }
   });
 
+  // DEBUG: Check encryption key and clear encrypted messages (TEMPORARY - remove after use)
+  app.post("/api/admin/debug-encryption", async (req: Request, res: Response) => {
+    try {
+      const ChatMessage = require('./models/ChatMessage').ChatMessage;
+      const { MESSAGE_ENCRYPTION_KEY } = process.env;
+      
+      console.log('🔍 DEBUG - Current encryption key:', MESSAGE_ENCRYPTION_KEY ? 'SET' : 'NOT SET (using default)');
+      console.log('🔍 DEBUG - Default key would be:', 'default-encryption-key-change-in-production');
+      
+      // Count encrypted messages
+      const encryptedCount = await ChatMessage.countDocuments({ encrypted: true });
+      console.log(`🔍 DEBUG - Found ${encryptedCount} encrypted messages`);
+      
+      // Clear all encrypted messages if requested
+      if (req.body.clearMessages) {
+        console.log('🧹 Clearing encrypted messages...');
+        const result = await ChatMessage.updateMany(
+          { encrypted: true }, 
+          { 
+            text: '[Previous message could not be decrypted - please start a new conversation]', 
+            encrypted: false 
+          }
+        );
+        
+        console.log(`✅ Cleared ${result.modifiedCount} encrypted messages`);
+        
+        return res.json({ 
+          success: true, 
+          message: `Cleared ${result.modifiedCount} encrypted messages. Your chat should now work properly!`,
+          debugInfo: {
+            encryptionKeySet: !!MESSAGE_ENCRYPTION_KEY,
+            encryptedMessagesFound: encryptedCount,
+            messagesCleared: result.modifiedCount
+          }
+        });
+      }
+      
+      res.json({ 
+        debugInfo: {
+          encryptionKeySet: !!MESSAGE_ENCRYPTION_KEY,
+          encryptedMessagesFound: encryptedCount,
+          message: "Use POST with {clearMessages: true} to clear encrypted messages"
+        }
+      });
+    } catch (error) {
+      console.error("❌ Debug endpoint error:", error);
+      res.status(500).json({ message: "Debug endpoint failed" });
+    }
+  });
+
   // Send a message - Enhanced with validation and error handling
   app.post("/api/chat/messages", requireAuth, async (req: Request, res: Response) => {
     try {
