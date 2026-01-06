@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { GripVertical, Edit, Trash, Plus, X } from 'lucide-react';
 import { useData } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { apiFetch } from '@/lib/api';
 import { MenuItem } from '@/lib/data';
 
@@ -80,7 +81,7 @@ const DraggableMenuItem: React.FC<DraggableMenuItemProps> = ({ item, index, move
                 variant="ghost" 
                 size="icon" 
                 onClick={() => onEdit(item)}
-                className="magnetic hover:text-primary"
+                className="hover:text-primary"
               >
                 <Edit className="h-4 w-4" />
               </Button>
@@ -88,7 +89,7 @@ const DraggableMenuItem: React.FC<DraggableMenuItemProps> = ({ item, index, move
                 variant="ghost" 
                 size="icon" 
                 onClick={() => onDelete(item.id)}
-                className="magnetic hover:text-destructive"
+                className="hover:text-destructive"
               >
                 <Trash className="h-4 w-4" />
               </Button>
@@ -125,6 +126,8 @@ const DragDropMenuManager: React.FC = () => {
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingImageFiles, setEditingImageFiles] = useState<File[]>([]);
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<MenuItem | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   React.useEffect(() => {
     setMenuItems(menu);
@@ -226,8 +229,20 @@ const DragDropMenuManager: React.FC = () => {
   };
 
   const handleDeleteItem = (id: string) => {
-    deleteMenuItem(id);
-    toast({ title: 'Success', description: 'Item removed from menu' });
+    const item = menuItems.find(item => item.id === id);
+    if (item) {
+      setDeleteConfirmItem(item);
+      setIsDeleteDialogOpen(true);
+    }
+  };
+
+  const confirmDeleteItem = () => {
+    if (deleteConfirmItem) {
+      deleteMenuItem(deleteConfirmItem.id);
+      toast({ title: 'Success', description: 'Item removed from menu' });
+      setDeleteConfirmItem(null);
+      setIsDeleteDialogOpen(false);
+    }
   };
 
   const handleEditItem = (item: MenuItem) => {
@@ -475,7 +490,7 @@ const DragDropMenuManager: React.FC = () => {
           </div>
           <Button 
             onClick={handleAddItem} 
-            className="mt-4 luminous-glow magnetic"
+            className="mt-4 luminous-glow"
             disabled={!newItem.name || !newItem.category}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -751,7 +766,7 @@ const DragDropMenuManager: React.FC = () => {
               <div className="flex gap-2">
                 <Button 
                   onClick={handleUpdateItem} 
-                  className="flex-1 luminous-glow magnetic"
+                  className="flex-1 luminous-glow"
                 >
                   Update Item
                 </Button>
@@ -771,6 +786,35 @@ const DragDropMenuManager: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Menu Item</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{deleteConfirmItem?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setDeleteConfirmItem(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteItem}
+            >
+              Delete Item
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

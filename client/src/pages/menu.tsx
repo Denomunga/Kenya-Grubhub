@@ -230,11 +230,6 @@ export default function Menu() {
   }, [menu, activeCategory, searchedProducts]);
 
   const addToCart = (item: MenuItem) => {
-    if (!isAuthenticated) {
-      toast({ title: "Please login", description: "You need to be logged in to order.", variant: "destructive" });
-      return;
-    }
-    
     setCart(prev => {
       const existing = prev.find(i => i.item.id === item.id);
       if (existing) {
@@ -270,6 +265,16 @@ export default function Menu() {
         
 
   const handleCheckout = () => {
+    if (!isAuthenticated) {
+      toast({ 
+        title: "Please login", 
+        description: "You need to be logged in to checkout. Your cart items will be saved.",
+        variant: "destructive" 
+      });
+      setLocation('/login');
+      return;
+    }
+
     if (!selectedLocation) {
       toast({ 
         title: "Location Required", 

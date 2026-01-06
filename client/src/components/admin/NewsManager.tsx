@@ -475,74 +475,74 @@ const NewsManager: React.FC = () => {
       {/* Edit Modal */}
       {isEditModalOpen && editingItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto gradient-mesh border-animated-gradient">
-            <CardHeader>
-              <CardTitle className="text-holographic">Edit News Article</CardTitle>
-              <CardDescription>
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white border border-gray-200 shadow-xl">
+            <CardHeader className="bg-gray-50 border-b border-gray-200">
+              <CardTitle className="text-gray-900">Edit News Article</CardTitle>
+              <CardDescription className="text-gray-600">
                 Update the news article details
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="bg-white">
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-title">Article Title *</Label>
+                    <Label htmlFor="edit-title" className="text-gray-700 font-medium">Article Title *</Label>
                     <Input
                       id="edit-title"
                       placeholder="Enter article title"
                       value={editingItem.title}
                       onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
-                      className="liquid-transition"
+                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-author">Author *</Label>
+                    <Label htmlFor="edit-author" className="text-gray-700 font-medium">Author *</Label>
                     <Input
                       id="edit-author"
                       placeholder="Author name"
                       value={editingItem.author}
                       onChange={(e) => setEditingItem({ ...editingItem, author: e.target.value })}
-                      className="liquid-transition"
+                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-date">Publication Date *</Label>
+                  <Label htmlFor="edit-date" className="text-gray-700 font-medium">Publication Date *</Label>
                   <Input
                     id="edit-date"
                     type="date"
                     value={editingItem.date}
                     onChange={(e) => setEditingItem({ ...editingItem, date: e.target.value })}
-                    className="liquid-transition"
+                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-image-upload">Update Featured Image (optional)</Label>
+                  <Label htmlFor="edit-image-upload" className="text-gray-700 font-medium">Update Featured Image (optional)</Label>
                   <Input
                     id="edit-image-upload"
                     type="file"
                     accept="image/*"
                     onChange={handleEditImageChange}
-                    className="liquid-transition"
+                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-500">
                     Upload a new image to replace the current one
                   </p>
                   
                   {/* Existing Image Preview */}
                   {editingItem.image && (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-foreground">Current Image:</p>
+                      <p className="text-sm font-medium text-gray-700">Current Image:</p>
                       <div className="relative group">
                         <img
                           src={editingItem.image}
                           alt="Current news article image"
-                          className="w-full h-48 object-cover rounded border"
+                          className="w-full h-48 object-cover rounded border border-gray-300"
                         />
                       </div>
                     </div>
@@ -551,21 +551,21 @@ const NewsManager: React.FC = () => {
                   {/* New Image Preview */}
                   {editingImageFiles.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-foreground">New Image:</p>
+                      <p className="text-sm font-medium text-gray-700">New Image:</p>
                       <div className="relative group">
                         <img
                           src={URL.createObjectURL(editingImageFiles[0])}
                           alt="New news article preview"
-                          className="w-full h-48 object-cover rounded border"
+                          className="w-full h-48 object-cover rounded border border-gray-300"
                         />
                         <button
                           type="button"
                           onClick={() => removeEditingImage(0)}
-                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                         >
                           <X className="h-4 w-4" />
                         </button>
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center truncate">
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 text-center truncate">
                           {editingImageFiles[0].name}
                         </div>
                       </div>
@@ -574,13 +574,13 @@ const NewsManager: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-content">Content *</Label>
+                  <Label htmlFor="edit-content" className="text-gray-700 font-medium">Content *</Label>
                   <Textarea
                     id="edit-content"
                     placeholder="Write your news article content here..."
                     value={editingItem.content}
                     onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })}
-                    className="liquid-transition min-h-[200px]"
+                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 min-h-[200px]"
                     required
                   />
                 </div>
@@ -588,7 +588,7 @@ const NewsManager: React.FC = () => {
                 <div className="flex gap-2 pt-4">
                   <Button 
                     onClick={handleUpdateNews}
-                    className="flex-1 luminous-glow magnetic"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -608,6 +608,7 @@ const NewsManager: React.FC = () => {
                       setEditingImageFiles([]);
                     }}
                     disabled={isLoading}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
                   >
                     Cancel
                   </Button>
