@@ -19,14 +19,23 @@ const ProductImageSlideshow = ({ images, productName }: { images: string[], prod
   }, [images]);
 
   useEffect(() => {
-    if (images.length <= 1) return;
+    if (!images || images.length <= 1) return;
+
+    console.log(`Starting slideshow for ${productName} with ${images.length} images`);
 
     const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      setCurrentImageIndex((prev) => {
+        const next = (prev + 1) % images.length;
+        console.log(`Changing image for ${productName}: ${prev} -> ${next}`);
+        return next;
+      });
     }, 2500); // Change every 2.5 seconds
 
-    return () => clearInterval(interval);
-  }, [images.length]);
+    return () => {
+      console.log(`Stopping slideshow for ${productName}`);
+      clearInterval(interval);
+    };
+  }, [images, productName]); // Changed dependency to include images array and productName
 
   if (!images || images.length === 0) {
     return (
