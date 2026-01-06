@@ -413,7 +413,7 @@ export default function Chat() {
                 <AvatarFallback className="bg-white text-primary font-bold">KB</AvatarFallback>
               </Avatar>
               <div>
-                <CardTitle className="text-lg">Kenyan Bistro Support</CardTitle>
+                <CardTitle className="text-lg">Kenyan Hub Support</CardTitle>
                 <div className="flex items-center gap-1 text-xs opacity-90">
                   <div className="h-2 w-2 bg-green-400 rounded-full animate-pulse" />
                   <span>Staff Online</span>
@@ -433,7 +433,7 @@ export default function Chat() {
                 <div className="text-center my-6">
                   <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-background shadow-sm text-xs text-muted-foreground border">
                     <Lock className="h-3 w-3" />
-                    Messages are end-to-end encrypted. No one outside of this chat, not even Kenyan Bistro, can read them.
+                    Messages are end-to-end encrypted. No one outside of this chat, not even Kenyan Hub, can read them.
                   </div>
                 </div>
 
