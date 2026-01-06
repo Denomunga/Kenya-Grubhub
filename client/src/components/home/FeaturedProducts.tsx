@@ -13,15 +13,42 @@ const AnimatedCard = motion.create(Card);
 // Simple slideshow component for product images
 const ProductImageSlideshow = ({ images, productName }: { images: string[], productName: string }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
 
+  // Preload images
   useEffect(() => {
-    setCurrentImageIndex(0); // Reset to first image when images change
+    if (!images || images.length === 0) return;
+
+    let loadedCount = 0;
+    const totalImages = images.length;
+
+    images.forEach((src, index) => {
+      const img = new Image();
+      img.onload = () => {
+        loadedCount++;
+        if (loadedCount === totalImages) {
+          setImagesLoaded(true);
+        }
+      };
+      img.onerror = () => {
+        loadedCount++; // Count failed loads too
+        if (loadedCount === totalImages) {
+          setImagesLoaded(true);
+        }
+      };
+      img.src = src;
+    });
   }, [images]);
 
   useEffect(() => {
-    if (!images || images.length <= 1) return;
+    setCurrentImageIndex(0); // Reset to first image when images change
+    setImagesLoaded(false); // Reset loaded state
+  }, [images]);
 
-    console.log(`Starting slideshow for ${productName} with ${images.length} images`);
+  useEffect(() => {
+    if (!imagesLoaded || images.length <= 1) return;
+
+    console.log(`Starting slideshow for ${productName} with ${images.length} images (all loaded)`);
 
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => {
@@ -35,12 +62,24 @@ const ProductImageSlideshow = ({ images, productName }: { images: string[], prod
       console.log(`Stopping slideshow for ${productName}`);
       clearInterval(interval);
     };
-  }, [images, productName]); // Changed dependency to include images array and productName
+  }, [images, imagesLoaded, productName]);
 
   if (!images || images.length === 0) {
     return (
       <div className="w-full h-48 bg-muted flex items-center justify-center">
         <span className="text-muted-foreground">No Image</span>
+      </div>
+    );
+  }
+
+  // Show loading state while images are preloading
+  if (!imagesLoaded) {
+    return (
+      <div className="w-full h-48 bg-muted flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-muted-foreground text-sm">Loading images...</span>
+        </div>
       </div>
     );
   }
