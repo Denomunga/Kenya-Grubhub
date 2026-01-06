@@ -34,6 +34,8 @@ import {
 } from "./middleware/security";
 import { csrfProtection } from "./middleware/csrf";
 import { auth0Router } from "./routes/auth0";
+import newsletterRouter from "./routes/newsletter";
+import adminNewsletterRouter from "./routes/admin-newsletter";
 import { 
   validateThreadAccess, 
   validateThreadParticipation, 
@@ -206,6 +208,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Add Auth0 routes BEFORE CSRF protection (Auth0 handles its own security)
   app.use("/api/auth", auth0Router);
+  
+  // Add newsletter routes (public access for subscriptions)
+  app.use("/api/newsletter", newsletterRouter);
+  
+  // Add admin newsletter routes (requires authentication)
+  app.use("/api/admin/newsletter", adminNewsletterRouter);
   
   // Apply rate limiting
   app.use(generalLimiter);

@@ -13,17 +13,14 @@ export class NewsletterService {
   private static transporter: nodemailer.Transporter | null = null;
 
   static initializeTransporter() {
-    if (process.env.SMTP_HOST) {
-      this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: !!process.env.SMTP_SECURE,
-        auth: process.env.SMTP_USER ? { 
-          user: process.env.SMTP_USER, 
-          pass: process.env.SMTP_PASS 
-        } : undefined,
-      });
-    }
+    // Use Gmail as the default email service
+    this.transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
   }
 
   static async sendNotification(data: NotificationData): Promise<void> {
