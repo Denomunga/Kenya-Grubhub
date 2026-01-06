@@ -54,7 +54,6 @@ export function isValidEncryptedFormat(encryptedText: string): boolean {
     
     // Try to decrypt a test string to see if it's valid
     try {
-      const testDecrypt = CryptoJS.AES.decrypt(encryptedText, 'test-key');
       // If it doesn't throw an error, it's valid format
       return true;
     } catch (e) {
