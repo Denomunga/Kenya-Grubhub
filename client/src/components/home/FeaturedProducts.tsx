@@ -15,6 +15,10 @@ const ProductImageSlideshow = ({ images, productName }: { images: string[], prod
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
+    setCurrentImageIndex(0); // Reset to first image when images change
+  }, [images]);
+
+  useEffect(() => {
     if (images.length <= 1) return;
 
     const interval = setInterval(() => {
@@ -70,7 +74,7 @@ interface MenuItem {
   isPopular?: boolean;
 }
 
-interface FeaturedDishesProps {
+interface FeaturedProductsProps {
   items: MenuItem[];
   isLoading: boolean;
 }
@@ -100,7 +104,7 @@ const LoadingSkeleton = () => (
   </div>
 );
 
-const FeaturedDishes = ({ items, isLoading }: FeaturedDishesProps) => {
+const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
   const [, setLocation] = useLocation();
 
   return (
@@ -212,4 +216,4 @@ const FeaturedDishes = ({ items, isLoading }: FeaturedDishesProps) => {
   );
 };
 
-export default FeaturedDishes;
+export default FeaturedProducts;
