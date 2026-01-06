@@ -519,7 +519,7 @@ const DragDropMenuManager: React.FC = () => {
               />
               <Select
                 value={editingItem.category}
-                onValueChange={(value: "Main" | "Starter" | "Drinks" | "Dessert") => 
+                onValueChange={(value: string) => 
                   setEditingItem({ ...editingItem, category: value })
                 }
               >
@@ -527,12 +527,120 @@ const DragDropMenuManager: React.FC = () => {
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Main">Main Course</SelectItem>
-                  <SelectItem value="Starter">Starter</SelectItem>
-                  <SelectItem value="Drinks">Drinks</SelectItem>
-                  <SelectItem value="Dessert">Dessert</SelectItem>
+                  <SelectItem value="Food">Food</SelectItem>
+                  <SelectItem value="Electronics">Electronics</SelectItem>
+                  <SelectItem value="Vehicles">Vehicles</SelectItem>
+                  <SelectItem value="Real Estate">Real Estate</SelectItem>
+                  <SelectItem value="Fashion">Fashion</SelectItem>
+                  <SelectItem value="Furniture">Furniture</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
+              <Input
+                placeholder="Subcategory (optional)"
+                value={editingItem.subcategory || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, subcategory: e.target.value })}
+                className="liquid-transition"
+              />
+              <Input
+                placeholder="Brand (optional)"
+                value={editingItem.brand || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, brand: e.target.value })}
+                className="liquid-transition"
+              />
+              <Select
+                value={editingItem.condition || ''}
+                onValueChange={(value: "new" | "used" | "refurbished" | "") => 
+                  setEditingItem({ ...editingItem, condition: value || undefined })
+                }
+              >
+                <SelectTrigger className="liquid-transition">
+                  <SelectValue placeholder="Condition (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No condition</SelectItem>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="used">Used</SelectItem>
+                  <SelectItem value="refurbished">Refurbished</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Size (optional)"
+                value={editingItem.size || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, size: e.target.value })}
+                className="liquid-transition"
+              />
+              <Input
+                placeholder="Color (optional)"
+                value={editingItem.color || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, color: e.target.value })}
+                className="liquid-transition"
+              />
+              <Input
+                type="number"
+                placeholder="Year (optional)"
+                value={editingItem.year || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, year: parseInt(e.target.value) || undefined })}
+                className="liquid-transition"
+              />
+              <Input
+                placeholder="Material (optional)"
+                value={editingItem.material || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, material: e.target.value })}
+                className="liquid-transition"
+              />
+              <Input
+                placeholder="Location (optional)"
+                value={editingItem.location || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, location: e.target.value })}
+                className="liquid-transition"
+              />
+              <Input
+                type="number"
+                placeholder="Stock (optional)"
+                value={editingItem.stock || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, stock: parseInt(e.target.value) || undefined })}
+                className="liquid-transition"
+              />
+              <Input
+                type="number"
+                placeholder="Weight (kg, optional)"
+                value={editingItem.weight || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, weight: parseFloat(e.target.value) || undefined })}
+                className="liquid-transition"
+              />
+              <Input
+                placeholder="Tags (comma-separated, optional)"
+                value={editingItem.tags?.join(', ') || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) })}
+                className="liquid-transition"
+              />
+              <Input
+                placeholder="Dimensions (JSON format, optional)"
+                value={editingItem.dimensions ? JSON.stringify(editingItem.dimensions) : ''}
+                onChange={(e) => {
+                  try {
+                    const dimensions = e.target.value ? JSON.parse(e.target.value) : undefined;
+                    setEditingItem({ ...editingItem, dimensions });
+                  } catch (error) {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                className="liquid-transition"
+              />
+              <Input
+                placeholder="Specifications (JSON format, optional)"
+                value={editingItem.specifications ? JSON.stringify(editingItem.specifications) : ''}
+                onChange={(e) => {
+                  try {
+                    const specifications = e.target.value ? JSON.parse(e.target.value) : undefined;
+                    setEditingItem({ ...editingItem, specifications });
+                  } catch (error) {
+                    // Invalid JSON, ignore
+                  }
+                }}
+                className="liquid-transition"
+              />
               <Input
                 placeholder="Description"
                 value={editingItem.description}

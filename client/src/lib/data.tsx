@@ -836,8 +836,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
           description: item.description,
           price: item.price,
           category: item.category,
+          subcategory: item.subcategory,
+          brand: item.brand,
+          condition: item.condition,
+          specifications: item.specifications,
           images: item.images,
-          available: item.available
+          available: item.available,
+          stock: item.stock,
+          location: item.location,
+          tags: item.tags,
+          size: item.size,
+          color: item.color,
+          year: item.year,
+          material: item.material,
+          weight: item.weight,
+          dimensions: item.dimensions
         }),
       });
 

@@ -4,7 +4,7 @@ import { useData } from "@/lib/data";
 import { apiFetch } from "@/lib/api";
 import HeroSection from "@/components/home/HeroSection";
 import CategoryFilter from "@/components/home/CategoryFilter";
-import FeaturedDishes from "@/components/home/FeaturedDishes";
+import FeaturedProducts from "@/components/home/FeaturedProducts";
 import InteractiveMap from "@/components/home/InteractiveMap";
 import ProductSearch from "@/components/search/ProductSearch";
 import { Button } from "@/components/ui/button";
@@ -314,7 +314,7 @@ export default function Home() {
         </div>
         
         <div>
-          <FeaturedDishes 
+          <FeaturedProducts 
             items={featuredItems}
             isLoading={isLoading}
           />
