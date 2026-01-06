@@ -5,8 +5,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
-import { Search, Filter, X, ChevronDown, ChevronUp, Sparkles, DollarSign, MapPin, Package, Star } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Slider } from '@/components/ui/slider';
+import { Search, Filter, X, ChevronDown, ChevronUp, Sparkles, DollarSign, MapPin, Package, Star, Loader2 } from 'lucide-react';
 import { MenuItem } from '@/lib/data';
+import { useDebounce } from '@/hooks/use-debounce';
 
 interface SearchFilters {
   query: string;
@@ -17,6 +20,7 @@ interface SearchFilters {
   location: string;
   inStock: boolean;
   tags: string[];
+  sortBy: string;
 }
 
 interface ProductSearchProps {
@@ -34,13 +38,44 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
     brand: '',
     location: '',
     inStock: false,
-    tags: []
+    tags: [],
+    sortBy: 'relevance'
   });
 
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [allTags, setAllTags] = useState<string[]>([]);
   const [allBrands, setAllBrands] = useState<string[]>([]);
   const [allLocations, setAllLocations] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const debouncedQuery = useDebounce(filters.query, 300);
+
+  // Load filters and history from localStorage
+  useEffect(() => {
+    const savedFilters = localStorage.getItem('productSearchFilters');
+    if (savedFilters) {
+      try {
+        setFilters(JSON.parse(savedFilters));
+      } catch (e) {
+        console.error('Failed to parse saved filters', e);
+      }
+    }
+    const savedHistory = localStorage.getItem('searchHistory');
+    if (savedHistory) {
+      try {
+        setSearchHistory(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error('Failed to parse search history', e);
+      }
+    }
+  }, []);
+
+  // Save filters to localStorage
+  useEffect(() => {
+    localStorage.setItem('productSearchFilters', JSON.stringify(filters));
+  }, [filters]);
 
   // Extract unique values from products
   useEffect(() => {
@@ -65,12 +100,28 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
     return ['all', ...Array.from(cats).sort()];
   }, [products]);
 
+  // Get search suggestions
+  const suggestions = useMemo(() => {
+    if (!debouncedQuery.trim()) return searchHistory.slice(0, 5);
+    const query = debouncedQuery.toLowerCase();
+    const matches = new Set<string>();
+    products.forEach(product => {
+      if (product.name.toLowerCase().includes(query)) matches.add(product.name);
+      if (product.brand && product.brand.toLowerCase().includes(query)) matches.add(product.brand);
+      product.tags?.forEach(tag => {
+        if (tag.toLowerCase().includes(query)) matches.add(tag);
+      });
+    });
+    return Array.from(matches).slice(0, 5);
+  }, [debouncedQuery, products, searchHistory]);
+
   // Filter products based on all criteria
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
+    setIsLoading(true);
+    const result = products.filter(product => {
       // Text search (name, description, brand, tags)
-      const searchText = filters.query.toLowerCase();
-      const matchesText = !filters.query || 
+      const searchText = debouncedQuery.toLowerCase();
+      const matchesText = !debouncedQuery || 
         product.name.toLowerCase().includes(searchText) ||
         product.description.toLowerCase().includes(searchText) ||
         product.brand?.toLowerCase().includes(searchText) ||
@@ -101,7 +152,28 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
       return matchesText && matchesCategory && matchesPrice && matchesCondition && 
              matchesBrand && matchesLocation && matchesStock && matchesTags;
     });
-  }, [products, filters]);
+    // Sort results
+    result.sort((a, b) => {
+      switch (filters.sortBy) {
+        case 'price-low':
+          return a.price - b.price;
+        case 'price-high':
+          return b.price - a.price;
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'relevance':
+        default:
+          // For relevance, prioritize exact matches
+          const aScore = (a.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ? 2 : 0) +
+                         (a.brand?.toLowerCase().includes(debouncedQuery.toLowerCase()) ? 1 : 0);
+          const bScore = (b.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ? 2 : 0) +
+                         (b.brand?.toLowerCase().includes(debouncedQuery.toLowerCase()) ? 1 : 0);
+          return bScore - aScore;
+      }
+    });
+    setTimeout(() => setIsLoading(false), 100); // Simulate async
+    return result;
+  }, [products, debouncedQuery, filters]);
 
   // Update parent component with filtered results
   useEffect(() => {
@@ -110,6 +182,11 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
 
   const updateFilter = (key: keyof SearchFilters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+    if (key === 'query' && value.trim() && !searchHistory.includes(value.trim())) {
+      const newHistory = [value.trim(), ...searchHistory.slice(0, 4)];
+      setSearchHistory(newHistory);
+      localStorage.setItem('searchHistory', JSON.stringify(newHistory));
+    }
   };
 
   const clearFilters = () => {
@@ -121,7 +198,8 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
       brand: '',
       location: '',
       inStock: false,
-      tags: []
+      tags: [],
+      sortBy: 'relevance'
     });
   };
 
@@ -144,6 +222,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
     if (filters.location) count++;
     if (filters.inStock) count++;
     if (filters.tags.length > 0) count++;
+    if (filters.sortBy !== 'relevance') count++;
     return count;
   }, [filters]);
 
@@ -167,23 +246,52 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
             <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-purple-600 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity"></div>
             <div className="relative flex gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-4 w-4" />
-                <Input
-                  placeholder="Search for products, brands, or tags..."
-                  value={filters.query}
-                  onChange={(e) => updateFilter('query', e.target.value)}
-                  className="pl-12 h-10 text-base border-0 shadow-lg bg-white/80 backdrop-blur focus:ring-4 focus:ring-blue-500/20 transition-all"
-                />
-                {filters.query && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => updateFilter('query', '')}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-gray-100"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+                <Popover open={showSuggestions && suggestions.length > 0} onOpenChange={setShowSuggestions}>
+                  <PopoverTrigger asChild>
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-4 w-4" />
+                      <Input
+                        placeholder="Search for products, brands, or tags..."
+                        value={filters.query}
+                        onChange={(e) => {
+                          updateFilter('query', e.target.value);
+                          setShowSuggestions(true);
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                        className="pl-12 h-10 text-base border-0 shadow-lg bg-white/80 backdrop-blur focus:ring-4 focus:ring-blue-500/20 transition-all"
+                        aria-label="Search products"
+                      />
+                      {isLoading && <Loader2 className="absolute right-12 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-blue-500" />}
+                      {filters.query && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => updateFilter('query', '')}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-gray-100"
+                          aria-label="Clear search"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <div className="max-h-48 overflow-y-auto">
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                          onClick={() => {
+                            updateFilter('query', suggestion);
+                            setShowSuggestions(false);
+                          }}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
               <Button
                 onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
@@ -215,6 +323,24 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
             </div>
           </div>
 
+          {/* Sort and Filters Row */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Sort by:</span>
+              <Select value={filters.sortBy} onValueChange={(value) => updateFilter('sortBy', value)}>
+                <SelectTrigger className="w-40 h-8 bg-white/80 backdrop-blur border-gray-200">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="relevance">Relevance</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Advanced Filters */}
           <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
             <CollapsibleContent className="space-y-6">
@@ -227,7 +353,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                       Category
                     </label>
                     <Select value={filters.category} onValueChange={(value) => updateFilter('category', value)}>
-                      <SelectTrigger className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                      <SelectTrigger className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" aria-label="Select category">
                         <SelectValue placeholder="All categories" />
                       </SelectTrigger>
                       <SelectContent>
@@ -246,27 +372,20 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                       <DollarSign className="h-4 w-4 text-green-500" />
                       Price Range (KSH)
                     </label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        placeholder="Min"
-                        value={filters.priceRange.min}
-                        onChange={(e) => updateFilter('priceRange', { 
-                          ...filters.priceRange, 
-                          min: parseInt(e.target.value) || 0 
-                        })}
-                        className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                    <div className="px-3">
+                      <Slider
+                        value={[filters.priceRange.min, filters.priceRange.max]}
+                        onValueChange={(value) => updateFilter('priceRange', { min: value[0], max: value[1] })}
+                        max={1000000}
+                        min={0}
+                        step={100}
+                        className="w-full"
+                        aria-label="Price range slider"
                       />
-                      <Input
-                        type="number"
-                        placeholder="Max"
-                        value={filters.priceRange.max}
-                        onChange={(e) => updateFilter('priceRange', { 
-                          ...filters.priceRange, 
-                          max: parseInt(e.target.value) || 1000000000 
-                        })}
-                        className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>KSH {filters.priceRange.min.toLocaleString()}</span>
+                        <span>KSH {filters.priceRange.max.toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -374,13 +493,19 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
               <span className="text-xs font-medium text-gray-700">
-                <span className="text-base font-bold text-blue-600">{filteredProducts.length}</span>
-                <span className="text-gray-500"> of </span>
-                <span className="text-base font-bold text-purple-600">{products.length}</span>
-                <span className="text-gray-500"> products found</span>
+                {isLoading ? (
+                  'Searching...'
+                ) : (
+                  <>
+                    <span className="text-base font-bold text-blue-600">{filteredProducts.length}</span>
+                    <span className="text-gray-500"> of </span>
+                    <span className="text-base font-bold text-purple-600">{products.length}</span>
+                    <span className="text-gray-500"> products found</span>
+                  </>
+                )}
               </span>
             </div>
-            {filteredProducts.length === 0 && (
+            {filteredProducts.length === 0 && !isLoading && (
               <div className="text-xs text-gray-500 italic">
                 Try adjusting your filters or search terms
               </div>
