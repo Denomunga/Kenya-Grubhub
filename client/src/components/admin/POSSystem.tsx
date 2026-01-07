@@ -101,6 +101,8 @@ export default function POSSystem() {
 
   useEffect(() => {
     fetchSales();
+    loadReceipts();
+    loadReceiptStats();
     loadPOSSettings();
     startSessionTimer();
     
@@ -300,6 +302,44 @@ export default function POSSystem() {
         fetchSales();
         addToRecentSales(sale._id);
         
+        // Automatically save receipt to database
+        try {
+          const receiptData = {
+            items: sale.items.map((item: any) => ({
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              total: item.price * item.quantity
+            })),
+            subtotal: sale.subtotal,
+            tax: sale.tax,
+            discount: sale.discount,
+            total: sale.total,
+            paymentMethod: sale.paymentMethod,
+            paymentAmount: sale.paymentAmount,
+            change: sale.change,
+            customerName: sale.customerName,
+            customerPhone: sale.customerPhone,
+            cashier: sale.cashier,
+            storeLocation: sale.storeLocation
+          };
+
+          await apiFetch('/api/receipts/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              saleId: sale._id,
+              receiptData
+            })
+          });
+          
+          // Refresh receipts list
+          loadReceipts();
+          loadReceiptStats();
+        } catch (receiptError) {
+          console.warn('Failed to save receipt automatically:', receiptError);
+        }
+        
         // Update local product inventory to reflect changes
         setCart([]);
         setPaymentAmount('');
@@ -409,7 +449,7 @@ export default function POSSystem() {
     try {
       // Save receipt to database
       const receiptData = {
-        items: currentSale.items.map(item => ({
+        items: currentSale.items.map((item: any) => ({
           name: item.name,
           quantity: item.quantity,
           price: item.price,
@@ -997,15 +1037,20 @@ export default function POSSystem() {
                     <TableRow key={receipt._id}>
                       <TableCell className="font-mono">{receipt.receiptNumber}</TableCell>
                       <TableCell>{new Date(receipt.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>{receipt.items?.length || 0} items</TableCell>
-                      <TableCell>{formatPriceKSHS(receipt.total)}</TableCell>
-                      <TableCell>{receipt.paymentMethod}</TableCell>
+                      <TableCell>{receipt.receiptData?.items?.length || 0} items</TableCell>
+                      <TableCell>{formatPriceKSHS(receipt.receiptData?.total || 0)}</TableCell>
+                      <TableCell>{receipt.receiptData?.paymentMethod || 'N/A'}</TableCell>
                       <TableCell>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            setCurrentSale(receipt);
+                            setCurrentSale({
+                              ...receipt.receiptData,
+                              _id: receipt.saleId,
+                              receiptNumber: receipt.receiptNumber,
+                              createdAt: receipt.createdAt
+                            });
                             setShowReceipts(false);
                           }}
                         >

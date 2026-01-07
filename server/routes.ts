@@ -2959,7 +2959,6 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   // Mount routers
   app.use("/api/auth0", auth0Router);
   app.use("/api/newsletter", newsletterRouter);
-  app.use("/api/admin-newsletter", adminNewsletterRouter);
   // POS and Receipt routes are already mounted above with proper middleware
 
   // Test endpoint to verify routes are registering
