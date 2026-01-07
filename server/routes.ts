@@ -113,7 +113,7 @@ declare module "express-session" {
 }
 
 // Helper function to calculate total revenue from orders and POS sales
-async function calculateTotalRevenue() {
+export async function calculateTotalRevenue() {
   const [orderRevenue, saleRevenue] = await Promise.all([
     Order.aggregate([{ $match: { status: { $ne: 'Cancelled' } } }, { $group: { _id: null, revenue: { $sum: "$total" } } }]),
     Sale.aggregate([{ $match: { status: 'Completed' } }, { $group: { _id: null, revenue: { $sum: "$total" } } }])

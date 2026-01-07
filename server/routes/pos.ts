@@ -3,7 +3,9 @@ import { Sale } from "../models/Sale";
 import { Product } from "../models/Product";
 import { User } from "../models/User";
 import { POSSettings } from "../models/POSSettings";
+import { Order } from "../models/Order";
 import rateLimit from 'express-rate-limit';
+import { calculateTotalRevenue } from '../routes';
 
 const router = Router();
 
@@ -39,24 +41,34 @@ router.get("/sales", requireAuth, apiLimiter, async (req, res) => {
     }
 
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined; // Return all if no limit
+    const skip = limit ? (page - 1) * limit : 0;
 
-    const sales = await Sale.find()
+    const query = Sale.find()
       .populate('cashier', 'name username')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .sort({ createdAt: -1 });
+
+    // Only apply pagination if limit is specified
+    if (limit !== undefined) {
+      query.skip(skip).limit(limit);
+    }
+
+    const sales = await query;
 
     const total = await Sale.countDocuments();
 
     res.json({
       sales,
-      pagination: {
+      pagination: limit ? {
         page,
         limit,
         total,
         pages: Math.ceil(total / limit)
+      } : {
+        page,
+        limit: total,
+        total,
+        pages: 1
       }
     });
   } catch (error) {
@@ -167,6 +179,20 @@ router.post("/sales", requireAuth, apiLimiter, async (req, res) => {
     // Populate cashier info
     await sale.populate('cashier', 'name username');
 
+    // Emit KPIs update for real-time dashboard//
+    try {
+      const totalRevenue = await calculateTotalRevenue();
+      const activeOrders = await Order.countDocuments({ status: { $ne: 'Delivered' } });
+      const since = new Date(Date.now() - 60_000);
+      const opm = await Order.countDocuments({ createdAt: { $gte: since } });
+      
+      // Emit socket event for real-time updates
+      const reqApp = req.app as any;
+      reqApp.locals.io?.emit('kpi:update', { totalRevenue, activeOrders, ordersPerMinute: opm });
+    } catch (err) {
+      console.error('Error emitting KPI update after POS sale:', err);
+    }
+
     res.status(201).json(sale);
   } catch (error) {
     console.error("Error creating sale:", error);
@@ -238,6 +264,43 @@ router.patch("/sales/:id", requireAuth, async (req, res) => {
     res.json(sale);
   } catch (error) {
     console.error("Error updating sale:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get total revenue from all sales
+router.get("/sales/total", requireAuth, async (req, res) => {
+  try {
+    if (req.user?.role !== "admin" && req.user?.role !== "staff") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const [totalRevenue, totalSales, todaySales] = await Promise.all([
+      Sale.aggregate([
+        { $match: { status: 'Completed' } },
+        { $group: { _id: null, total: { $sum: '$total' } } },
+        { $project: { total: 1 } }
+      ]),
+      Sale.countDocuments({ status: 'Completed' }),
+      Sale.aggregate([
+        { $match: { 
+          status: 'Completed',
+          createdAt: { 
+            $gte: new Date(new Date().setHours(0, 0, 0, 0)) 
+          } 
+        } },
+        { $group: { _id: null, total: { $sum: '$total' } } },
+        { $project: { total: 1 } }
+      ])
+    ]);
+
+    res.json({
+      totalRevenue: totalRevenue[0]?.total || 0,
+      totalSales,
+      todayRevenue: todaySales[0]?.total || 0
+    });
+  } catch (error) {
+    console.error("Error calculating total revenue:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -402,22 +465,57 @@ router.get("/reports/daily", requireAuth, async (req, res) => {
     }
 
     const date = req.query.date ? new Date(req.query.date as string) : new Date();
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Use date string for filtering to avoid timezone issues
+    const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+    // Also check last 24 hours as fallback
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     const [sales, refunds, summary] = await Promise.all([
       Sale.find({
         status: 'Completed',
-        createdAt: { $gte: startOfDay, $lte: endOfDay }
+        $or: [
+          {
+            $expr: {
+              $eq: [
+                { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                dateString
+              ]
+            }
+          },
+          { createdAt: { $gte: twentyFourHoursAgo } }
+        ]
       }).populate('cashier', 'name username'),
       Sale.find({
         status: 'Refunded',
-        updatedAt: { $gte: startOfDay, $lte: endOfDay }
+        $or: [
+          {
+            $expr: {
+              $eq: [
+                { $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' } },
+                dateString
+              ]
+            }
+          },
+          { updatedAt: { $gte: twentyFourHoursAgo } }
+        ]
       }),
       Sale.aggregate([
-        { $match: { status: 'Completed', createdAt: { $gte: startOfDay, $lte: endOfDay } } },
+        {
+          $match: {
+            status: 'Completed',
+            $or: [
+              {
+                $expr: {
+                  $eq: [
+                    { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                    dateString
+                  ]
+                }
+              },
+              { createdAt: { $gte: twentyFourHoursAgo } }
+            ]
+          }
+        },
         {
           $group: {
             _id: null,
@@ -431,7 +529,7 @@ router.get("/reports/daily", requireAuth, async (req, res) => {
     ]);
 
     res.json({
-      date: startOfDay.toISOString().split('T')[0],
+      date: dateString,
       sales,
       refunds,
       summary: summary[0] || { totalSales: 0, totalItems: 0, averageTransaction: 0, count: 0 }
