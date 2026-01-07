@@ -111,6 +111,10 @@ export default function POSSystem() {
   const [bulkStockUpdates, setBulkStockUpdates] = useState<any[]>([]);
   const [isUpdatingStock, setIsUpdatingStock] = useState(false);
 
+  // Sale confirmation state
+  const [showSaleConfirmation, setShowSaleConfirmation] = useState(false);
+  const [pendingSale, setPendingSale] = useState<any>(null);
+
   useEffect(() => {
     fetchSales();
     loadReceipts();
@@ -274,7 +278,7 @@ export default function POSSystem() {
   const getSubtotal = () => cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const getTotal = () => getSubtotal() + tax - discount;
 
-  const processSale = async () => {
+  const processSale = () => {
     if (cart.length === 0) {
       toast({ title: "Error", description: "Cart is empty", variant: "destructive" });
       return;
@@ -288,23 +292,42 @@ export default function POSSystem() {
       return;
     }
 
+    // Set pending sale data and show confirmation dialog
+    setPendingSale({
+      items: cart,
+      subtotal: getSubtotal(),
+      tax,
+      discount,
+      total,
+      paymentMethod,
+      paymentAmount: payment,
+      change: payment - total,
+      customerName: customerName || undefined,
+      customerPhone: customerPhone || undefined
+    });
+    setShowSaleConfirmation(true);
+  };
+
+  const confirmSale = async () => {
+    if (!pendingSale) return;
+    
     setIsProcessing(true);
     try {
       const response = await apiFetch('/api/pos/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: cart.map(item => ({
+          items: pendingSale.items.map((item: any) => ({
             productId: item.productId,
             quantity: item.quantity,
             price: item.price
           })),
-          paymentMethod,
-          paymentAmount: payment,
-          customerName: customerName || undefined,
-          customerPhone: customerPhone || undefined,
-          tax,
-          discount
+          paymentMethod: pendingSale.paymentMethod,
+          paymentAmount: pendingSale.paymentAmount,
+          customerName: pendingSale.customerName,
+          customerPhone: pendingSale.customerPhone,
+          tax: pendingSale.tax,
+          discount: pendingSale.discount
         })
       });
 
@@ -369,6 +392,8 @@ export default function POSSystem() {
       toast({ title: "Error", description: "Failed to process sale", variant: "destructive" });
     } finally {
       setIsProcessing(false);
+      setShowSaleConfirmation(false);
+      setPendingSale(null);
     }
   };
 
@@ -1726,6 +1751,106 @@ export default function POSSystem() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Sale Confirmation Dialog */}
+      {showSaleConfirmation && pendingSale && (
+        <Dialog open={showSaleConfirmation} onOpenChange={() => setShowSaleConfirmation(false)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Sale Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-semibold mb-3">Sale Summary</h4>
+                
+                {/* Items List */}
+                <div className="space-y-2 mb-4">
+                  <div className="font-medium">Items ({pendingSale.items.length} items):</div>
+                  {pendingSale.items.map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span>{item.name} x{item.quantity}</span>
+                      <span>{formatPriceKSHS(item.price * item.quantity)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Summary */}
+                <div className="space-y-1 border-t pt-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span>{formatPriceKSHS(pendingSale.subtotal)}</span>
+                  </div>
+                  {pendingSale.tax > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Tax:</span>
+                      <span>{formatPriceKSHS(pendingSale.tax)}</span>
+                    </div>
+                  )}
+                  {pendingSale.discount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Discount:</span>
+                      <span>{formatPriceKSHS(pendingSale.discount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold">
+                    <span>Total:</span>
+                    <span>{formatPriceKSHS(pendingSale.total)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Payment ({pendingSale.paymentMethod}):</span>
+                    <span>{formatPriceKSHS(pendingSale.paymentAmount)}</span>
+                  </div>
+                  {pendingSale.change > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Change:</span>
+                      <span>{formatPriceKSHS(pendingSale.change)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Customer Info */}
+                {(pendingSale.customerName || pendingSale.customerPhone) && (
+                  <div className="border-t pt-2">
+                    <div className="font-medium mb-1">Customer Information:</div>
+                    {pendingSale.customerName && (
+                      <div className="text-sm">Name: {pendingSale.customerName}</div>
+                    )}
+                    {pendingSale.customerPhone && (
+                      <div className="text-sm">Phone: {pendingSale.customerPhone}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Confirmation Question */}
+              <div className="text-center">
+                <p className="text-lg font-medium mb-4">
+                  Do you want to confirm this sale?
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Button 
+                    onClick={confirmSale}
+                    disabled={isProcessing}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {isProcessing ? 'Processing...' : 'Yes, Confirm Sale'}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowSaleConfirmation(false);
+                      setPendingSale(null);
+                    }}
+                    disabled={isProcessing}
+                  >
+                    No, Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
