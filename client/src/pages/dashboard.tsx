@@ -72,15 +72,11 @@ export default function Dashboard() {
   React.useEffect(() => {
     const fetchPOSTotalRevenue = async () => {
       try {
-        console.log('Fetching POS total revenue...');
         // Use the new total revenue endpoint for efficiency
         const response = await apiFetch('/api/pos/sales/total');
-        console.log('POS total revenue response:', response);
         if (response.ok) {
           const data = await response.json();
-          console.log('POS total revenue data:', data);
           setPosTotalRevenue(data.totalRevenue || 0);
-          console.log('POS total revenue:', data.totalRevenue || 0);
         } else {
           console.error('POS total revenue fetch failed:', response.status, response.statusText);
         }
@@ -219,7 +215,7 @@ export default function Dashboard() {
               <CardContent>
                 <div className="text-2xl font-bold">
                   {formatPriceKSHS(
-                    kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0)
+                    kpis?.totalRevenue ?? (orders.reduce((sum, o) => sum + o.total, 0) + posTotalRevenue)
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-2">
@@ -305,7 +301,7 @@ export default function Dashboard() {
                   <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatPriceKSHS(kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0))}</div>
+                  <div className="text-2xl font-bold">{formatPriceKSHS(kpis?.totalRevenue ?? (orders.reduce((sum, o) => sum + o.total, 0) + posTotalRevenue))}</div>
                 </CardContent>
               </Card>
             </div>

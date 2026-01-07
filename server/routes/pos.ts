@@ -190,7 +190,7 @@ router.post("/sales", requireAuth, apiLimiter, async (req, res) => {
       const reqApp = req.app as any;
       reqApp.locals.io?.emit('kpi:update', { totalRevenue, activeOrders, ordersPerMinute: opm });
     } catch (err) {
-      console.error('Error emitting KPI update after POS sale:', err);
+      // Removed console.error
     }
 
     res.status(201).json(sale);

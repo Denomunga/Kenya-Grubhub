@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Users, BarChart3 } from 'lucide-react';
 import { useData } from '@/lib/data';
+import { apiFetch } from '@/lib/api';
 
 interface ChartData {
   label: string;
@@ -25,6 +26,27 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
   const { orders, kpis } = useData();
   const [animatedValues, setAnimatedValues] = useState<{ [key: string]: number }>({});
   const [orderTrends, setOrderTrends] = useState<OrderTrend[]>([]);
+  const [localPosRevenue, setLocalPosRevenue] = useState(0);
+
+  // Fetch POS revenue directly as backup
+  useEffect(() => {
+    const fetchPOSRevenue = async () => {
+      try {
+        const response = await apiFetch('/api/pos/sales/total');
+        if (response.ok) {
+          const data = await response.json();
+          setLocalPosRevenue(data.totalRevenue || 0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch POS revenue in AnimatedCharts:', error);
+      }
+    };
+
+    fetchPOSRevenue();
+    // Refresh every 2 minutes
+    const interval = setInterval(fetchPOSRevenue, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Generate mock trend data
   useEffect(() => {
@@ -44,7 +66,8 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
   // Animate counter values
   useEffect(() => {
     const orderRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-    const totalRevenue = kpis?.totalRevenue ?? orderRevenue + posTotalRevenue;
+    const posRevenueToUse = posTotalRevenue || localPosRevenue;
+    const totalRevenue = kpis?.totalRevenue ?? orderRevenue + posRevenueToUse;
     
     const targets = {
       totalRevenue,
@@ -65,7 +88,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
         setAnimatedValues(prev => ({ ...prev, [key]: Math.floor(current) }));
       }, 20);
     });
-  }, [orders, kpis, posTotalRevenue]);
+  }, [orders, kpis, posTotalRevenue, localPosRevenue]);
 
   const chartData: ChartData[] = [
     {
