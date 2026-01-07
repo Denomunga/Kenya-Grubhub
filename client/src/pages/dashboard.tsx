@@ -60,12 +60,30 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [opm, setOpm] = React.useState<number>(0); // orders per minute
   const orderTimestampsRef = React.useRef<number[]>([]);
+  const [posSales, setPosSales] = React.useState<any[]>([]); // Add POS sales state
 
   React.useEffect(() => {
     if (!isAdmin && !isStaff) {
       setLocation("/login");
     }
   }, [isAdmin, isStaff, setLocation]);
+
+  // Fetch POS sales for total revenue calculation
+  React.useEffect(() => {
+    const fetchPOSSales = async () => {
+      try {
+        const response = await apiFetch('/api/pos/sales?limit=1000');
+        if (response.ok) {
+          const data = await response.json();
+          setPosSales(data.sales || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch POS sales:', error);
+      }
+    };
+
+    fetchPOSSales();
+  }, []);
 
   React.useEffect(() => {
     const handleNew = (e: any) => {
@@ -94,8 +112,19 @@ export default function Dashboard() {
     const onPOSSale = (e: any) => {
       const payload = e.detail;
       toast({ title: 'POS Sale Completed', description: `Sale for ${formatPriceKSHS(payload.total)}` });
-      // Refresh KPIs when a POS sale is completed
-      window.location.reload(); // Simple way to refresh all data including KPIs
+      // Refresh POS sales data when a sale is completed
+      const fetchPOSSales = async () => {
+        try {
+          const response = await apiFetch('/api/pos/sales?limit=1000');
+          if (response.ok) {
+            const data = await response.json();
+            setPosSales(data.sales || []);
+          }
+        } catch (error) {
+          console.error('Failed to fetch POS sales:', error);
+        }
+      };
+      fetchPOSSales();
     };
     
     window.addEventListener('orders:new', handleNew);
@@ -188,7 +217,11 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatPriceKSHS(kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0))}
+                  {formatPriceKSHS(
+                    kpis?.totalRevenue ?? 
+                    orders.reduce((sum, o) => sum + o.total, 0) + 
+                    posSales.reduce((sum, sale) => sum + sale.total, 0)
+                  )}
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <TrendingUp className="h-4 w-4 text-green-500" />
@@ -273,7 +306,7 @@ export default function Dashboard() {
                   <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatPriceKSHS(kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0))}</div>
+                  <div className="text-2xl font-bold">{formatPriceKSHS(kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0) + posSales.reduce((sum, sale) => sum + sale.total, 0))}</div>
                 </CardContent>
               </Card>
             </div>
