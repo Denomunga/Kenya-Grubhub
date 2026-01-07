@@ -47,7 +47,7 @@ const SaleSchema = new Schema<ISale>(
     cashier: { type: String, required: true },
     customerName: { type: String },
     customerPhone: { type: String },
-    receiptNumber: { type: String, required: true, unique: true },
+    receiptNumber: { type: String, unique: true },
     notes: { type: String },
     auditLog: [{
       action: { type: String, required: true },
