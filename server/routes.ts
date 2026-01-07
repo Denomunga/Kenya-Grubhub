@@ -34,10 +34,12 @@ import {
   securityHeaders
 } from "./middleware/security";
 import { csrfProtection } from "./middleware/csrf";
+import { syncPOSWithWebsite } from "./middleware/posSync";
 import { auth0Router } from "./routes/auth0";
 import newsletterRouter from "./routes/newsletter";
 import adminNewsletterRouter from "./routes/admin-newsletter";
 import posRouter from "./routes/pos";
+import receiptRouter from "./routes/receipt";
 import { 
   validateThreadAccess, 
   validateThreadParticipation, 
@@ -231,7 +233,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/admin/newsletter", adminNewsletterRouter);
   
   // Add POS routes (requires authentication)
-  app.use("/api/pos", posRouter);
+  app.use("/api/pos", syncPOSWithWebsite, posRouter);
+  
+  // Add Receipt routes (requires authentication)
+  app.use("/api/receipts", receiptRouter);
   
   // Apply rate limiting
   app.use(generalLimiter);
@@ -2955,7 +2960,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   app.use("/api/auth0", auth0Router);
   app.use("/api/newsletter", newsletterRouter);
   app.use("/api/admin-newsletter", adminNewsletterRouter);
-  app.use("/api/pos", posRouter);
+  // POS and Receipt routes are already mounted above with proper middleware
 
   // Test endpoint to verify routes are registering
   app.get("/api/test", (_req, res) => {

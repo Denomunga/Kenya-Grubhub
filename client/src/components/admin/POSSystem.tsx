@@ -49,6 +49,7 @@ interface Sale {
   createdAt: string;
   cashier: { name: string; username: string };
   auditLog?: any[];
+  storeLocation?: string;
 }
 
 interface POSSettings {
@@ -94,6 +95,9 @@ export default function POSSystem() {
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [recentSales, setRecentSales] = useState<{ saleId: string; timestamp: string }[]>([]);
+  const [showReceipts, setShowReceipts] = useState(false);
+  const [receipts, setReceipts] = useState<any[]>([]);
+  const [receiptStats, setReceiptStats] = useState<any>({});
 
   useEffect(() => {
     fetchSales();
@@ -150,7 +154,7 @@ export default function POSSystem() {
     try {
       const newSettings = { ...posSettings, ...updates } as POSSettings;
       const response = await apiFetch('/api/pos/settings', {
-        method: 'PUT',
+        method: 'PATCH',
         body: JSON.stringify(newSettings)
       });
       if (response.ok) {
@@ -197,6 +201,15 @@ export default function POSSystem() {
     if (!product) {
       toast({ title: "Error", description: "Product not found", variant: "destructive" });
       return;
+    }
+
+    // Check for low stock warning
+    if (product.stock !== undefined && product.stock <= 5 && product.stock > 0) {
+      toast({ 
+        title: "Low Stock Warning", 
+        description: `Only ${product.stock} left in stock for ${product.name}`, 
+        variant: "default" 
+      });
     }
 
     if (product.stock !== undefined && product.stock < quantity) {
@@ -284,14 +297,17 @@ export default function POSSystem() {
       if (response.ok) {
         const sale = await response.json();
         setCurrentSale(sale);
+        fetchSales();
+        addToRecentSales(sale._id);
+        
+        // Update local product inventory to reflect changes
         setCart([]);
         setPaymentAmount('');
         setCustomerName('');
         setCustomerPhone('');
         setDiscount(0);
         setTax(0);
-        fetchSales();
-        addToRecentSales(sale._id);
+        
         toast({ title: "Success", description: "Sale completed successfully" });
       } else {
         const error = await response.json();
@@ -363,8 +379,72 @@ export default function POSSystem() {
     }
   };
 
-  const printReceipt = () => {
+  const loadReceipts = async () => {
+    try {
+      const response = await apiFetch('/api/receipts?limit=50');
+      if (response.ok) {
+        const data = await response.json();
+        setReceipts(data.receipts);
+      }
+    } catch (error) {
+      console.error('Failed to load receipts:', error);
+    }
+  };
+
+  const loadReceiptStats = async () => {
+    try {
+      const response = await apiFetch('/api/receipts/stats');
+      if (response.ok) {
+        const stats = await response.json();
+        setReceiptStats(stats);
+      }
+    } catch (error) {
+      console.error('Failed to load receipt stats:', error);
+    }
+  };
+
+  const printReceipt = async () => {
     if (!currentSale) return;
+
+    try {
+      // Save receipt to database
+      const receiptData = {
+        items: currentSale.items.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.price * item.quantity
+        })),
+        subtotal: currentSale.subtotal,
+        tax: currentSale.tax,
+        discount: currentSale.discount,
+        total: currentSale.total,
+        paymentMethod: currentSale.paymentMethod,
+        paymentAmount: currentSale.paymentAmount,
+        change: currentSale.change,
+        customerName: currentSale.customerName,
+        customerPhone: currentSale.customerPhone,
+        cashier: currentSale.cashier,
+        storeLocation: currentSale.storeLocation
+      };
+
+      const saveResponse = await apiFetch('/api/receipts/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          saleId: currentSale._id,
+          receiptData
+        })
+      });
+
+      if (!saveResponse.ok) {
+        console.warn('Failed to save receipt to database:', await saveResponse.text());
+        // Continue with printing even if save fails
+      }
+    } catch (error) {
+      console.error('Error saving receipt:', error);
+      // Continue with printing
+    }
 
     const receiptWindow = window.open('', '_blank', 'width=400,height=600');
     if (!receiptWindow) return;
@@ -452,6 +532,16 @@ export default function POSSystem() {
           <Button onClick={() => setShowSalesHistory(!showSalesHistory)} variant="outline">
             <Receipt className="h-4 w-4 mr-2" />
             {showSalesHistory ? 'Hide' : 'Show'} Sales History
+          </Button>
+          <Button onClick={() => {
+            setShowReceipts(!showReceipts);
+            if (!showReceipts) {
+              loadReceipts();
+              loadReceiptStats();
+            }
+          }} variant="outline">
+            <Printer className="h-4 w-4 mr-2" />
+            {showReceipts ? 'Hide' : 'Show'} Receipts
           </Button>
         </div>
       </div>
@@ -613,12 +703,26 @@ export default function POSSystem() {
                     <SelectValue placeholder="Select a product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {products.filter((p: Product) => p.available).map((product: Product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name} - {formatPriceKSHS(product.price)}
-                        {product.stock !== undefined && ` (${product.stock} in stock)`}
-                      </SelectItem>
-                    ))}
+                    {products.filter((p: Product) => p.available).map((product: Product) => {
+                      const isLowStock = product.stock !== undefined && product.stock <= 5;
+                      const isOutOfStock = product.stock === 0;
+                      
+                      return (
+                        <SelectItem 
+                          key={product.id} 
+                          value={product.id}
+                          disabled={isOutOfStock}
+                          className={isLowStock ? "text-orange-600 font-medium" : isOutOfStock ? "text-red-500 line-through" : ""}
+                        >
+                          {product.name} - {formatPriceKSHS(product.price)}
+                          {product.stock !== undefined && (
+                            <span className={isLowStock ? "text-orange-600 font-bold" : isOutOfStock ? "text-red-500" : ""}>
+                              {isOutOfStock ? " (OUT OF STOCK)" : ` (${product.stock} in stock${isLowStock ? " - LOW STOCK!" : ""})`}
+                            </span>
+                          )}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -843,6 +947,81 @@ export default function POSSystem() {
                 ))}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Receipts Section */}
+      {showReceipts && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Receipts Management</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {/* Receipt Stats */}
+              <div className="space-y-2">
+                <h4 className="font-medium">Total Receipts</h4>
+                <div className="text-2xl font-bold">
+                  {receiptStats.totalReceipts || receipts.length}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-medium">Total Revenue</h4>
+                <div className="text-2xl font-bold text-green-600">
+                  {formatPriceKSHS(receiptStats.totalRevenue || 0)}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-medium">Average Sale</h4>
+                <div className="text-2xl font-bold">
+                  {formatPriceKSHS(receiptStats.averageSale || 0)}
+                </div>
+              </div>
+            </div>
+            
+            {receipts.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Receipt #</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Items</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Payment Method</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {receipts.map((receipt: any) => (
+                    <TableRow key={receipt._id}>
+                      <TableCell className="font-mono">{receipt.receiptNumber}</TableCell>
+                      <TableCell>{new Date(receipt.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{receipt.items?.length || 0} items</TableCell>
+                      <TableCell>{formatPriceKSHS(receipt.total)}</TableCell>
+                      <TableCell>{receipt.paymentMethod}</TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setCurrentSale(receipt);
+                            setShowReceipts(false);
+                          }}
+                        >
+                          <Receipt className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No receipts found
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

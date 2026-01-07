@@ -60,10 +60,12 @@ const SaleSchema = new Schema<ISale>(
 );
 
 // Auto-generate receipt number
-SaleSchema.pre('save', async function(next) {
+SaleSchema.pre('save', function(next) {
   if (this.isNew && !this.receiptNumber) {
-    const count = await mongoose.model('Sale').countDocuments();
-    this.receiptNumber = `RCP-${Date.now()}-${(count + 1).toString().padStart(4, '0')}`;
+    // Generate unique receipt number using timestamp and random component
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    this.receiptNumber = `RCP-${timestamp}-${random}`;
   }
   next();
 });
