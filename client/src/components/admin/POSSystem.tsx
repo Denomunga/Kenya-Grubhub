@@ -7,11 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, Printer, Search, BarChart3, Users, TrendingUp, Heart, LogOut } from 'lucide-react';
+import { Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, Printer, Search, BarChart3, Users, TrendingUp, Heart, LogOut, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiFetch } from '@/lib/api';
 import { formatPriceKSHS } from '@/lib/format';
 import { useData } from '@/lib/data';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface Product {
   id: string;
@@ -539,6 +541,156 @@ export default function POSSystem() {
     receiptWindow.document.write(receiptHTML);
     receiptWindow.document.close();
     receiptWindow.print();
+  };
+
+  const saveReceiptAsPDF = async () => {
+    if (!currentSale) return;
+
+    try {
+      // Save receipt to database first
+      const receiptData = {
+        items: currentSale.items.map((item: any) => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.price * item.quantity
+        })),
+        subtotal: currentSale.subtotal,
+        tax: currentSale.tax,
+        discount: currentSale.discount,
+        total: currentSale.total,
+        paymentMethod: currentSale.paymentMethod,
+        paymentAmount: currentSale.paymentAmount,
+        change: currentSale.change,
+        customerName: currentSale.customerName,
+        customerPhone: currentSale.customerPhone,
+        cashier: currentSale.cashier,
+        storeLocation: currentSale.storeLocation
+      };
+
+      const saveResponse = await apiFetch('/api/receipts/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          saleId: currentSale._id,
+          receiptData
+        })
+      });
+
+      if (!saveResponse.ok) {
+        console.warn('Failed to save receipt to database:', await saveResponse.text());
+      }
+
+      // Create a temporary div for the receipt
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '-9999px';
+      tempDiv.style.width = '300px';
+      tempDiv.style.fontFamily = 'monospace';
+      tempDiv.style.fontSize = '12px';
+      tempDiv.innerHTML = `
+        <div style="text-align: center; font-weight: bold;">KENYA GRUBHUB</div>
+        <div style="text-align: center;">Point of Sale Receipt</div>
+        <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
+        <div>Receipt: ${currentSale.receiptNumber}</div>
+        <div>Date: ${new Date(currentSale.createdAt).toLocaleString()}</div>
+        <div>Cashier: ${currentSale.cashier.name}</div>
+        ${currentSale.customerName ? `<div>Customer: ${currentSale.customerName}</div>` : ''}
+        <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
+        ${currentSale.items.map(item => `
+          <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+            <span>${item.name}</span>
+            <span>${item.quantity}x ${formatPriceKSHS(item.price * item.quantity)}</span>
+          </div>
+        `).join('')}
+        <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
+        <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+          <span>Subtotal:</span>
+          <span>${formatPriceKSHS(currentSale.subtotal)}</span>
+        </div>
+        ${currentSale.tax > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+            <span>Tax:</span>
+            <span>${formatPriceKSHS(currentSale.tax)}</span>
+          </div>
+        ` : ''}
+        ${currentSale.discount > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+            <span>Discount:</span>
+            <span>${formatPriceKSHS(currentSale.discount)}</span>
+          </div>
+        ` : ''}
+        <div style="display: flex; justify-content: space-between; margin: 2px 0; font-weight: bold;">
+          <span>Total:</span>
+          <span>${formatPriceKSHS(currentSale.total)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+          <span>Payment (${currentSale.paymentMethod}):</span>
+          <span>${formatPriceKSHS(currentSale.paymentAmount)}</span>
+        </div>
+        ${currentSale.change > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+            <span>Change:</span>
+            <span>${formatPriceKSHS(currentSale.change)}</span>
+          </div>
+        ` : ''}
+        <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
+        <div style="text-align: center;">Thank you for shopping with us!</div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Convert to canvas and then to PDF
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true
+      });
+
+      document.body.removeChild(tempDiv);
+
+      // Create PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Save the PDF
+      const fileName = `receipt_${currentSale.receiptNumber}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+
+      toast({ 
+        title: "Success", 
+        description: "Receipt saved as PDF successfully" 
+      });
+
+    } catch (error) {
+      console.error('Error saving PDF:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to save PDF receipt", 
+        variant: "destructive" 
+      });
+    }
   };
 
   return (
@@ -1137,6 +1289,10 @@ export default function POSSystem() {
               <Button onClick={printReceipt} className="flex-1">
                 <Printer className="h-4 w-4 mr-2" />
                 Print Receipt
+              </Button>
+              <Button onClick={saveReceiptAsPDF} variant="outline" className="flex-1">
+                <Download className="h-4 w-4 mr-2" />
+                Save as PDF
               </Button>
               <Button variant="outline" onClick={() => setCurrentSale(null)}>
                 Close
