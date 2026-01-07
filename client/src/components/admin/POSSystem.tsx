@@ -1203,7 +1203,6 @@ export default function POSSystem() {
                               receiptNumber: receipt.receiptNumber,
                               createdAt: receipt.createdAt
                             });
-                            setShowReceipts(false);
                           }}
                         >
                           <Receipt className="h-3 w-3 mr-1" />
