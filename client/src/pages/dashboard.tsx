@@ -219,9 +219,7 @@ export default function Dashboard() {
               <CardContent>
                 <div className="text-2xl font-bold">
                   {formatPriceKSHS(
-                    kpis?.totalRevenue ?? 
-                    orders.reduce((sum, o) => sum + o.total, 0) + 
-                    posTotalRevenue
+                    kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0) + posTotalRevenue
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-2">

@@ -44,7 +44,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
   // Animate counter values
   useEffect(() => {
     const orderRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-    const totalRevenue = (kpis?.totalRevenue ?? orderRevenue) + posTotalRevenue;
+    const totalRevenue = kpis?.totalRevenue ?? orderRevenue + posTotalRevenue;
     
     const targets = {
       totalRevenue,
