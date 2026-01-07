@@ -72,7 +72,8 @@ export default function Dashboard() {
   React.useEffect(() => {
     const fetchPOSSales = async () => {
       try {
-        const response = await apiFetch('/api/pos/sales?limit=1000');
+        // Fetch all POS sales without limit to get complete historical data
+        const response = await apiFetch('/api/pos/sales');
         if (response.ok) {
           const data = await response.json();
           setPosSales(data.sales || []);
@@ -83,6 +84,11 @@ export default function Dashboard() {
     };
 
     fetchPOSSales();
+    
+    // Refresh POS sales data every 5 minutes to ensure current data
+    const interval = setInterval(fetchPOSSales, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   React.useEffect(() => {
@@ -112,19 +118,8 @@ export default function Dashboard() {
     const onPOSSale = (e: any) => {
       const payload = e.detail;
       toast({ title: 'POS Sale Completed', description: `Sale for ${formatPriceKSHS(payload.total)}` });
-      // Refresh POS sales data when a sale is completed
-      const fetchPOSSales = async () => {
-        try {
-          const response = await apiFetch('/api/pos/sales?limit=1000');
-          if (response.ok) {
-            const data = await response.json();
-            setPosSales(data.sales || []);
-          }
-        } catch (error) {
-          console.error('Failed to fetch POS sales:', error);
-        }
-      };
-      fetchPOSSales();
+      // Add the new sale amount to existing POS sales total
+      setPosSales(prev => [...prev, payload.sale]);
     };
     
     window.addEventListener('orders:new', handleNew);
