@@ -76,3 +76,10 @@ jspm_packages/
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+
+# encryption/ auth0/
+AUTH0_COMPLETE.md
+AUTH0_SETUP.md
+ENCRYPTION_KEY_SETUP.md
+ENCRYPTION_SECURITY.md
