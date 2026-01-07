@@ -190,7 +190,7 @@ router.post("/sales", requireAuth, apiLimiter, async (req, res) => {
       const reqApp = req.app as any;
       reqApp.locals.io?.emit('kpi:update', { totalRevenue, activeOrders, ordersPerMinute: opm });
     } catch (err) {
-      // Removed console.error
+      console.error('Error emitting KPI update after POS sale:', err);
     }
 
     res.status(201).json(sale);
@@ -201,7 +201,7 @@ router.post("/sales", requireAuth, apiLimiter, async (req, res) => {
 });
 
 // Get sale by ID
-router.get("/sales/:id", requireAuth, async (req, res) => {
+router.get("/sales/:id([0-9a-fA-F]{24})", requireAuth, async (req, res) => {
   try {
     if (req.user?.role !== "admin" && req.user?.role !== "staff") {
       return res.status(403).json({ message: "Access denied" });
@@ -220,7 +220,7 @@ router.get("/sales/:id", requireAuth, async (req, res) => {
 });
 
 // Update sale status (for refunds/cancellations)
-router.patch("/sales/:id", requireAuth, async (req, res) => {
+router.patch("/sales/:id([0-9a-fA-F]{24})", requireAuth, async (req, res) => {
   try {
     if (req.user?.role !== "admin" && req.user?.role !== "staff") {
       return res.status(403).json({ message: "Access denied" });

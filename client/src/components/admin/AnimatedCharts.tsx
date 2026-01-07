@@ -67,7 +67,9 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
   useEffect(() => {
     const orderRevenue = orders.reduce((sum, o) => sum + o.total, 0);
     const posRevenueToUse = posTotalRevenue || localPosRevenue;
-    const totalRevenue = kpis?.totalRevenue ?? orderRevenue + posRevenueToUse;
+    const totalRevenue = (kpis?.totalRevenue && kpis.totalRevenue > 0)
+      ? kpis.totalRevenue
+      : (orderRevenue + posRevenueToUse);
     
     const targets = {
       totalRevenue,

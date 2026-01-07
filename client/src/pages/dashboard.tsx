@@ -215,7 +215,9 @@ export default function Dashboard() {
               <CardContent>
                 <div className="text-2xl font-bold">
                   {formatPriceKSHS(
-                    kpis?.totalRevenue ?? (orders.reduce((sum, o) => sum + o.total, 0) + posTotalRevenue)
+                    (kpis?.totalRevenue && kpis.totalRevenue > 0)
+                      ? kpis.totalRevenue
+                      : (orders.reduce((sum, o) => sum + o.total, 0) + posTotalRevenue)
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-2">
@@ -301,7 +303,7 @@ export default function Dashboard() {
                   <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatPriceKSHS(kpis?.totalRevenue ?? (orders.reduce((sum, o) => sum + o.total, 0) + posTotalRevenue))}</div>
+                  <div className="text-2xl font-bold">{formatPriceKSHS((kpis?.totalRevenue && kpis.totalRevenue > 0) ? kpis.totalRevenue : (orders.reduce((sum, o) => sum + o.total, 0) + posTotalRevenue))}</div>
                 </CardContent>
               </Card>
             </div>
