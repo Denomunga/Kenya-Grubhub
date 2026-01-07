@@ -64,7 +64,7 @@ export default function AuthPage() {
               <div className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl border border-white/20">
                 <UtensilsCrossed className="h-8 w-8 text-yellow-400" />
               </div>
-              <h1 className="text-4xl font-bold font-serif">KENYAN-HUB</h1>
+              <h1 className="text-4xl font-bold font-serif">MS-COMPUTERS</h1>
             </div>
             
             <h2 className="text-5xl font-serif font-bold mb-6 leading-tight">
@@ -72,8 +72,8 @@ export default function AuthPage() {
             </h2>
             
             <p className="text-xl text-white/90 mb-8 leading-relaxed">
-              Discover premium Kenyan designs and craftsmanship that blend tradition with modern elegance. 
-              Join thousands who trust KENYAN-HUB for authentic cultural experiences.
+               Discover premium MS Solutions, designs and craftsmanship that blend functionality with elegance. 
+              Join thousands who trust MS-COMPUTERS for authentic technological experiences.
             </p>
             
             <div className="space-y-4">
@@ -108,14 +108,14 @@ export default function AuthPage() {
                 <div className="bg-blue-600 p-3 rounded-full">
                   <UtensilsCrossed className="h-6 w-6 text-white" />
                 </div>
-                <h1 className="text-2xl font-bold font-serif">KENYAN-HUB</h1>
+                <h1 className="text-2xl font-bold font-serif">MS-COMPUTERS</h1>
               </div>
               
               <CardTitle className="text-3xl font-serif font-bold text-gray-900">
                 Get Started
               </CardTitle>
               <CardDescription className="text-gray-600 text-lg">
-                Join KENYAN-HUB and experience authentic Kenyan style
+                Join MS-COMPUTERS and experience authentic MS Solutions
               </CardDescription>
               
               <div className="flex items-center justify-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-full border border-green-200">
@@ -153,7 +153,7 @@ export default function AuthPage() {
           {/* Mobile Hero Section */}
           <div className="lg:hidden mt-8 text-center">
             <div className="bg-linear-to-r from-blue-600 to-purple-600 text-white p-6 rounded-2xl">
-              <h3 className="text-xl font-bold font-serif mb-2">Experience Kenyan Style</h3>
+              <h3 className="text-xl font-bold font-serif mb-2">Experience MS-COMPUTER Style</h3>
               <p className="text-sm text-white/90">
                 Authentic designs, premium quality, secure shopping
               </p>

@@ -88,7 +88,7 @@ export default function Login() {
             </h2>
             
             <p className="text-xl text-white/90 mb-8 leading-relaxed">
-              Discover premium Kenyan designs and craftsmanship that blend tradition with modern elegance. 
+              Discover premium MS Solutions, designs and craftsmanship that blend functionality with elegance. 
               Join thousands who trust MS-COMPUTERS for authentic technological experiences.
             </p>
             
