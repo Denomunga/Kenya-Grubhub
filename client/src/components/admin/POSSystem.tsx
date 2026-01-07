@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, Printer, Search, BarChart3, Users, TrendingUp, Heart, LogOut, Download } from 'lucide-react';
+import { Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, Printer, Search, BarChart3, Users, TrendingUp, Heart, LogOut, Download, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiFetch } from '@/lib/api';
 import { formatPriceKSHS } from '@/lib/format';
@@ -100,6 +100,16 @@ export default function POSSystem() {
   const [showReceipts, setShowReceipts] = useState(false);
   const [receipts, setReceipts] = useState<any[]>([]);
   const [receiptStats, setReceiptStats] = useState<any>({});
+  
+  // Stock management state
+  const [showStockManagement, setShowStockManagement] = useState(false);
+  const [stockProducts, setStockProducts] = useState<any[]>([]);
+  const [stockUpdateMode, setStockUpdateMode] = useState<'single' | 'bulk'>('single');
+  const [selectedStockProduct, setSelectedStockProduct] = useState<string>('');
+  const [stockOperation, setStockOperation] = useState<'set' | 'add' | 'subtract'>('set');
+  const [stockAmount, setStockAmount] = useState<string>('');
+  const [bulkStockUpdates, setBulkStockUpdates] = useState<any[]>([]);
+  const [isUpdatingStock, setIsUpdatingStock] = useState(false);
 
   useEffect(() => {
     fetchSales();
@@ -693,6 +703,173 @@ export default function POSSystem() {
     }
   };
 
+  // Stock Management Functions
+  const loadStockProducts = async () => {
+    try {
+      const response = await apiFetch('/api/pos/stock');
+      if (response.ok) {
+        const data = await response.json();
+        setStockProducts(data);
+      }
+    } catch (error) {
+      console.error('Error loading stock products:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to load stock data", 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const updateSingleStock = async () => {
+    if (!selectedStockProduct || !stockAmount) {
+      toast({ 
+        title: "Error", 
+        description: "Please select a product and enter an amount", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    setIsUpdatingStock(true);
+    try {
+      const response = await apiFetch(`/api/pos/stock/${selectedStockProduct}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stock: parseInt(stockAmount),
+          operation: stockOperation
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({ 
+          title: "Success", 
+          description: `Stock updated successfully. New stock: ${result.newStock}` 
+        });
+        
+        // Reset form and reload data
+        setSelectedStockProduct('');
+        setStockAmount('');
+        loadStockProducts();
+        
+        // Also refresh the main products data to update POS
+        window.location.reload(); // Simple way to refresh all product data
+      } else {
+        const error = await response.json();
+        toast({ 
+          title: "Error", 
+          description: error.message, 
+          variant: "destructive" 
+        });
+      }
+    } catch (error) {
+      console.error('Error updating stock:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to update stock", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsUpdatingStock(false);
+    }
+  };
+
+  const updateBulkStock = async () => {
+    if (bulkStockUpdates.length === 0) {
+      toast({ 
+        title: "Error", 
+        description: "Please add products to update", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    setIsUpdatingStock(true);
+    try {
+      const response = await apiFetch('/api/pos/stock/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          updates: bulkStockUpdates
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({ 
+          title: "Success", 
+          description: `Updated ${result.results.filter((r: any) => !r.error).length} products successfully` 
+        });
+        
+        // Reset form and reload data
+        setBulkStockUpdates([]);
+        loadStockProducts();
+        
+        // Also refresh the main products data to update POS
+        window.location.reload(); // Simple way to refresh all product data
+      } else {
+        const error = await response.json();
+        toast({ 
+          title: "Error", 
+          description: error.message, 
+          variant: "destructive" 
+        });
+      }
+    } catch (error) {
+      console.error('Error in bulk stock update:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to update stock", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsUpdatingStock(false);
+    }
+  };
+
+  const addToBulkUpdates = () => {
+    if (!selectedStockProduct || !stockAmount) {
+      toast({ 
+        title: "Error", 
+        description: "Please select a product and enter an amount", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const existingIndex = bulkStockUpdates.findIndex(
+      update => update.productId === selectedStockProduct
+    );
+
+    if (existingIndex >= 0) {
+      // Update existing entry
+      const updated = [...bulkStockUpdates];
+      updated[existingIndex] = {
+        productId: selectedStockProduct,
+        stock: parseInt(stockAmount),
+        operation: stockOperation
+      };
+      setBulkStockUpdates(updated);
+    } else {
+      // Add new entry
+      setBulkStockUpdates([...bulkStockUpdates, {
+        productId: selectedStockProduct,
+        stock: parseInt(stockAmount),
+        operation: stockOperation
+      }]);
+    }
+
+    // Reset form
+    setSelectedStockProduct('');
+    setStockAmount('');
+  };
+
+  const removeFromBulkUpdates = (productId: string) => {
+    setBulkStockUpdates(bulkStockUpdates.filter(update => update.productId !== productId));
+  };
+
   return (
     <div className="space-y-6">
       {/* Session Warning Dialog */}
@@ -734,6 +911,15 @@ export default function POSSystem() {
           }} variant="outline">
             <Printer className="h-4 w-4 mr-2" />
             {showReceipts ? 'Hide' : 'Show'} Receipts
+          </Button>
+          <Button onClick={() => {
+            setShowStockManagement(!showStockManagement);
+            if (!showStockManagement) {
+              loadStockProducts();
+            }
+          }} variant="outline">
+            <Package className="h-4 w-4 mr-2" />
+            {showStockManagement ? 'Hide' : 'Show'} Stock Management
           </Button>
         </div>
       </div>
@@ -1299,6 +1485,231 @@ export default function POSSystem() {
             </div>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Stock Management Section */}
+      {showStockManagement && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Stock Management</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Mode Selection */}
+            <div className="flex gap-2">
+              <Button 
+                variant={stockUpdateMode === 'single' ? 'default' : 'outline'}
+                onClick={() => setStockUpdateMode('single')}
+              >
+                Single Product Update
+              </Button>
+              <Button 
+                variant={stockUpdateMode === 'bulk' ? 'default' : 'outline'}
+                onClick={() => setStockUpdateMode('bulk')}
+              >
+                Bulk Update
+              </Button>
+            </div>
+
+            {stockUpdateMode === 'single' ? (
+              /* Single Stock Update */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <Label htmlFor="stockProduct">Product</Label>
+                  <Select value={selectedStockProduct} onValueChange={setSelectedStockProduct}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stockProducts.map((product: any) => (
+                        <SelectItem key={product._id} value={product._id}>
+                          {product.name} - {product.stock || 0} in stock
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="stockOperation">Operation</Label>
+                  <Select value={stockOperation} onValueChange={(value: 'set' | 'add' | 'subtract') => setStockOperation(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="set">Set Stock</SelectItem>
+                      <SelectItem value="add">Add Stock</SelectItem>
+                      <SelectItem value="subtract">Subtract Stock</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="stockAmount">Amount</Label>
+                  <Input
+                    id="stockAmount"
+                    type="number"
+                    min="0"
+                    value={stockAmount}
+                    onChange={(e) => setStockAmount(e.target.value)}
+                    placeholder="Enter amount"
+                  />
+                </div>
+                
+                <div className="flex items-end">
+                  <Button 
+                    onClick={updateSingleStock} 
+                    disabled={isUpdatingStock || !selectedStockProduct || !stockAmount}
+                    className="w-full"
+                  >
+                    {isUpdatingStock ? 'Updating...' : 'Update Stock'}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* Bulk Stock Update */
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <Label htmlFor="bulkProduct">Product</Label>
+                    <Select value={selectedStockProduct} onValueChange={setSelectedStockProduct}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {stockProducts.map((product: any) => (
+                          <SelectItem key={product._id} value={product._id}>
+                            {product.name} - {product.stock || 0} in stock
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="bulkOperation">Operation</Label>
+                    <Select value={stockOperation} onValueChange={(value: 'set' | 'add' | 'subtract') => setStockOperation(value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="set">Set Stock</SelectItem>
+                        <SelectItem value="add">Add Stock</SelectItem>
+                        <SelectItem value="subtract">Subtract Stock</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="bulkAmount">Amount</Label>
+                    <Input
+                      id="bulkAmount"
+                      type="number"
+                      min="0"
+                      value={stockAmount}
+                      onChange={(e) => setStockAmount(e.target.value)}
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                  
+                  <div className="flex items-end">
+                    <Button 
+                      onClick={addToBulkUpdates} 
+                      disabled={!selectedStockProduct || !stockAmount}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add to List
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Bulk Updates List */}
+                {bulkStockUpdates.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Pending Updates ({bulkStockUpdates.length}):</h4>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {bulkStockUpdates.map((update, index) => {
+                        const product = stockProducts.find((p: any) => p._id === update.productId);
+                        return (
+                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <span className="text-sm">
+                              {product?.name} - {update.operation} {update.stock}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => removeFromBulkUpdates(update.productId)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={updateBulkStock} 
+                        disabled={isUpdatingStock}
+                        className="flex-1"
+                      >
+                        {isUpdatingStock ? 'Processing...' : 'Apply All Updates'}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setBulkStockUpdates([])}
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Stock Levels Table */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Current Stock Levels</h4>
+              <div className="max-h-96 overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Current Stock</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stockProducts.map((product: any) => {
+                      const stockLevel = product.stock || 0;
+                      const isLowStock = stockLevel > 0 && stockLevel <= 10;
+                      const isOutOfStock = stockLevel === 0;
+                      
+                      return (
+                        <TableRow key={product._id}>
+                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell>{product.category || 'N/A'}</TableCell>
+                          <TableCell>
+                            <span className={isLowStock ? "text-orange-600 font-medium" : isOutOfStock ? "text-red-600 font-medium" : ""}>
+                              {stockLevel}
+                            </span>
+                          </TableCell>
+                          <TableCell>{formatPriceKSHS(product.price)}</TableCell>
+                          <TableCell>
+                            <Badge variant={isOutOfStock ? "destructive" : isLowStock ? "secondary" : "default"}>
+                              {isOutOfStock ? "Out of Stock" : isLowStock ? "Low Stock" : "In Stock"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

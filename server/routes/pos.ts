@@ -658,4 +658,155 @@ router.get("/reports/performance", requireAuth, async (req, res) => {
   }
 });
 
+// Stock Management Endpoints
+
+// Get all products with stock levels
+router.get("/stock", requireAuth, apiLimiter, async (req, res) => {
+  try {
+    if (req.user?.role !== "admin" && req.user?.role !== "staff") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const products = await Product.find()
+      .select('name price stock available category brand')
+      .sort({ category: 1, name: 1 });
+
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching stock levels:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Update stock level
+router.patch("/stock/:productId", requireAuth, apiLimiter, async (req, res) => {
+  try {
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can update stock levels" });
+    }
+
+    const { productId } = req.params;
+    const { stock, operation } = req.body; // operation: 'set' | 'add' | 'subtract'
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    let newStock: number;
+    const currentStock = product.stock || 0;
+
+    switch (operation) {
+      case 'set':
+        newStock = Math.max(0, stock);
+        break;
+      case 'add':
+        newStock = currentStock + Math.max(0, stock);
+        break;
+      case 'subtract':
+        newStock = Math.max(0, currentStock - Math.max(0, stock));
+        break;
+      default:
+        return res.status(400).json({ message: "Invalid operation. Use 'set', 'add', or 'subtract'" });
+    }
+
+    // Update product stock and availability
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      { 
+        stock: newStock,
+        available: newStock > 0
+      },
+      { new: true }
+    ).select('name stock available');
+
+    // Log the stock change for audit purposes
+    if (updatedProduct) {
+      console.log(`Stock updated by ${req.user.username}: Product ${updatedProduct.name} (${productId}) - ${operation} ${stock}, new stock: ${newStock}`);
+    }
+
+    res.json({
+      message: "Stock updated successfully",
+      product: updatedProduct,
+      previousStock: currentStock,
+      newStock: newStock
+    });
+  } catch (error) {
+    console.error("Error updating stock:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Bulk stock update
+router.patch("/stock/bulk", requireAuth, apiLimiter, async (req, res) => {
+  try {
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can update stock levels" });
+    }
+
+    const { updates } = req.body; // Array of { productId, stock, operation }
+
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ message: "Invalid updates array" });
+    }
+
+    const results = [];
+    
+    for (const update of updates) {
+      const { productId, stock, operation } = update;
+      
+      const product = await Product.findById(productId);
+      if (!product) {
+        results.push({ productId, error: "Product not found" });
+        continue;
+      }
+
+      let newStock: number;
+      const currentStock = product.stock || 0;
+
+      switch (operation) {
+        case 'set':
+          newStock = Math.max(0, stock);
+          break;
+        case 'add':
+          newStock = currentStock + Math.max(0, stock);
+          break;
+        case 'subtract':
+          newStock = Math.max(0, currentStock - Math.max(0, stock));
+          break;
+        default:
+          results.push({ productId, error: "Invalid operation" });
+          continue;
+      }
+
+      await Product.findByIdAndUpdate(
+        productId,
+        { 
+          stock: newStock,
+          available: newStock > 0
+        }
+      );
+
+      results.push({
+        productId,
+        productName: product.name,
+        previousStock: currentStock,
+        newStock: newStock,
+        operation,
+        amount: stock
+      });
+    }
+
+    console.log(`Bulk stock update by ${req.user.username}: ${results.length} products updated`);
+
+    res.json({
+      message: "Bulk stock update completed",
+      results
+    });
+  } catch (error) {
+    console.error("Error in bulk stock update:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 export default router;
