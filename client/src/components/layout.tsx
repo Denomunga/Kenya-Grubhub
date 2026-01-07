@@ -164,7 +164,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </motion.div>
                   </div>
                 )}
-                MS COMPUTERS & STATIONERY SERVICES
+                MS COMPUTERS & REPAIRS
               </span>
             </motion.div>
           </Link>
