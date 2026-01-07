@@ -2951,6 +2951,12 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     }
   });
 
+  // Mount routers
+  app.use("/api/auth0", auth0Router);
+  app.use("/api/newsletter", newsletterRouter);
+  app.use("/api/admin-newsletter", adminNewsletterRouter);
+  app.use("/api/pos", posRouter);
+
   // Test endpoint to verify routes are registering
   app.get("/api/test", (_req, res) => {
     console.log("Test endpoint hit!");
