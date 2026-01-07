@@ -13,6 +13,7 @@ import { News } from './models/News';
 import { Review } from './models/Review';
 import { BusinessLocation } from './models/BusinessLocation';
 import { Product } from './models/Product';
+import { Sale } from './models/Sale';
 import mongoose from "mongoose";
 import { NewsAudit } from "./models/NewsAudit";
 import { ReviewAudit } from "./models/ReviewAudit";
@@ -36,6 +37,7 @@ import { csrfProtection } from "./middleware/csrf";
 import { auth0Router } from "./routes/auth0";
 import newsletterRouter from "./routes/newsletter";
 import adminNewsletterRouter from "./routes/admin-newsletter";
+import posRouter from "./routes/pos";
 import { 
   validateThreadAccess, 
   validateThreadParticipation, 
@@ -106,6 +108,19 @@ declare module "express-session" {
   interface SessionData {
     userId?: string;
   }
+}
+
+// Helper function to calculate total revenue from orders and POS sales
+async function calculateTotalRevenue() {
+  const [orderRevenue, saleRevenue] = await Promise.all([
+    Order.aggregate([{ $match: { status: { $ne: 'Cancelled' } } }, { $group: { _id: null, revenue: { $sum: "$total" } } }]),
+    Sale.aggregate([{ $match: { status: 'Completed' } }, { $group: { _id: null, revenue: { $sum: "$total" } } }])
+  ]);
+  
+  const orderTotal = orderRevenue.length ? orderRevenue[0].revenue : 0;
+  const saleTotal = saleRevenue.length ? saleRevenue[0].revenue : 0;
+  
+  return orderTotal + saleTotal;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -214,6 +229,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Add admin newsletter routes (requires authentication)
   app.use("/api/admin/newsletter", adminNewsletterRouter);
+  
+  // Add POS routes (requires authentication)
+  app.use("/api/pos", posRouter);
   
   // Apply rate limiting
   app.use(generalLimiter);
@@ -1806,12 +1824,41 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     try {
       const { items, total, user, userId, userEmail, userPhone, eta, location } = req.body as any;
       if (!items || !Array.isArray(items) || typeof total !== 'number') return res.status(400).json({ message: 'items and total required' });
+
+      // Validate stock availability and reduce stock levels
+      for (const item of items) {
+        if (!item.productId || !item.quantity || !item.price) {
+          return res.status(400).json({ message: 'Invalid item data' });
+        }
+
+        const product = await Product.findById(item.productId);
+        if (!product) {
+          return res.status(404).json({ message: `Product ${item.productId} not found` });
+        }
+
+        if (!product.available) {
+          return res.status(400).json({ message: `Product ${product.name} is not available` });
+        }
+
+        if (product.stock !== undefined && product.stock < item.quantity) {
+          return res.status(400).json({ message: `Insufficient stock for ${product.name}. Available: ${product.stock}` });
+        }
+      }
+
+      // Create the order
       const o = await Order.create({ items, total, user, userId, userEmail, userPhone, eta, location });
+
+      // Update inventory - reduce stock levels
+      for (const item of items) {
+        await Product.findByIdAndUpdate(item.productId, {
+          $inc: { stock: -item.quantity }
+        });
+      }
+
       try { (app as any).locals.io?.emit('orders:new', { id: o._id.toString(), items: o.items, total: o.total, status: o.status, user: o.user, userEmail: o.userEmail, userPhone: o.userPhone, createdAt: o.createdAt, eta: o.eta, location: o.location }); } catch (e) {}
       // Emit KPIs update
       try {
-        const totalRevenueAgg = await Order.aggregate([{ $group: { _id: null, revenue: { $sum: "$total" } } }]);
-        const totalRevenue = totalRevenueAgg.length ? totalRevenueAgg[0].revenue : 0;
+        const totalRevenue = await calculateTotalRevenue();
         const activeOrders = await Order.countDocuments({ status: { $ne: 'Delivered' } });
         const since = new Date(Date.now() - 60_000);
         const opm = await Order.countDocuments({ createdAt: { $gte: since } });
@@ -1851,8 +1898,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       try { (app as any).locals.io?.emit('orders:update', { id: found._id.toString(), status: found.status, eta: found.eta, updatedAt: found.updatedAt }); } catch (e) {}
       // Emit KPIs update
       try {
-        const totalRevenueAgg = await Order.aggregate([{ $group: { _id: null, revenue: { $sum: "$total" } } }]);
-        const totalRevenue = totalRevenueAgg.length ? totalRevenueAgg[0].revenue : 0;
+        const totalRevenue = await calculateTotalRevenue();
         const activeOrders = await Order.countDocuments({ status: { $ne: 'Delivered' } });
         const since = new Date(Date.now() - 60_000);
         const opm = await Order.countDocuments({ createdAt: { $gte: since } });
@@ -1886,6 +1932,13 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       
       found.status = 'Cancelled';
       await found.save();
+
+      // Restore inventory - increase stock levels back
+      for (const item of found.items) {
+        await Product.findByIdAndUpdate(item.productId, {
+          $inc: { stock: item.quantity }
+        });
+      }
       
       // Emit socket events for real-time updates
       try { 
@@ -1900,8 +1953,8 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       
       // Emit KPIs update
       try {
-        const totalRevenueAgg = await Order.aggregate([{ $group: { _id: null, revenue: { $sum: "$total" } } }]);
-        const totalRevenue = totalRevenueAgg.length ? totalRevenueAgg[0].revenue : 0;
+        const totalRevenue = await calculateTotalRevenue();
+
         const activeOrders = await Order.countDocuments({ status: { $ne: 'Delivered' } });
         const since = new Date(Date.now() - 60_000);
         const opm = await Order.countDocuments({ createdAt: { $gte: since } });
@@ -1938,6 +1991,55 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       if (found.status !== 'Pending') {
         return res.status(400).json({ message: 'Order can only be modified while pending' });
       }
+
+      // Validate stock availability for new items
+      for (const item of items) {
+        if (!item.productId || !item.quantity || !item.price) {
+          return res.status(400).json({ message: 'Invalid item data' });
+        }
+
+        const product = await Product.findById(item.productId);
+        if (!product) {
+          return res.status(404).json({ message: `Product ${item.productId} not found` });
+        }
+
+        if (!product.available) {
+          return res.status(400).json({ message: `Product ${product.name} is not available` });
+        }
+
+        // Calculate the difference in quantity for this product
+        const existingItem = found.items.find((existing: any) => existing.productId === item.productId);
+        const existingQuantity = existingItem ? existingItem.quantity : 0;
+        const quantityDifference = item.quantity - existingQuantity;
+
+        if (product.stock !== undefined && product.stock < quantityDifference) {
+          return res.status(400).json({ message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Required additional: ${quantityDifference}` });
+        }
+      }
+
+      // Update inventory based on quantity differences
+      for (const item of items) {
+        const existingItem = found.items.find((existing: any) => existing.productId === item.productId);
+        const existingQuantity = existingItem ? existingItem.quantity : 0;
+        const quantityDifference = item.quantity - existingQuantity;
+
+        if (quantityDifference !== 0) {
+          await Product.findByIdAndUpdate(item.productId, {
+            $inc: { stock: -quantityDifference }
+          });
+        }
+      }
+
+      // Handle products that were removed from the order (restore their stock)
+      for (const existingItem of found.items) {
+        const stillExists = items.find((item: any) => item.productId === existingItem.productId);
+        if (!stillExists) {
+          // This product was removed, restore its stock
+          await Product.findByIdAndUpdate(existingItem.productId, {
+            $inc: { stock: existingItem.quantity }
+          });
+        }
+      }
       
       // Update order items and total
       found.items = items;
@@ -1959,8 +2061,8 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       
       // Emit KPIs update
       try {
-        const totalRevenueAgg = await Order.aggregate([{ $group: { _id: null, revenue: { $sum: "$total" } } }]);
-        const totalRevenue = totalRevenueAgg.length ? totalRevenueAgg[0].revenue : 0;
+        const totalRevenue = await calculateTotalRevenue();
+
         const activeOrders = await Order.countDocuments({ status: { $ne: 'Delivered' } });
         const since = new Date(Date.now() - 60_000);
         const opm = await Order.countDocuments({ createdAt: { $gte: since } });

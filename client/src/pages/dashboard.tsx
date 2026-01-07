@@ -33,6 +33,7 @@ import DragDropMenuManager from "@/components/admin/DragDropMenuManager";
 import AnimatedCharts from "@/components/admin/AnimatedCharts";
 import OrderLocationView from "@/components/admin/OrderLocationView";
 import BusinessLocationManager from "@/components/admin/BusinessLocationManager";
+import POSSystem from "@/components/admin/POSSystem";
 
 function playBeep() {
   try {
@@ -154,6 +155,7 @@ export default function Dashboard() {
           <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Overview</TabsTrigger>
           <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Analytics</TabsTrigger>
           <TabsTrigger value="orders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Orders</TabsTrigger>
+          <TabsTrigger value="pos" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">POS</TabsTrigger>
           <TabsTrigger value="menu" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Menu</TabsTrigger>
           <TabsTrigger value="location" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Location</TabsTrigger>
           <TabsTrigger value="news" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">News</TabsTrigger>
@@ -411,6 +413,10 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="pos">
+          <POSSystem />
         </TabsContent>
 
         <TabsContent value="menu">
