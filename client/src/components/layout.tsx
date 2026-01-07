@@ -327,7 +327,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <h2 className="text-2xl font-bold text-blue-600">
                       Navigation
                     </h2>
-                    <p className="text-xs text-muted-foreground mt-1">Explore KENYAN-HUB</p>
+                    <p className="text-xs text-muted-foreground mt-1">Explore MS-COMPUTERS</p>
                   </motion.div>
                   <motion.button
                     className="p-3 rounded-full bg-blue-100 hover:bg-blue-200 transition-all duration-300 border border-blue-200 shadow-lg hover:shadow-xl"
@@ -488,8 +488,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 transition={{ delay: 0.7, type: "spring", stiffness: 300 }}
               >
                 <div className="text-center">
-                  <div className="text-xs text-muted-foreground font-medium">KENYAN-HUB</div>
-                  <div className="text-xs text-muted-foreground mt-1">Premium Kenyan Experience</div>
+                  <div className="text-xs text-muted-foreground font-medium">MS-COMPUTERS</div>
+                  <div className="text-xs text-muted-foreground mt-1">Premium Kenyan Laptops</div>
                 </div>
               </motion.div>
             </motion.div>
@@ -556,7 +556,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <Laptop className="h-5 w-5 text-primary" />
                 )}
               </div>
-              <span className="font-heading text-xl font-bold">KENYAN-HUB</span>
+              <span className="font-heading text-xl font-bold">MS-COMPUTERS</span>
               {isChristmasMode && <span className="text-2xl">🎄</span>}
             </div>
             <p className={`${
@@ -567,7 +567,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {isChristmasMode ? (
                 <>Experience the magic of Christmas fashion! 🎅 Discover festive styles and elegant designs that bring joy and style to your holiday season. Perfect for spreading cheer and looking your best! 🎁</>
               ) : (
-                <>Experience Kenyan Style and Designs that bring joy in all Seasons. Perfect for spreading cheer and looking for the best! 🎁</>
+                <>Experience our curated collection featuring XUK Laptops, XUS Laptops, Computers Accessories, Computer Repairs and Stationeries, with modern elegance, and a touch of sophistication.</>
               )}
             </p>
           </motion.div>
@@ -600,8 +600,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 ? 'text-white/80' 
                 : 'text-primary-foreground/80'
             }`}>
-              <li className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Westlands, Nairobi, Kenya</li>
-              <li className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> +254 717 320 783</li>
+              <li className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Mathingu Road Wangirika  Hse Room No.G10, Ruiru Town </li>
+              <li className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> +254 724 399 231</li>
             </ul>
           </motion.div>
 
@@ -632,9 +632,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             transition={{ duration: 0.5, delay: 0.5 }}
           >
             {isChristmasMode ? (
-              <>© 2024 KENYAN-HUB. All rights reserved. 🎄 Wishing you a Merry Christmas and Happy New Year! 🎅</>
+              <>© 2024 MS-COMPUTERS. All rights reserved. 🎄 Wishing you a Merry Christmas and Happy New Year! 🎅</>
             ) : (
-              <>© 2024 KENYAN-HUB. All rights reserved.</>
+              <>© 2024 MS-COMPUTERS. All rights reserved.</>
             )}
           </motion.p>
         </div>

@@ -92,7 +92,7 @@ const HeroSection = () => {
       <div className="absolute inset-0">
         <motion.img
           src={heroImage}
-          alt="Modern Kenyan fashion and lifestyle"
+          alt="Modern Kenyan Laptops, Stationery, Computer Accessories, and Repairs"
           className="w-full h-full object-cover"
           loading="eager"
           initial={{ scale: 1.1 }}
@@ -135,7 +135,7 @@ const HeroSection = () => {
               )}
             </motion.div>
             <span className="text-sm font-medium text-white">
-              {isChristmasMode ? '🎄 Magical Christmas Collection' : 'Experience Authentic Kenyan Style'}
+              {isChristmasMode ? '🎄 Magical Christmas Collection' : 'Ms-Computers And Repairs'}
             </span>
           </motion.div>
           <motion.h1 
@@ -147,7 +147,7 @@ const HeroSection = () => {
             {isChristmasMode ? (
               <span className="text-gradient bg-clip-text text-transparent bg-linear-to-r from-red-400 via-green-400 to-red-600 animate-pulse">🎄 Magical Christmas Collection</span>
             ) : (
-              <>Discover The Style Of <span className="text-gradient bg-clip-text text-transparent bg-linear-to-r from-yellow-400 bg-black">Kenya</span></>
+              <>Discover <span className="text-gradient bg-clip-text text-transparent bg-linear-to-r from-yellow-400 bg-black">TECHNOLOGY</span></>
             )}
           </motion.h1>
           <motion.p 
@@ -159,7 +159,7 @@ const HeroSection = () => {
             {isChristmasMode ? (
               <>🎅 Step into our winter wonderland! Experience the enchantment of Christmas with exclusive Kenyan designs that blend traditional craftsmanship with festive magic. Perfect for spreading joy and style this magical season! 🎁</>
             ) : (
-              <>Explore our curated collection featuring traditional designs with modern elegance, crafted with authentic Kenyan materials and timeless style.</>
+              <>Explore our curated collection featuring XUK Laptops, XUS Laptops, Computers Accessories, Computer Repairs and Stationeries, with modern elegance, and a touch of sophistication.</>
             )}
           </motion.p>
           <motion.div 

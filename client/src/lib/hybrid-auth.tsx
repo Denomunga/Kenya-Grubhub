@@ -297,7 +297,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
         setSyncedUser(data.user);
         toast({ 
           title: "Registration Successful", 
-          description: `Welcome to KENYAN-HUB, ${name}!` 
+          description: `Welcome to MS-Computers, ${name}!` 
         });
         return true;
       } else {

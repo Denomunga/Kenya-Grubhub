@@ -158,287 +158,287 @@ interface DataContextType {
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const INITIAL_MENU: MenuItem[] = [
-  // Food Items
-  {
-    id: "1",
-    name: "Nyama Choma",
-    description: "Grilled beef marinated in traditional Kenyan spices, served with kachumbari.",
-    price: 1200,
-    category: "Food",
-    subcategory: "Main Course",
-    available: true,
-    stock: 50,
-    tags: ["beef", "grilled", "traditional"],
-  },
-  {
-    id: "2",
-    name: "Ugali & Sukuma Wiki",
-    description: "Classic Kenyan staple. Cornmeal cake with sautéed collard greens.",
-    price: 400,
-    category: "Food",
-    subcategory: "Main Course",
-    available: true,
-    stock: 100,
-    tags: ["vegetarian", "traditional"],
-  },
-  {
-    id: "3",
-    name: "Chapati & Madondo",
-    description: "Soft layered flatbread served with a rich red bean stew.",
-    price: 350,
-    category: "Food",
-    subcategory: "Main Course",
-    available: true,
-    stock: 80,
-    tags: ["vegetarian", "beans"],
-  },
-  {
-    id: "4",
-    name: "Beef Samosas (Pair)",
-    description: "Crispy pastry filled with spiced minced beef.",
-    price: 150,
-    category: "Food",
-    subcategory: "Starter",
-    available: true,
-    stock: 40,
-    tags: ["beef", "snack", "crispy"],
-  },
+// const INITIAL_MENU: MenuItem[] = [
+//   // Food Items
+//   {
+//     id: "1",
+//     name: "Nyama Choma",
+//     description: "Grilled beef marinated in traditional Kenyan spices, served with kachumbari.",
+//     price: 1200,
+//     category: "Food",
+//     subcategory: "Main Course",
+//     available: true,
+//     stock: 50,
+//     tags: ["beef", "grilled", "traditional"],
+//   },
+//   {
+//     id: "2",
+//     name: "Ugali & Sukuma Wiki",
+//     description: "Classic Kenyan staple. Cornmeal cake with sautéed collard greens.",
+//     price: 400,
+//     category: "Food",
+//     subcategory: "Main Course",
+//     available: true,
+//     stock: 100,
+//     tags: ["vegetarian", "traditional"],
+//   },
+//   {
+//     id: "3",
+//     name: "Chapati & Madondo",
+//     description: "Soft layered flatbread served with a rich red bean stew.",
+//     price: 350,
+//     category: "Food",
+//     subcategory: "Main Course",
+//     available: true,
+//     stock: 80,
+//     tags: ["vegetarian", "beans"],
+//   },
+//   {
+//     id: "4",
+//     name: "Beef Samosas (Pair)",
+//     description: "Crispy pastry filled with spiced minced beef.",
+//     price: 150,
+//     category: "Food",
+//     subcategory: "Starter",
+//     available: true,
+//     stock: 40,
+//     tags: ["beef", "snack", "crispy"],
+//   },
   
-  // Electronics
-  {
-    id: "5",
-    name: "MacBook Pro 14\"",
-    description: "M3 Pro chip, 18GB RAM, 512GB SSD. Perfect for professionals and creators.",
-    price: 250000,
-    category: "Electronics",
-    subcategory: "Laptops",
-    brand: "Apple",
-    condition: "new",
-    specifications: {
-      processor: "M3 Pro",
-      ram: "18GB",
-      storage: "512GB SSD",
-      display: "14.2\" Liquid Retina XDR",
-      graphics: "M3 Pro GPU"
-    },
-    images: [],
-    available: true,
-    stock: 15,
-    tags: ["laptop", "apple", "professional", "m3"],
-  },
-  {
-    id: "6",
-    name: "iPhone 15 Pro",
-    description: "Latest iPhone with titanium design, A17 Pro chip, and advanced camera system.",
-    price: 145000,
-    category: "Electronics",
-    subcategory: "Smartphones",
-    brand: "Apple",
-    condition: "new",
-    specifications: {
-      processor: "A17 Pro",
-      storage: "256GB",
-      camera: "48MP Main + 12MP Ultra Wide + 12MP Telephoto",
-      display: "6.1\" Super Retina XDR",
-      battery: "All-day battery life"
-    },
-    images: [],
-    available: true,
-    stock: 25,
-    tags: ["smartphone", "apple", "5g", "pro"],
-  },
-  {
-    id: "7",
-    name: "Samsung Galaxy S24 Ultra",
-    description: "Premium Android phone with S Pen, 200MP camera, and Galaxy AI features.",
-    price: 130000,
-    category: "Electronics",
-    subcategory: "Smartphones",
-    brand: "Samsung",
-    condition: "new",
-    specifications: {
-      processor: "Snapdragon 8 Gen 3",
-      storage: "256GB",
-      camera: "200MP Main + 50MP Periscope + 12MP Ultra Wide",
-      display: "6.8\" Dynamic AMOLED 2X",
-      special: "S Pen included"
-    },
-    images: [],
-    available: true,
-    stock: 20,
-    tags: ["smartphone", "samsung", "android", "s-pen"],
-  },
+//   // Electronics
+//   {
+//     id: "5",
+//     name: "MacBook Pro 14\"",
+//     description: "M3 Pro chip, 18GB RAM, 512GB SSD. Perfect for professionals and creators.",
+//     price: 250000,
+//     category: "Electronics",
+//     subcategory: "Laptops",
+//     brand: "Apple",
+//     condition: "new",
+//     specifications: {
+//       processor: "M3 Pro",
+//       ram: "18GB",
+//       storage: "512GB SSD",
+//       display: "14.2\" Liquid Retina XDR",
+//       graphics: "M3 Pro GPU"
+//     },
+//     images: [],
+//     available: true,
+//     stock: 15,
+//     tags: ["laptop", "apple", "professional", "m3"],
+//   },
+//   {
+//     id: "6",
+//     name: "iPhone 15 Pro",
+//     description: "Latest iPhone with titanium design, A17 Pro chip, and advanced camera system.",
+//     price: 145000,
+//     category: "Electronics",
+//     subcategory: "Smartphones",
+//     brand: "Apple",
+//     condition: "new",
+//     specifications: {
+//       processor: "A17 Pro",
+//       storage: "256GB",
+//       camera: "48MP Main + 12MP Ultra Wide + 12MP Telephoto",
+//       display: "6.1\" Super Retina XDR",
+//       battery: "All-day battery life"
+//     },
+//     images: [],
+//     available: true,
+//     stock: 25,
+//     tags: ["smartphone", "apple", "5g", "pro"],
+//   },
+//   {
+//     id: "7",
+//     name: "Samsung Galaxy S24 Ultra",
+//     description: "Premium Android phone with S Pen, 200MP camera, and Galaxy AI features.",
+//     price: 130000,
+//     category: "Electronics",
+//     subcategory: "Smartphones",
+//     brand: "Samsung",
+//     condition: "new",
+//     specifications: {
+//       processor: "Snapdragon 8 Gen 3",
+//       storage: "256GB",
+//       camera: "200MP Main + 50MP Periscope + 12MP Ultra Wide",
+//       display: "6.8\" Dynamic AMOLED 2X",
+//       special: "S Pen included"
+//     },
+//     images: [],
+//     available: true,
+//     stock: 20,
+//     tags: ["smartphone", "samsung", "android", "s-pen"],
+//   },
   
-  // Vehicles
-  {
-    id: "8",
-    name: "Toyota Land Cruiser V8",
-    description: "2023 model, excellent condition, full service history. Perfect for Kenyan roads.",
-    price: 8500000,
-    category: "Vehicles",
-    subcategory: "SUVs",
-    brand: "Toyota",
-    condition: "used",
-    specifications: {
-      year: 2023,
-      mileage: "15,000 km",
-      engine: "4.0L V8",
-      transmission: "Automatic",
-      fuel: "Petrol",
-      drive: "4WD"
-    },
-    images: [],
-    available: true,
-    stock: 1,
-    location: "Nairobi",
-    tags: ["suv", "toyota", "4x4", "off-road"],
-  },
-  {
-    id: "9",
-    name: "Honda CR-V 2022",
-    description: "Reliable family SUV with excellent fuel economy and safety features.",
-    price: 3200000,
-    category: "Vehicles",
-    subcategory: "SUVs",
-    brand: "Honda",
-    condition: "used",
-    specifications: {
-      year: 2022,
-      mileage: "25,000 km",
-      engine: "1.5L Turbo",
-      transmission: "CVT",
-      fuel: "Petrol",
-      seats: 7
-    },
-    images: [],
-    available: true,
-    stock: 1,
-    location: "Mombasa",
-    tags: ["suv", "honda", "family", "fuel-efficient"],
-  },
+//   // Vehicles
+//   {
+//     id: "8",
+//     name: "Toyota Land Cruiser V8",
+//     description: "2023 model, excellent condition, full service history. Perfect for Kenyan roads.",
+//     price: 8500000,
+//     category: "Vehicles",
+//     subcategory: "SUVs",
+//     brand: "Toyota",
+//     condition: "used",
+//     specifications: {
+//       year: 2023,
+//       mileage: "15,000 km",
+//       engine: "4.0L V8",
+//       transmission: "Automatic",
+//       fuel: "Petrol",
+//       drive: "4WD"
+//     },
+//     images: [],
+//     available: true,
+//     stock: 1,
+//     location: "Nairobi",
+//     tags: ["suv", "toyota", "4x4", "off-road"],
+//   },
+//   {
+//     id: "9",
+//     name: "Honda CR-V 2022",
+//     description: "Reliable family SUV with excellent fuel economy and safety features.",
+//     price: 3200000,
+//     category: "Vehicles",
+//     subcategory: "SUVs",
+//     brand: "Honda",
+//     condition: "used",
+//     specifications: {
+//       year: 2022,
+//       mileage: "25,000 km",
+//       engine: "1.5L Turbo",
+//       transmission: "CVT",
+//       fuel: "Petrol",
+//       seats: 7
+//     },
+//     images: [],
+//     available: true,
+//     stock: 1,
+//     location: "Mombasa",
+//     tags: ["suv", "honda", "family", "fuel-efficient"],
+//   },
   
-  // Real Estate
-  {
-    id: "10",
-    name: "3 Bedroom Apartment - Kilimani",
-    description: "Modern 3BR apartment in prime Kilimani location, 24/7 security, swimming pool.",
-    price: 15000000,
-    category: "Real Estate",
-    subcategory: "Apartments",
-    condition: "new",
-    specifications: {
-      bedrooms: 3,
-      bathrooms: 2,
-      size: "120 sq meters",
-      floor: "5th floor",
-      parking: "2 dedicated spaces",
-      amenities: ["Gym", "Pool", "Security", "Backup generator"]
-    },
-    images: [],
-    available: true,
-    stock: 1,
-    location: "Kilimani, Nairobi",
-    tags: ["apartment", "kilimani", "modern", "3br"],
-  },
-  {
-    id: "11",
-    name: "Office Space - Westlands",
-    description: "Prime commercial office space in Westlands, perfect for businesses.",
-    price: 8000000,
-    category: "Real Estate",
-    subcategory: "Commercial",
-    condition: "new",
-    specifications: {
-      size: "200 sq meters",
-      floor: "Ground floor",
-      parking: "10 spaces",
-      features: ["Conference room", "Kitchen", "Reception", "Backup power"]
-    },
-    images: [],
-    available: true,
-    stock: 1,
-    location: "Westlands, Nairobi",
-    tags: ["office", "commercial", "westlands", "business"],
-  },
+//   // Real Estate
+//   {
+//     id: "10",
+//     name: "3 Bedroom Apartment - Kilimani",
+//     description: "Modern 3BR apartment in prime Kilimani location, 24/7 security, swimming pool.",
+//     price: 15000000,
+//     category: "Real Estate",
+//     subcategory: "Apartments",
+//     condition: "new",
+//     specifications: {
+//       bedrooms: 3,
+//       bathrooms: 2,
+//       size: "120 sq meters",
+//       floor: "5th floor",
+//       parking: "2 dedicated spaces",
+//       amenities: ["Gym", "Pool", "Security", "Backup generator"]
+//     },
+//     images: [],
+//     available: true,
+//     stock: 1,
+//     location: "Kilimani, Nairobi",
+//     tags: ["apartment", "kilimani", "modern", "3br"],
+//   },
+//   {
+//     id: "11",
+//     name: "Office Space - Westlands",
+//     description: "Prime commercial office space in Westlands, perfect for businesses.",
+//     price: 8000000,
+//     category: "Real Estate",
+//     subcategory: "Commercial",
+//     condition: "new",
+//     specifications: {
+//       size: "200 sq meters",
+//       floor: "Ground floor",
+//       parking: "10 spaces",
+//       features: ["Conference room", "Kitchen", "Reception", "Backup power"]
+//     },
+//     images: [],
+//     available: true,
+//     stock: 1,
+//     location: "Westlands, Nairobi",
+//     tags: ["office", "commercial", "westlands", "business"],
+//   },
   
-  // Fashion
-  {
-    id: "12",
-    name: "Nike Air Jordan 1 Retro",
-    description: "Classic basketball sneakers in original colorway, brand new with box.",
-    price: 15000,
-    category: "Fashion",
-    subcategory: "Footwear",
-    brand: "Nike",
-    condition: "new",
-    specifications: {
-      size: "US 10",
-      colorway: "Chicago",
-      material: "Leather",
-      year: 2024
-    },
-    images: [],
-    available: true,
-    stock: 5,
-    tags: ["sneakers", "nike", "jordan", "basketball"],
-  },
-  {
-    id: "13",
-    name: "Leather Jacket - Premium",
-    description: "Genuine leather jacket, perfect for Kenyan weather, stylish and durable.",
-    price: 8500,
-    category: "Fashion",
-    subcategory: "Clothing",
-    condition: "new",
-    specifications: {
-      material: "Genuine Leather",
-      color: "Black",
-      sizes: ["S", "M", "L", "XL"],
-      style: "Biker Jacket"
-    },
-    images: [],
-    available: true,
-    stock: 20,
-    tags: ["jacket", "leather", "fashion", "biker"],
-  },
-  {
-    id: "14",
-    name: "Designer Handbag",
-    description: "Authentic designer handbag, comes with certificate of authenticity.",
-    price: 45000,
-    category: "Fashion",
-    subcategory: "Accessories",
-    condition: "new",
-    specifications: {
-      brand: "Louis Vuitton",
-      material: "Canvas with leather trim",
-      color: "Brown monogram",
-      compartments: 3
-    },
-    images: [],
-    available: true,
-    stock: 3,
-    tags: ["handbag", "designer", "luxury", "authentic"],
-  },
-];
+//   // Fashion
+//   {
+//     id: "12",
+//     name: "Nike Air Jordan 1 Retro",
+//     description: "Classic basketball sneakers in original colorway, brand new with box.",
+//     price: 15000,
+//     category: "Fashion",
+//     subcategory: "Footwear",
+//     brand: "Nike",
+//     condition: "new",
+//     specifications: {
+//       size: "US 10",
+//       colorway: "Chicago",
+//       material: "Leather",
+//       year: 2024
+//     },
+//     images: [],
+//     available: true,
+//     stock: 5,
+//     tags: ["sneakers", "nike", "jordan", "basketball"],
+//   },
+//   {
+//     id: "13",
+//     name: "Leather Jacket - Premium",
+//     description: "Genuine leather jacket, perfect for Kenyan weather, stylish and durable.",
+//     price: 8500,
+//     category: "Fashion",
+//     subcategory: "Clothing",
+//     condition: "new",
+//     specifications: {
+//       material: "Genuine Leather",
+//       color: "Black",
+//       sizes: ["S", "M", "L", "XL"],
+//       style: "Biker Jacket"
+//     },
+//     images: [],
+//     available: true,
+//     stock: 20,
+//     tags: ["jacket", "leather", "fashion", "biker"],
+//   },
+//   {
+//     id: "14",
+//     name: "Designer Handbag",
+//     description: "Authentic designer handbag, comes with certificate of authenticity.",
+//     price: 45000,
+//     category: "Fashion",
+//     subcategory: "Accessories",
+//     condition: "new",
+//     specifications: {
+//       brand: "Louis Vuitton",
+//       material: "Canvas with leather trim",
+//       color: "Brown monogram",
+//       compartments: 3
+//     },
+//     images: [],
+//     available: true,
+//     stock: 3,
+//     tags: ["handbag", "designer", "luxury", "authentic"],
+//   },
+// ];
 
-const INITIAL_NEWS: NewsItem[] = [
-  {
-    id: "1",
-    title: "Grand Opening in Nairobi!",
-    content: "We are thrilled to announce our newest location in Westlands. Come visit us for exclusive opening offers.",
-    date: "2024-05-20",
-    author: "Admin",
-  },
-  {
-    id: "2",
-    title: "New Menu Items",
-    content: "Introducing our new Swahili Seafood Platter available every Friday.",
-    date: "2024-06-01",
-    author: "Chef Kamau",
-  }
-];
+// const INITIAL_NEWS: NewsItem[] = [
+//   {
+//     id: "1",
+//     title: "Grand Opening in Nairobi!",
+//     content: "We are thrilled to announce our newest location in Westlands. Come visit us for exclusive opening offers.",
+//     date: "2024-05-20",
+//     author: "Admin",
+//   },
+//   {
+//     id: "2",
+//     title: "New Menu Items",
+//     content: "Introducing our new Swahili Seafood Platter available every Friday.",
+//     date: "2024-06-01",
+//     author: "Chef Kamau",
+//   }
+// ];
 
 const INITIAL_STAFF: Staff[] = [
   { id: "1", name: "Juma", role: "Head Chef" },
@@ -540,12 +540,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Try to fetch server-side menu/news/orders if available and override local mock data
   useEffect(() => {
     (async () => {
-      const menuLoaded = await fetchMenuFromServer();
       
       // Fallback to initial data only if server fetch failed
-      if (!menuLoaded) {
-        setMenu(INITIAL_MENU);
-      }
+      // if (!menuLoaded) {
+      //   setMenu(INITIAL_MENU);
+      // }
       
       // Force a second fetch after a delay to ensure we have the latest data
       setTimeout(async () => {
@@ -592,8 +591,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           if (Array.isArray(d.news)) setNews(d.news);
         }
       } catch (err) {
-        console.warn('Failed to fetch news from server, using initial data');
-        setNews(INITIAL_NEWS);
+        console.warn('Failed to fetch news from server, ');
+        setNews;
       }
     })();
   }, []);
