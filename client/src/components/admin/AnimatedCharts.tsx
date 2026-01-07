@@ -17,7 +17,11 @@ interface OrderTrend {
   revenue: number;
 }
 
-const AnimatedCharts: React.FC = () => {
+interface AnimatedChartsProps {
+  posTotalRevenue?: number;
+}
+
+const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) => {
   const { orders, kpis } = useData();
   const [animatedValues, setAnimatedValues] = useState<{ [key: string]: number }>({});
   const [orderTrends, setOrderTrends] = useState<OrderTrend[]>([]);
@@ -39,11 +43,14 @@ const AnimatedCharts: React.FC = () => {
 
   // Animate counter values
   useEffect(() => {
+    const orderRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+    const totalRevenue = (kpis?.totalRevenue ?? orderRevenue) + posTotalRevenue;
+    
     const targets = {
-      totalRevenue: kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0),
+      totalRevenue,
       activeOrders: kpis?.activeOrders ?? orders.filter(o => o.status !== 'Delivered').length,
       totalOrders: orders.length,
-      avgOrderValue: orders.length > 0 ? Math.round(orders.reduce((sum, o) => sum + o.total, 0) / orders.length) : 0
+      avgOrderValue: orders.length > 0 ? Math.round(orderRevenue / orders.length) : 0
     };
 
     Object.entries(targets).forEach(([key, target]) => {
@@ -58,7 +65,7 @@ const AnimatedCharts: React.FC = () => {
         setAnimatedValues(prev => ({ ...prev, [key]: Math.floor(current) }));
       }, 20);
     });
-  }, [orders, kpis]);
+  }, [orders, kpis, posTotalRevenue]);
 
   const chartData: ChartData[] = [
     {

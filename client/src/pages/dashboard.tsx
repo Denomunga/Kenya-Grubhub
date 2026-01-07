@@ -279,7 +279,7 @@ export default function Dashboard() {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <AnimatedCharts />
+          <AnimatedCharts posTotalRevenue={posTotalRevenue} />
         </TabsContent>
 
         <TabsContent value="orders">

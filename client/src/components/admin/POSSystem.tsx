@@ -142,6 +142,13 @@ export default function POSSystem() {
     };
   }, []);
 
+  // Load reports when reports section is shown
+  useEffect(() => {
+    if (showReports) {
+      loadReports();
+    }
+  }, [showReports]);
+
   const fetchSales = async () => {
     try {
       const response = await apiFetch('/api/pos/sales?limit=50');
@@ -336,6 +343,11 @@ export default function POSSystem() {
         setCurrentSale(sale);
         fetchSales();
         addToRecentSales(sale._id);
+        
+        // Refresh reports if they are currently shown
+        if (showReports) {
+          loadReports();
+        }
         
         // Automatically save receipt to database
         try {
@@ -1072,9 +1084,9 @@ export default function POSSystem() {
                   <DollarSign className="h-4 w-4 mr-2" />
                   Today's Sales
                 </h4>
-                {reportData.dailySales && reportData.dailySales.length > 0 ? (
+                {reportData.dailySales && (reportData.dailySales as any).summary ? (
                   <div className="text-2xl font-bold text-green-600">
-                    {formatPriceKSHS(reportData.dailySales.reduce((sum, sale) => sum + sale.total, 0))}
+                    {formatPriceKSHS((reportData.dailySales as any).summary.totalSales || 0)}
                   </div>
                 ) : (
                   <div className="text-muted-foreground">No sales today</div>
