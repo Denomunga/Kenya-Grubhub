@@ -179,7 +179,7 @@ router.post("/sales", requireAuth, apiLimiter, async (req, res) => {
     // Populate cashier info
     await sale.populate('cashier', 'name username');
 
-    // Emit KPIs update for real-time dashboard//
+    // Emit KPIs update for real-time dashboard
     try {
       const totalRevenue = await calculateTotalRevenue();
       const activeOrders = await Order.countDocuments({ status: { $ne: 'Delivered' } });
