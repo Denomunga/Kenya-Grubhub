@@ -1340,58 +1340,288 @@ export default function POSSystem() {
           </Card>
         </div>
       ) : (
-        /* Sales History */
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Receipt</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Cashier</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sales.map(sale => (
-                  <TableRow key={sale._id}>
-                    <TableCell className="font-mono">{sale.receiptNumber}</TableCell>
-                    <TableCell>{new Date(sale.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>{sale.cashier.name}</TableCell>
-                    <TableCell>{sale.items.length} items</TableCell>
-                    <TableCell>{formatPriceKSHS(sale.total)}</TableCell>
-                    <TableCell>{sale.paymentMethod}</TableCell>
-                    <TableCell>
-                      <Badge variant={sale.status === 'Completed' ? 'default' : 'destructive'}>
-                        {sale.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setCurrentSale(sale);
-                          setShowSalesHistory(false);
-                        }}
+        /* Stock Management and Sales History */
+        <div>
+          {/* Stock Management */}
+          {showStockManagement && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Stock Management</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Mode Selection */}
+                <div className="flex gap-2">
+                  <Button 
+                    variant={stockUpdateMode === 'single' ? 'default' : 'outline'}
+                    onClick={() => setStockUpdateMode('single')}
+                  >
+                    Single Product Update
+                  </Button>
+                  <Button 
+                    variant={stockUpdateMode === 'bulk' ? 'default' : 'outline'}
+                    onClick={() => setStockUpdateMode('bulk')}
+                  >
+                    Bulk Update
+                  </Button>
+                </div>
+
+                {stockUpdateMode === 'single' ? (
+                  /* Single Stock Update */
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <Label htmlFor="stockProduct">Product</Label>
+                      <Select value={selectedStockProduct} onValueChange={setSelectedStockProduct}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select product" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stockProducts.map((product: any) => (
+                            <SelectItem key={product._id} value={product._id}>
+                              {product.name} - {product.stock || 0} in stock
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="stockOperation">Operation</Label>
+                      <Select value={stockOperation} onValueChange={(value: 'set' | 'add' | 'subtract') => setStockOperation(value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="set">Set Stock</SelectItem>
+                          <SelectItem value="add">Add Stock</SelectItem>
+                          <SelectItem value="subtract">Subtract Stock</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="stockAmount">Amount</Label>
+                      <Input
+                        id="stockAmount"
+                        type="number"
+                        min="0"
+                        value={stockAmount}
+                        onChange={(e) => setStockAmount(e.target.value)}
+                        placeholder="Enter amount"
+                      />
+                    </div>
+                    
+                    <div className="flex items-end">
+                      <Button 
+                        onClick={updateSingleStock} 
+                        disabled={isUpdatingStock || !selectedStockProduct || !stockAmount}
+                        className="w-full"
                       >
-                        <Receipt className="h-3 w-3 mr-1" />
-                        View
+                        {isUpdatingStock ? 'Updating...' : 'Update Stock'}
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                    </div>
+                  </div>
+                ) : (
+                  /* Bulk Stock Update */
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <Label htmlFor="bulkProduct">Product</Label>
+                        <Select value={selectedStockProduct} onValueChange={setSelectedStockProduct}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select product" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {stockProducts.map((product: any) => (
+                              <SelectItem key={product._id} value={product._id}>
+                                {product.name} - {product.stock || 0} in stock
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="bulkOperation">Operation</Label>
+                        <Select value={stockOperation} onValueChange={(value: 'set' | 'add' | 'subtract') => setStockOperation(value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="set">Set Stock</SelectItem>
+                            <SelectItem value="add">Add Stock</SelectItem>
+                            <SelectItem value="subtract">Subtract Stock</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="bulkAmount">Amount</Label>
+                        <Input
+                          id="bulkAmount"
+                          type="number"
+                          min="0"
+                          value={stockAmount}
+                          onChange={(e) => setStockAmount(e.target.value)}
+                          placeholder="Enter amount"
+                        />
+                      </div>
+                      
+                      <div className="flex items-end">
+                        <Button 
+                          onClick={addToBulkUpdates} 
+                          disabled={!selectedStockProduct || !stockAmount}
+                          className="w-full"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add to List
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Bulk Updates List */}
+                    {bulkStockUpdates.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Pending Updates ({bulkStockUpdates.length}):</h4>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {bulkStockUpdates.map((update, index) => {
+                            const product = stockProducts.find((p: any) => p._id === update.productId);
+                            return (
+                              <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                <span className="text-sm">
+                                  {product?.name} - {update.operation} {update.stock}
+                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => removeFromBulkUpdates(update.productId)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={updateBulkStock} 
+                            disabled={isUpdatingStock}
+                            className="flex-1"
+                          >
+                            {isUpdatingStock ? 'Processing...' : 'Apply All Updates'}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setBulkStockUpdates([])}
+                          >
+                            Clear All
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Stock Levels Table */}
+                <div className="space-y-4">
+                  <h4 className="font-medium">Current Stock Levels</h4>
+                  <div className="max-h-96 overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Product</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Current Stock</TableHead>
+                          <TableHead>Price</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {stockProducts.map((product: any) => {
+                          const stockLevel = product.stock || 0;
+                          const isLowStock = stockLevel > 0 && stockLevel <= 10;
+                          const isOutOfStock = stockLevel === 0;
+                          
+                          return (
+                            <TableRow key={product._id}>
+                              <TableCell className="font-medium">{product.name}</TableCell>
+                              <TableCell>{product.category || 'N/A'}</TableCell>
+                              <TableCell>
+                                <span className={isLowStock ? "text-orange-600 font-medium" : isOutOfStock ? "text-red-600 font-medium" : ""}>
+                                  {stockLevel}
+                                </span>
+                              </TableCell>
+                              <TableCell>{formatPriceKSHS(product.price)}</TableCell>
+                              <TableCell>
+                                <Badge variant={isOutOfStock ? "destructive" : isLowStock ? "secondary" : "default"}>
+                                  {isOutOfStock ? "Out of Stock" : isLowStock ? "Low Stock" : "In Stock"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Sales History */}
+          {(showSalesHistory || showStockManagement) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Sales History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Receipt</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Cashier</TableHead>
+                      <TableHead>Items</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sales.map(sale => (
+                      <TableRow key={sale._id}>
+                        <TableCell className="font-mono">{sale.receiptNumber}</TableCell>
+                        <TableCell>{new Date(sale.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>{sale.cashier.name}</TableCell>
+                        <TableCell>{sale.items.length} items</TableCell>
+                        <TableCell>{formatPriceKSHS(sale.total)}</TableCell>
+                        <TableCell>{sale.paymentMethod}</TableCell>
+                        <TableCell>
+                          <Badge variant={sale.status === 'Completed' ? 'default' : 'destructive'}>
+                            {sale.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setCurrentSale(sale);
+                              setShowSalesHistory(false);
+                            }}
+                          >
+                            <Receipt className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Receipts Section */}
@@ -1550,231 +1780,6 @@ export default function POSSystem() {
             </div>
           </DialogContent>
         </Dialog>
-      )}
-
-      {/* Stock Management Section */}
-      {showStockManagement && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Stock Management</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Mode Selection */}
-            <div className="flex gap-2">
-              <Button 
-                variant={stockUpdateMode === 'single' ? 'default' : 'outline'}
-                onClick={() => setStockUpdateMode('single')}
-              >
-                Single Product Update
-              </Button>
-              <Button 
-                variant={stockUpdateMode === 'bulk' ? 'default' : 'outline'}
-                onClick={() => setStockUpdateMode('bulk')}
-              >
-                Bulk Update
-              </Button>
-            </div>
-
-            {stockUpdateMode === 'single' ? (
-              /* Single Stock Update */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <Label htmlFor="stockProduct">Product</Label>
-                  <Select value={selectedStockProduct} onValueChange={setSelectedStockProduct}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {stockProducts.map((product: any) => (
-                        <SelectItem key={product._id} value={product._id}>
-                          {product.name} - {product.stock || 0} in stock
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="stockOperation">Operation</Label>
-                  <Select value={stockOperation} onValueChange={(value: 'set' | 'add' | 'subtract') => setStockOperation(value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="set">Set Stock</SelectItem>
-                      <SelectItem value="add">Add Stock</SelectItem>
-                      <SelectItem value="subtract">Subtract Stock</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="stockAmount">Amount</Label>
-                  <Input
-                    id="stockAmount"
-                    type="number"
-                    min="0"
-                    value={stockAmount}
-                    onChange={(e) => setStockAmount(e.target.value)}
-                    placeholder="Enter amount"
-                  />
-                </div>
-                
-                <div className="flex items-end">
-                  <Button 
-                    onClick={updateSingleStock} 
-                    disabled={isUpdatingStock || !selectedStockProduct || !stockAmount}
-                    className="w-full"
-                  >
-                    {isUpdatingStock ? 'Updating...' : 'Update Stock'}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              /* Bulk Stock Update */
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <Label htmlFor="bulkProduct">Product</Label>
-                    <Select value={selectedStockProduct} onValueChange={setSelectedStockProduct}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select product" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {stockProducts.map((product: any) => (
-                          <SelectItem key={product._id} value={product._id}>
-                            {product.name} - {product.stock || 0} in stock
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="bulkOperation">Operation</Label>
-                    <Select value={stockOperation} onValueChange={(value: 'set' | 'add' | 'subtract') => setStockOperation(value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="set">Set Stock</SelectItem>
-                        <SelectItem value="add">Add Stock</SelectItem>
-                        <SelectItem value="subtract">Subtract Stock</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="bulkAmount">Amount</Label>
-                    <Input
-                      id="bulkAmount"
-                      type="number"
-                      min="0"
-                      value={stockAmount}
-                      onChange={(e) => setStockAmount(e.target.value)}
-                      placeholder="Enter amount"
-                    />
-                  </div>
-                  
-                  <div className="flex items-end">
-                    <Button 
-                      onClick={addToBulkUpdates} 
-                      disabled={!selectedStockProduct || !stockAmount}
-                      className="w-full"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add to List
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Bulk Updates List */}
-                {bulkStockUpdates.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Pending Updates ({bulkStockUpdates.length}):</h4>
-                    <div className="max-h-40 overflow-y-auto space-y-1">
-                      {bulkStockUpdates.map((update, index) => {
-                        const product = stockProducts.find((p: any) => p._id === update.productId);
-                        return (
-                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                            <span className="text-sm">
-                              {product?.name} - {update.operation} {update.stock}
-                            </span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => removeFromBulkUpdates(update.productId)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={updateBulkStock} 
-                        disabled={isUpdatingStock}
-                        className="flex-1"
-                      >
-                        {isUpdatingStock ? 'Processing...' : 'Apply All Updates'}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setBulkStockUpdates([])}
-                      >
-                        Clear All
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Stock Levels Table */}
-            <div className="space-y-4">
-              <h4 className="font-medium">Current Stock Levels</h4>
-              <div className="max-h-96 overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Current Stock</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {stockProducts.map((product: any) => {
-                      const stockLevel = product.stock || 0;
-                      const isLowStock = stockLevel > 0 && stockLevel <= 10;
-                      const isOutOfStock = stockLevel === 0;
-                      
-                      return (
-                        <TableRow key={product._id}>
-                          <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{product.category || 'N/A'}</TableCell>
-                          <TableCell>
-                            <span className={isLowStock ? "text-orange-600 font-medium" : isOutOfStock ? "text-red-600 font-medium" : ""}>
-                              {stockLevel}
-                            </span>
-                          </TableCell>
-                          <TableCell>{formatPriceKSHS(product.price)}</TableCell>
-                          <TableCell>
-                            <Badge variant={isOutOfStock ? "destructive" : isLowStock ? "secondary" : "default"}>
-                              {isOutOfStock ? "Out of Stock" : isLowStock ? "Low Stock" : "In Stock"}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       )}
 
       {/* Sale Confirmation Dialog */}
