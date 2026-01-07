@@ -91,10 +91,24 @@ export default function Dashboard() {
       toast({ title: `Message from ${payload.message.senderName}`, description: payload.message.text });
       playBeep();
     };
+    const onPOSSale = (e: any) => {
+      const payload = e.detail;
+      toast({ title: 'POS Sale Completed', description: `Sale for ${formatPriceKSHS(payload.total)}` });
+      // Refresh KPIs when a POS sale is completed
+      window.location.reload(); // Simple way to refresh all data including KPIs
+    };
+    
     window.addEventListener('orders:new', handleNew);
     window.addEventListener('orders:update', handleUpdate);
     window.addEventListener('chat:message', onChat);
-    return () => { window.removeEventListener('orders:new', handleNew); window.removeEventListener('orders:update', handleUpdate); window.removeEventListener('chat:message', onChat); };
+    window.addEventListener('pos:sale-completed', onPOSSale);
+    
+    return () => { 
+      window.removeEventListener('orders:new', handleNew); 
+      window.removeEventListener('orders:update', handleUpdate); 
+      window.removeEventListener('chat:message', onChat);
+      window.removeEventListener('pos:sale-completed', onPOSSale);
+    };
   }, [toast]);
 
   // Particle burst effect for order confirmations

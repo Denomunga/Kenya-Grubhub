@@ -383,6 +383,18 @@ export default function POSSystem() {
         setDiscount(0);
         setTax(0);
         
+        // Dispatch event to notify dashboard of new sale
+        window.dispatchEvent(new CustomEvent('pos:sale-completed', {
+          detail: {
+            sale,
+            total: sale.total,
+            timestamp: new Date().toISOString()
+          }
+        }));
+        
+        // Refresh reports data to update Today's Sales
+        loadReports();
+        
         toast({ title: "Success", description: "Sale completed successfully" });
       } else {
         const error = await response.json();
