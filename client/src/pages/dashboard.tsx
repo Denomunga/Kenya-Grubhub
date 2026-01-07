@@ -182,7 +182,7 @@ export default function Dashboard() {
             </Card>
             <Card className="border shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">System Health</CardTitle>
+                <CardTitle className="text-sm font-medium">Server Health</CardTitle>
                 <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
               </CardHeader>
               <CardContent>
@@ -399,7 +399,7 @@ export default function Dashboard() {
                             <SelectContent>
                               <SelectItem value="Pending">Pending</SelectItem>
                               <SelectItem value="Preparing">Preparing</SelectItem>
-                              <SelectItem value="Ready">Ready</SelectItem>
+                              <SelectItem value="OnRoute">OnRoute</SelectItem>
                               <SelectItem value="Delivered">Delivered</SelectItem>
                             </SelectContent>
                           </Select>
