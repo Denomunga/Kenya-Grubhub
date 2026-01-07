@@ -12,6 +12,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { apiFetch } from '@/lib/api';
 import { MenuItem } from '@/lib/data';
 
+// Input sanitization utility
+const sanitizeInput = (input: string): string => {
+  return input
+    .trim()
+    .replace(/[<>]/g, '') // Remove potential HTML tags
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+=/gi, '') // Remove event handlers
+    .slice(0, 1000); // Limit length to prevent abuse
+};
+
 interface DraggableMenuItemProps {
   item: MenuItem;
   index: number;
@@ -122,7 +132,7 @@ const DragDropMenuManager: React.FC = () => {
     location?: string;
     stock?: number;
     tags?: string[];
-  }>({ name: '', category: 'Food', price: 0, images: [], description: '', imageFiles: [] });
+  }>({ name: '', category: 'HP', price: 0, images: [], description: '', imageFiles: [] });
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingImageFiles, setEditingImageFiles] = useState<File[]>([]);
@@ -197,16 +207,29 @@ const DragDropMenuManager: React.FC = () => {
 
     const item: MenuItem = {
       id: Date.now().toString(),
-      ...newItem,
+      name: sanitizeInput(newItem.name),
+      category: newItem.category,
+      price: newItem.price,
+      description: sanitizeInput(newItem.description || ''),
       available: true,
-      images: uploadedImages.length > 0 ? uploadedImages : ["https://placehold.co/400x300?text=Food"]
+      images: uploadedImages.length > 0 ? uploadedImages : ["https://placehold.co/400x300?text=Product"],
+      subcategory: newItem.subcategory ? sanitizeInput(newItem.subcategory) : undefined,
+      brand: newItem.brand ? sanitizeInput(newItem.brand) : undefined,
+      condition: newItem.condition,
+      size: newItem.size ? sanitizeInput(newItem.size) : undefined,
+      color: newItem.color ? sanitizeInput(newItem.color) : undefined,
+      year: newItem.year,
+      material: newItem.material ? sanitizeInput(newItem.material) : undefined,
+      location: newItem.location ? sanitizeInput(newItem.location) : undefined,
+      stock: newItem.stock,
+      tags: newItem.tags?.map(tag => sanitizeInput(tag)) || []
     };
 
     try {
     await addMenuItem(item);
     setNewItem({ 
       name: '', 
-      category: 'Food', 
+      category: 'HP', 
       price: 0, 
       images: [], 
       description: '', 
@@ -311,9 +334,18 @@ const DragDropMenuManager: React.FC = () => {
     // Combine existing images with newly uploaded ones
     const finalImages = [...(editingItem.images || []), ...uploadedImages];
 
-    // Update the item with new images
+    // Update the item with sanitized data and new images
     const updatedItem = {
       ...editingItem,
+      name: sanitizeInput(editingItem.name),
+      description: sanitizeInput(editingItem.description || ''),
+      subcategory: editingItem.subcategory ? sanitizeInput(editingItem.subcategory) : undefined,
+      brand: editingItem.brand ? sanitizeInput(editingItem.brand) : undefined,
+      size: editingItem.size ? sanitizeInput(editingItem.size) : undefined,
+      color: editingItem.color ? sanitizeInput(editingItem.color) : undefined,
+      material: editingItem.material ? sanitizeInput(editingItem.material) : undefined,
+      location: editingItem.location ? sanitizeInput(editingItem.location) : undefined,
+      tags: editingItem.tags?.map(tag => sanitizeInput(tag)) || [],
       images: finalImages
     };
 
@@ -352,13 +384,17 @@ const DragDropMenuManager: React.FC = () => {
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Food">Food</SelectItem>
-                <SelectItem value="Electronics">Electronics</SelectItem>
-                <SelectItem value="Vehicles">Vehicles</SelectItem>
-                <SelectItem value="Real Estate">Real Estate</SelectItem>
-                <SelectItem value="Fashion">Fashion</SelectItem>
-                <SelectItem value="Furniture">Furniture</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="HP">HP</SelectItem>
+                <SelectItem value="Dell">Dell</SelectItem>
+                <SelectItem value="Lenovo">Lenovo</SelectItem>
+                <SelectItem value="Asus">Asus</SelectItem>
+                <SelectItem value="Apple (MacBooks)">Apple (MacBooks)</SelectItem>
+                <SelectItem value="Toshiba">Toshiba</SelectItem>
+                <SelectItem value="Acer">Acer</SelectItem>
+                <SelectItem value="Microsoft Surface">Microsoft Surface</SelectItem>
+                <SelectItem value="Stationery">Stationery</SelectItem>
+                <SelectItem value="Mobilephones">Mobilephones</SelectItem>
+                <SelectItem value="Others">Others</SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -542,13 +578,17 @@ const DragDropMenuManager: React.FC = () => {
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Food">Food</SelectItem>
-                  <SelectItem value="Electronics">Electronics</SelectItem>
-                  <SelectItem value="Vehicles">Vehicles</SelectItem>
-                  <SelectItem value="Real Estate">Real Estate</SelectItem>
-                  <SelectItem value="Fashion">Fashion</SelectItem>
-                  <SelectItem value="Furniture">Furniture</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="HP">HP</SelectItem>
+                  <SelectItem value="Dell">Dell</SelectItem>
+                  <SelectItem value="Lenovo">Lenovo</SelectItem>
+                  <SelectItem value="Asus">Asus</SelectItem>
+                  <SelectItem value="Apple (MacBooks)">Apple (MacBooks)</SelectItem>
+                  <SelectItem value="Toshiba">Toshiba</SelectItem>
+                  <SelectItem value="Acer">Acer</SelectItem>
+                  <SelectItem value="Microsoft Surface">Microsoft Surface</SelectItem>
+                  <SelectItem value="Stationery">Stationery</SelectItem>
+                  <SelectItem value="Mobilephones">Mobilephones</SelectItem>
+                  <SelectItem value="Others">Others</SelectItem>
                 </SelectContent>
               </Select>
               <Input

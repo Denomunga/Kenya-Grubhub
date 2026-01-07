@@ -10,21 +10,21 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number; // in KSHS
-  category: string; // Now flexible - can be "Electronics", "Real Estate", "Fashion", "Vehicles", "Food", etc.
+  category: string; // Now flexible - can be "HP", "Dell", "Lenovo", "Asus", "Apple (MacBooks)", "Toshiba", "Acer", "Microsoft Surface", "Stationery", "Mobilephones", "Others", etc.
   subcategory?: string;
-  brand?: string; // Optional - mainly for electronics, fashion, vehicles
-  condition?: "new" | "used" | "refurbished"; // Optional - mainly for electronics, vehicles, fashion
-  specifications?: Record<string, any>; // Optional - for technical specs
+  brand?: string; // Optional - mainly for laptops, mobiles, stationery
+  condition?: "new" | "used" | "refurbished"; // Optional - mainly for laptops, mobiles, stationery
+  specifications?: Record<string, any>; // Optional - for technical specs of laptops/mobiles
   images?: string[];
   image?: string;
   available: boolean;
   stock?: number; // Optional - mainly for physical products
-  location?: string; // Optional - mainly for real estate, vehicles
+  location?: string; // Optional - mainly for delivery location
   tags?: string[]; // Optional - for searchability
-  size?: string; // Optional - for fashion, furniture
-  color?: string; // Optional - for fashion, vehicles
-  year?: number; // Optional - for vehicles, electronics
-  material?: string; // Optional - for fashion, furniture
+  size?: string; // Optional - for laptops (screen size), stationery
+  color?: string; // Optional - for laptops, mobiles
+  year?: number; // Optional - for laptops, mobiles
+  material?: string; // Optional - for stationery
   weight?: number; // Optional - for shipping calculation
   dimensions?: { length: number; width: number; height: number; }; // Optional - for shipping
 }
@@ -132,7 +132,7 @@ interface DataContextType {
   fetchReviewsFromServer: () => Promise<void>;
 
   orders: Order[];
-  placeOrder: (items: { item: MenuItem; quantity: number }[], location?: OrderLocation) => void;
+  placeOrder: (items: { item: MenuItem; quantity: number }[], location?: OrderLocation, userInfo?: { name: string; email?: string; phone?: string; userId?: string }) => void;
   updateOrderStatus: (id: string, status: Order["status"]) => void;
   cancelOrder: (id: string) => Promise<boolean>;
   modifyOrder: (id: string, items: { item: MenuItem; quantity: number }[]) => Promise<boolean>;
@@ -1293,21 +1293,22 @@ const fetchReviewsFromServer = async () => {
     return true;
   };
 
-  const placeOrder = (items: { item: MenuItem; quantity: number }[], location?: OrderLocation) => {
+  const placeOrder = (items: { item: MenuItem; quantity: number }[], location?: OrderLocation, userInfo?: { name: string; email?: string; phone?: string; userId?: string }) => {
     const total = items.reduce((sum, i) => sum + (i.item.price * i.quantity), 0);
     const newOrder: Order = {
       id: Date.now().toString(),
       items,
       total,
       status: "Pending",
-      user: "CurrentUser", // Simplified - will be updated by API response
+      user: userInfo?.name || "CurrentUser",
+      userEmail: userInfo?.email,
+      userPhone: userInfo?.phone,
       date: new Date().toISOString(),
       location: location || undefined,
     };
     setOrders([newOrder, ...orders]);
     
     // Send to API with user contact info
-    // In a real implementation, this would get user info from auth context
     apiFetch('/api/orders', {
       method: 'POST',
       body: JSON.stringify({
@@ -1318,10 +1319,10 @@ const fetchReviewsFromServer = async () => {
           price: i.item.price
         })),
         total,
-        user: "CurrentUser",
-        userId: "current-user-id", // Would come from auth
-        userEmail: "user@example.com", // Would come from auth
-        userPhone: "+254700000000", // Would come from auth
+        user: userInfo?.name || "CurrentUser",
+        userId: userInfo?.userId || "current-user-id",
+        userEmail: userInfo?.email,
+        userPhone: userInfo?.phone,
         location
       })
     }).catch(err => {

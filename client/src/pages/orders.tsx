@@ -177,6 +177,9 @@ export default function OrdersPage() {
                           const isValid = !isNaN(date.getTime());
                           return isValid ? date.toLocaleDateString() : 'Invalid date';
                         })()} • {order.user}
+                        {user?.role !== 'user' && order.userPhone && (
+                          <span className="ml-2 text-blue-600">📞 {order.userPhone}</span>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

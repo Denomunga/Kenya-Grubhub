@@ -1,15 +1,19 @@
 import { Button } from "@/components/ui/button";
-import { Coffee, Utensils, Laptop, Car, Home, Shirt, Package } from "lucide-react";
+import { Package, Monitor, Smartphone, BookOpen } from "lucide-react";
 
 const productCategories = [
   { id: 'all', name: 'All', icon: <Package className="w-4 h-4 mr-2" /> },
-  { id: 'food', name: 'Food', icon: <Utensils className="w-4 h-4 mr-2" /> },
-  { id: 'electronics', name: 'Electronics', icon: <Laptop className="w-4 h-4 mr-2" /> },
-  { id: 'vehicles', name: 'Vehicles', icon: <Car className="w-4 h-4 mr-2" /> },
-  { id: 'real estate', name: 'Real Estate', icon: <Home className="w-4 h-4 mr-2" /> },
-  { id: 'fashion', name: 'Fashion', icon: <Shirt className="w-4 h-4 mr-2" /> },
-  { id: 'furniture', name: 'Furniture', icon: <Coffee className="w-4 h-4 mr-2" /> },
-  { id: 'other', name: 'Other', icon: <Package className="w-4 h-4 mr-2" /> },
+  { id: 'hp', name: 'HP', icon: <Monitor className="w-4 h-4 mr-2" /> },
+  { id: 'dell', name: 'Dell', icon: <Monitor className="w-4 h-4 mr-2" /> },
+  { id: 'lenovo', name: 'Lenovo', icon: <Monitor className="w-4 h-4 mr-2" /> },
+  { id: 'asus', name: 'Asus', icon: <Monitor className="w-4 h-4 mr-2" /> },
+  { id: 'apple', name: 'Apple (MacBooks)', icon: <Monitor className="w-4 h-4 mr-2" /> },
+  { id: 'toshiba', name: 'Toshiba', icon: <Monitor className="w-4 h-4 mr-2" /> },
+  { id: 'acer', name: 'Acer', icon: <Monitor className="w-4 h-4 mr-2" /> },
+  { id: 'microsoft', name: 'Microsoft Surface', icon: <Monitor className="w-4 h-4 mr-2" /> },
+  { id: 'stationery', name: 'Stationery', icon: <BookOpen className="w-4 h-4 mr-2" /> },
+  { id: 'mobilephones', name: 'Mobilephones', icon: <Smartphone className="w-4 h-4 mr-2" /> },
+  { id: 'others', name: 'Others', icon: <Package className="w-4 h-4 mr-2" /> },
 ];
 
 interface CategoryFilterProps {

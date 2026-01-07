@@ -6,7 +6,7 @@ import { useChristmas } from "@/lib/christmas";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 import { Button } from "@/components/ui/button";
 import { 
-  Menu, X, UtensilsCrossed, MapPin, 
+  Menu, X, Laptop, MapPin, 
   MessageSquare, LayoutDashboard, Gift
 } from "lucide-react";
 import {
@@ -130,7 +130,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   {isChristmasMode ? (
                     <Gift className="h-6 w-6" />
                   ) : (
-                    <UtensilsCrossed className="h-6 w-6" />
+                    <Laptop className="h-6 w-6" />
                   )}
                 </motion.div>
               </div>
@@ -164,7 +164,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </motion.div>
                   </div>
                 )}
-                KENYAN-HUB
+                MS COMPUTERS & STATIONERY SERVICES
               </span>
             </motion.div>
           </Link>
@@ -553,7 +553,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 {isChristmasMode ? (
                   <Gift className="h-5 w-5 text-red-600" />
                 ) : (
-                  <UtensilsCrossed className="h-5 w-5 text-primary" />
+                  <Laptop className="h-5 w-5 text-primary" />
                 )}
               </div>
               <span className="font-heading text-xl font-bold">KENYAN-HUB</span>

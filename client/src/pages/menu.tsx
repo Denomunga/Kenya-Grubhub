@@ -9,7 +9,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, Plus, Minus, Trash, MapPin } from "lucide-react";
+import { ShoppingBag, Plus, Minus, Trash, MapPin, Phone } from "lucide-react";
 import { formatPriceKSHS, formatPrice } from "@/lib/format";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import ProductImageViewer, { ProductImage } from "@/components/ui/ProductImageViewer";
 import LocationPicker from '@/components/ui/LocationPicker';
 import OrderConfirmation from '@/components/ui/OrderConfirmation';
@@ -145,6 +146,8 @@ export default function Menu() {
   const [productDetailOpen, setProductDetailOpen] = useState(false);
   const [selectedProductForDetail, setSelectedProductForDetail] = useState<MenuItem | null>(null);
   const [reviewRating, setReviewRating] = useState<number>(5);
+  const [checkoutPhone, setCheckoutPhone] = useState<string>('');
+  const [showPhoneInput, setShowPhoneInput] = useState<boolean>(false);
 
   // Handle product ID from URL parameter
   useEffect(() => {
@@ -284,6 +287,32 @@ export default function Menu() {
       setLocationDialogOpen(true);
       return;
     }
+
+    // Phone number validation
+    let phoneToUse = user?.phone || checkoutPhone;
+    
+    // For logged-in users without phone, require them to enter one
+    if (!phoneToUse) {
+      toast({ 
+        title: "Phone Number Required", 
+        description: "Please add your phone number for delivery contact.",
+        variant: "destructive" 
+      });
+      setShowPhoneInput(true);
+      return;
+    }
+
+    // Basic phone validation (should start with + and have at least 7 digits)
+    const phoneRegex = /^\+\d{7,15}$/;
+    if (!phoneRegex.test(phoneToUse)) {
+      toast({ 
+        title: "Invalid Phone Number", 
+        description: "Please enter a valid phone number (e.g., +254700000000).",
+        variant: "destructive" 
+      });
+      setShowPhoneInput(true);
+      return;
+    }
     
     // Create the order
     const newOrder = {
@@ -293,13 +322,18 @@ export default function Menu() {
       status: "Pending",
       user: user?.name || "CurrentUser",
       userEmail: user?.email || undefined,
-      userPhone: user?.phone || undefined,
+      userPhone: phoneToUse,
       date: new Date().toISOString(),
       location: selectedLocation,
     };
     
     // Place the order
-    placeOrder(cart, selectedLocation);
+    placeOrder(cart, selectedLocation, {
+      name: user?.name || "CurrentUser",
+      email: user?.email,
+      phone: phoneToUse,
+      userId: user?.id
+    });
     
     // Set the last order for confirmation
     setLastOrder(newOrder);
@@ -308,6 +342,8 @@ export default function Menu() {
     // Clear cart and location
     setCart([]);
     setSelectedLocation(null);
+    setCheckoutPhone('');
+    setShowPhoneInput(false);
   };
 
   const cartTotal = cart.reduce((sum, i) => sum + (i.item.price * i.quantity), 0);
@@ -429,16 +465,89 @@ export default function Menu() {
                     )}
                   </div>
 
+                  {/* Phone Number Display/Input */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Contact Phone:</span>
+                      {!user?.phone && !showPhoneInput && (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => setShowPhoneInput(true)}
+                        >
+                          Add Phone
+                        </Button>
+                      )}
+                    </div>
+                    {user?.phone ? (
+                      <div className="bg-muted p-2 rounded text-sm">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-primary" />
+                          <span>{user.phone}</span>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-6 px-2 text-xs"
+                            onClick={() => {
+                              setCheckoutPhone(user.phone || '');
+                              setShowPhoneInput(true);
+                            }}
+                          >
+                            Update
+                          </Button>
+                        </div>
+                      </div>
+                    ) : showPhoneInput ? (
+                      <div className="space-y-2">
+                        <Input
+                          type="tel"
+                          placeholder="e.g. +254700000000"
+                          value={checkoutPhone}
+                          onChange={(e) => setCheckoutPhone(e.target.value)}
+                          className="w-full"
+                        />
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => {
+                              setShowPhoneInput(false);
+                              setCheckoutPhone('');
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            className="flex-1"
+                            onClick={() => {
+                              if (checkoutPhone.trim()) {
+                                setShowPhoneInput(false);
+                              }
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground text-center">
+                        Not provided
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex justify-between items-center font-bold text-lg">
                     <span>Total</span>
                     <span>{formatPriceKSHS(cartTotal)}</span>
                   </div>
                   <Button 
                     className="w-full h-12 text-lg" 
-                    disabled={cart.length === 0 || !selectedLocation} 
+                    disabled={cart.length === 0 || !selectedLocation || (!user?.phone && !checkoutPhone.trim())} 
                     onClick={handleCheckout}
                   >
-                    Checkout {selectedLocation ? '' : '(Location Required)'}
+                    Checkout {selectedLocation ? '' : '(Location Required)'}{(!user?.phone && !checkoutPhone.trim()) ? ' (Phone Required)' : ''}
                   </Button>
                 </div>
               </SheetFooter>
@@ -517,7 +626,7 @@ export default function Menu() {
                     )}
                   </div>
                   
-                  {/* Location for vehicles and real estate */}
+                  {/* Location for delivery */}
                   {item.location && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
                       <MapPin className="h-3 w-3" />
@@ -525,14 +634,14 @@ export default function Menu() {
                     </div>
                   )}
                   
-                  {/* Material for fashion/furniture */}
+                  {/* Material for products */}
                   {item.material && (
                     <div className="text-xs text-muted-foreground mb-2">
                       Material: {item.material}
                     </div>
                   )}
                   
-                  {/* Dimensions for shipping/furniture */}
+                  {/* Dimensions for shipping */}
                   {item.dimensions && (
                     <div className="text-xs text-muted-foreground mb-2">
                       Dimensions: {item.dimensions.length}L × {item.dimensions.width}W × {item.dimensions.height}H cm
