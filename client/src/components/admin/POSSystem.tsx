@@ -894,16 +894,29 @@ export default function POSSystem() {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Point of Sale System</h2>
         <div className="flex gap-2">
-          <Button onClick={() => setShowReports(!showReports)} variant="outline">
+          <Button onClick={() => {
+            setShowReports(!showReports);
+            setShowSalesHistory(false);
+            setShowReceipts(false);
+            setShowStockManagement(false);
+          }} variant="outline">
             <BarChart3 className="h-4 w-4 mr-2" />
             {showReports ? 'Hide' : 'Show'} Reports
           </Button>
-          <Button onClick={() => setShowSalesHistory(!showSalesHistory)} variant="outline">
+          <Button onClick={() => {
+            setShowSalesHistory(!showSalesHistory);
+            setShowReports(false);
+            setShowReceipts(false);
+            setShowStockManagement(false);
+          }} variant="outline">
             <Receipt className="h-4 w-4 mr-2" />
             {showSalesHistory ? 'Hide' : 'Show'} Sales History
           </Button>
           <Button onClick={() => {
             setShowReceipts(!showReceipts);
+            setShowSalesHistory(false);
+            setShowReports(false);
+            setShowStockManagement(false);
             if (!showReceipts) {
               loadReceipts();
               loadReceiptStats();
@@ -914,6 +927,9 @@ export default function POSSystem() {
           </Button>
           <Button onClick={() => {
             setShowStockManagement(!showStockManagement);
+            setShowSalesHistory(false);
+            setShowReports(false);
+            setShowReceipts(false);
             if (!showStockManagement) {
               loadStockProducts();
             }
@@ -1066,7 +1082,7 @@ export default function POSSystem() {
         </Card>
       )}
 
-      {!showSalesHistory ? (
+      {!showSalesHistory && !showReports && !showReceipts && !showStockManagement ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Product Selection */}
           <Card>
