@@ -60,7 +60,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [opm, setOpm] = React.useState<number>(0); // orders per minute
   const orderTimestampsRef = React.useRef<number[]>([]);
-  const [posSales, setPosSales] = React.useState<any[]>([]); // Add POS sales state
+  const [posTotalRevenue, setPosTotalRevenue] = React.useState<number>(0); // Add POS total revenue state
 
   React.useEffect(() => {
     if (!isAdmin && !isStaff) {
@@ -70,23 +70,29 @@ export default function Dashboard() {
 
   // Fetch POS sales for total revenue calculation
   React.useEffect(() => {
-    const fetchPOSSales = async () => {
+    const fetchPOSTotalRevenue = async () => {
       try {
-        // Fetch all POS sales without limit to get complete historical data
-        const response = await apiFetch('/api/pos/sales');
+        console.log('Fetching POS total revenue...');
+        // Use the new total revenue endpoint for efficiency
+        const response = await apiFetch('/api/pos/sales/total');
+        console.log('POS total revenue response:', response);
         if (response.ok) {
           const data = await response.json();
-          setPosSales(data.sales || []);
+          console.log('POS total revenue data:', data);
+          setPosTotalRevenue(data.totalRevenue || 0);
+          console.log('POS total revenue:', data.totalRevenue || 0);
+        } else {
+          console.error('POS total revenue fetch failed:', response.status, response.statusText);
         }
       } catch (error) {
-        console.error('Failed to fetch POS sales:', error);
+        console.error('Failed to fetch POS total revenue:', error);
       }
     };
 
-    fetchPOSSales();
+    fetchPOSTotalRevenue();
     
-    // Refresh POS sales data every 5 minutes to ensure current data
-    const interval = setInterval(fetchPOSSales, 5 * 60 * 1000);
+    // Refresh POS total revenue every 5 minutes to ensure current data
+    const interval = setInterval(fetchPOSTotalRevenue, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
   }, []);
@@ -118,8 +124,8 @@ export default function Dashboard() {
     const onPOSSale = (e: any) => {
       const payload = e.detail;
       toast({ title: 'POS Sale Completed', description: `Sale for ${formatPriceKSHS(payload.total)}` });
-      // Add the new sale amount to existing POS sales total
-      setPosSales(prev => [...prev, payload.sale]);
+      // Add the new sale amount to existing POS total revenue
+      setPosTotalRevenue(prev => prev + payload.total);
     };
     
     window.addEventListener('orders:new', handleNew);
@@ -215,7 +221,7 @@ export default function Dashboard() {
                   {formatPriceKSHS(
                     kpis?.totalRevenue ?? 
                     orders.reduce((sum, o) => sum + o.total, 0) + 
-                    posSales.reduce((sum, sale) => sum + sale.total, 0)
+                    posTotalRevenue
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-2">
@@ -301,7 +307,7 @@ export default function Dashboard() {
                   <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatPriceKSHS(kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0) + posSales.reduce((sum, sale) => sum + sale.total, 0))}</div>
+                  <div className="text-2xl font-bold">{formatPriceKSHS(kpis?.totalRevenue ?? orders.reduce((sum, o) => sum + o.total, 0) + posTotalRevenue)}</div>
                 </CardContent>
               </Card>
             </div>
