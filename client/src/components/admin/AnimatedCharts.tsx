@@ -28,9 +28,9 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
   const [orderTrends, setOrderTrends] = useState<OrderTrend[]>([]);
   const [localPosRevenue, setLocalPosRevenue] = useState(0);
 
-  // Fetch POS revenue directly as backup
+  // Fetch POS total revenue (all-time) for accurate total calculation
   useEffect(() => {
-    const fetchPOSRevenue = async () => {
+    const fetchPOSTotal = async () => {
       try {
         const response = await apiFetch('/api/pos/sales/total');
         if (response.ok) {
@@ -38,13 +38,13 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
           setLocalPosRevenue(data.totalRevenue || 0);
         }
       } catch (error) {
-        console.error('Failed to fetch POS revenue in AnimatedCharts:', error);
+        console.error('Failed to fetch POS total revenue in AnimatedCharts:', error);
       }
     };
 
-    fetchPOSRevenue();
+    fetchPOSTotal();
     // Refresh every 2 minutes
-    const interval = setInterval(fetchPOSRevenue, 2 * 60 * 1000);
+    const interval = setInterval(fetchPOSTotal, 2 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
