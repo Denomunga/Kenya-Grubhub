@@ -149,7 +149,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            Handpicked selection of our most popular products, from delicious food to electronics, vehicles, and more.
+            Handpicked selection of our most popular products, from XUS,XUK Laptops, Computer Accessories, Computer Repairs and Stationeries.
           </motion.p>
         </motion.div>
         
