@@ -705,9 +705,9 @@ export default function Menu() {
                   )}
                 </CardContent>
                 <CardFooter className="p-6 pt-0 flex gap-3 items-center bg-gray-50/30 border-t border-gray-100">
-                  <div className="flex-1">
+                  <div className="flex-1 relative group">
                     <Button 
-                      className="w-full group" 
+                      className="w-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
                       disabled={!item.available}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1214,16 +1214,18 @@ export default function Menu() {
 
               {/* Action Buttons */}
               <div className="flex gap-4 pt-4 border-t">
-                <Button
-                  onClick={() => {
-                    addToCart(selectedProductForDetail);
-                  }}
-                  disabled={!selectedProductForDetail.available}
-                  className="flex-1"
-                >
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  Add to Cart
-                </Button>
+                <div className="flex-1 relative group">
+                  <Button
+                    onClick={() => {
+                      addToCart(selectedProductForDetail);
+                    }}
+                    disabled={!selectedProductForDetail.available}
+                    className="w-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  >
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    Add to Cart
+                  </Button>
+                </div>
                 <Button variant="outline" onClick={() => setProductDetailOpen(false)}>
                   Close
                 </Button>
