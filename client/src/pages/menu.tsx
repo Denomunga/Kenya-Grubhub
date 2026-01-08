@@ -383,7 +383,7 @@ export default function Menu() {
                   <ShoppingBag className="mr-2 h-4 w-4" />
                   Cart
                   {cart.length > 0 && (
-                    <Badge variant="secondary" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-accent text-accent-foreground">
+                   <Badge className="absolute -top-2 -right-2 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs border-2 border-white shadow-lg animate-pulse">
                       {cart.length}
                     </Badge>
                   )}
@@ -763,7 +763,7 @@ export default function Menu() {
                           e.stopPropagation();
                           handleQuickRating(item.id, 5);
                         }}
-                        className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors opacity-0 group-hover:opacity-100 duration-300"
                         title="Quick 5-star rating"
                       >
                         5⭐
