@@ -107,11 +107,11 @@ router.get("/sale/:saleId", requireAuth, async (req, res) => {
   }
 });
 
-// Get all receipts (admin only)
+// Get all receipts (admin and staff)
 router.get("/", requireAuth, apiLimiter, async (req, res) => {
   try {
-    if (req.user?.role !== "admin") {
-      return res.status(403).json({ message: "Admin access required" });
+    if (req.user?.role !== "admin" && req.user?.role !== "staff") {
+      return res.status(403).json({ message: "Access denied" });
     }
 
     const page = parseInt(req.query.page as string) || 1;
@@ -148,19 +148,31 @@ router.get("/stats", requireAuth, async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const totalReceipts = await Receipt.countDocuments();
-    const totalPrints = await Receipt.aggregate([
-      { $group: { _id: null, total: { $sum: "$printCount" } } }
+    const [totalReceipts, totalPrints, receiptRevenue, recentReceipts] = await Promise.all([
+      Receipt.countDocuments(),
+      Receipt.aggregate([
+        { $group: { _id: null, total: { $sum: "$printCount" } } }
+      ]),
+      Receipt.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: "$receiptData.total" },
+            averageSale: { $avg: "$receiptData.total" }
+          }
+        }
+      ]),
+      Receipt.find()
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .populate('saleId', 'receiptNumber total')
     ]);
-
-    const recentReceipts = await Receipt.find()
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate('saleId', 'receiptNumber total');
 
     res.json({
       totalReceipts,
       totalPrints: totalPrints.length > 0 ? totalPrints[0].total : 0,
+      totalRevenue: receiptRevenue.length > 0 ? receiptRevenue[0].totalRevenue : 0,
+      averageSale: receiptRevenue.length > 0 ? receiptRevenue[0].averageSale : 0,
       recentReceipts
     });
   } catch (error) {
