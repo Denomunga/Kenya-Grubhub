@@ -383,7 +383,7 @@ export default function Menu() {
                   <ShoppingBag className="mr-2 h-4 w-4" />
                   Cart
                   {cart.length > 0 && (
-                   <Badge className="absolute -top-2 -right-2 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs border-2 border-white shadow-lg animate-pulse">
+                   <Badge className="absolute -top-3 -right-3 h-8 w-8 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-sm border-2 border-white shadow-xl animate-pulse">
                       {cart.length}
                     </Badge>
                   )}
