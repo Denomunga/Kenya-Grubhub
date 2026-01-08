@@ -530,6 +530,31 @@ export default function POSSystem() {
     }
   };
 
+  const createMissingReceipts = async () => {
+    try {
+      const response = await apiFetch('/api/receipts/create-missing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({ 
+          title: 'Success', 
+          description: `Created ${result.created} missing receipts` 
+        });
+        // Refresh receipts and stats
+        loadReceipts();
+        loadReceiptStats();
+      } else {
+        const error = await response.json();
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to create missing receipts', variant: 'destructive' });
+    }
+  };
+
   const createReceiptForSale = async (sale: any) => {
     try {
       const receiptData = {
@@ -774,12 +799,12 @@ export default function POSSystem() {
           </style>
         </head>
         <body>
-          <div class="center bold">KENYA GRUBHUB</div>
+          <div class="center bold">MS_COMPUTERS</div>
           <div class="center">Point of Sale Receipt</div>
           <div class="line"></div>
           <div>Receipt: ${currentSale.receiptNumber}</div>
           <div>Date: ${new Date(currentSale.createdAt).toLocaleString()}</div>
-          <div>Cashier: ${currentSale.cashier.name}</div>
+          <div>Cashier: ${currentSale.cashier?.name || 'Unknown'}</div>
           ${currentSale.customerName ? `<div>Customer: ${currentSale.customerName}</div>` : ''}
           <div class="line"></div>
           <table>
@@ -823,12 +848,12 @@ export default function POSSystem() {
     tempDiv.style.fontSize = '12px';
 
     tempDiv.innerHTML = `
-      <div style="text-align: center; font-weight: bold;">KENYA GRUBHUB</div>
+      <div style="text-align: center; font-weight: bold;">MS_COMPUTERS</div>
       <div style="text-align: center;">Point of Sale Receipt</div>
       <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
       <div>Receipt: ${currentSale.receiptNumber}</div>
       <div>Date: ${new Date(currentSale.createdAt).toLocaleString()}</div>
-      <div>Cashier: ${currentSale.cashier.name}</div>
+      <div>Cashier: ${currentSale.cashier?.name || 'Unknown'}</div>
       ${currentSale.customerName ? `<div>Customer: ${currentSale.customerName}</div>` : ''}
       <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
       ${currentSale.items.map(item => `
@@ -1595,7 +1620,13 @@ export default function POSSystem() {
           {(showReceipts || managementTab === 'receipts') && (
             <Card>
               <CardHeader>
-                <CardTitle>Receipts Management</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Receipts Management</CardTitle>
+                  <Button variant="outline" onClick={createMissingReceipts}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Missing Receipts
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -1672,13 +1703,13 @@ export default function POSSystem() {
             </DialogHeader>
             <div className="space-y-4 font-mono text-sm">
               <div className="text-center border-b pb-2">
-                <div className="font-bold">KENYA GRUBHUB</div>
+                <div className="font-bold">MS-COMPUTERS</div>
                 <div>Point of Sale Receipt</div>
               </div>
               <div>
                 <div>Receipt: {currentSale.receiptNumber}</div>
                 <div>Date: {new Date(currentSale.createdAt).toLocaleString()}</div>
-                <div>Cashier: {currentSale.cashier.name}</div>
+                <div>Cashier: {currentSale.cashier?.name || 'Unknown'}</div>
                 {currentSale.customerName && <div>Customer: {currentSale.customerName}</div>}
               </div>
               <div className="border-t border-b py-2">

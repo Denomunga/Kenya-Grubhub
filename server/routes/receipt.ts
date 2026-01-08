@@ -216,9 +216,8 @@ router.get("/stats", requireAuth, async (req, res) => {
       ])
     ]);
 
-    // Use sales data for more accurate revenue and stats, fallback to receipt data
+    // Use sales data for more accurate revenue and stats
     const salesStats = salesData.length > 0 ? salesData[0] : { totalSalesRevenue: 0, totalSalesCount: 0, averageSaleAmount: 0 };
-    const receiptStatsData = receiptRevenue.length > 0 ? receiptRevenue[0] : { totalRevenue: 0, averageSale: 0 };
 
     res.json({
       totalReceipts: salesStats.totalSalesCount, // Total sales instead of just printed receipts
@@ -230,6 +229,85 @@ router.get("/stats", requireAuth, async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching receipt stats:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Create missing receipts for existing sales
+router.post("/create-missing", requireAuth, async (req, res) => {
+  try {
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    // Get all sales
+    const allSales = await Sale.find().sort({ createdAt: -1 });
+    
+    // Get all existing receipts
+    const existingReceipts = await Receipt.find();
+    
+    // Create a Set of sale IDs that already have receipts
+    const existingSaleIds = new Set(
+      existingReceipts.map(receipt => receipt.saleId.toString())
+    );
+
+    // Find sales that don't have receipts
+    const salesWithoutReceipts = allSales.filter(sale => 
+      !existingSaleIds.has(sale._id.toString())
+    );
+
+    console.log(`Found ${salesWithoutReceipts.length} sales without receipts`);
+
+    if (salesWithoutReceipts.length === 0) {
+      return res.json({
+        message: "All sales already have receipts",
+        created: 0
+      });
+    }
+
+    // Create receipts for missing sales
+    const createdReceipts = [];
+    for (const sale of salesWithoutReceipts) {
+      try {
+        const receipt = new Receipt({
+          saleId: sale._id,
+          receiptNumber: sale.receiptNumber,
+          receiptData: {
+            items: sale.items,
+            subtotal: sale.subtotal,
+            tax: sale.tax,
+            discount: sale.discount,
+            total: sale.total,
+            paymentMethod: sale.paymentMethod,
+            paymentAmount: sale.paymentAmount,
+            change: sale.change,
+            customerName: sale.customerName,
+            customerPhone: sale.customerPhone,
+            cashier: sale.cashier,
+            storeLocation: sale.storeLocation
+          },
+          printCount: 0,
+          printedAt: []
+        });
+
+        await receipt.save();
+        createdReceipts.push(receipt);
+      } catch (error) {
+        console.error(`Failed to create receipt for sale ${sale.receiptNumber}:`, error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    res.json({
+      message: `Successfully created ${createdReceipts.length} missing receipts`,
+      created: createdReceipts.length,
+      receipts: createdReceipts.map(r => ({
+        receiptNumber: r.receiptNumber,
+        createdAt: r.createdAt
+      }))
+    });
+
+  } catch (error) {
+    console.error("Error creating missing receipts:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
