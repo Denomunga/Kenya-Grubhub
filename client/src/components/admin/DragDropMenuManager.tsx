@@ -806,7 +806,7 @@ const DragDropMenuManager: React.FC = () => {
               <div className="flex gap-2">
                 <Button 
                   onClick={handleUpdateItem} 
-                  className="flex-1 luminous-glow"
+                  className="flex-0 luminous-glow"
                 >
                   Update Item
                 </Button>
@@ -817,7 +817,7 @@ const DragDropMenuManager: React.FC = () => {
                     setEditingItem(null);
                     setEditingImageFiles([]);
                   }}
-                  className="flex-1"
+                  className="flex-0"
                 >
                   Cancel
                 </Button>
