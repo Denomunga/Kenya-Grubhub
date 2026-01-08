@@ -148,7 +148,7 @@ router.get("/stats", requireAuth, async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const [totalReceipts, totalPrints, receiptRevenue, recentReceipts] = await Promise.all([
+    const [totalReceipts, totalPrints, receiptRevenue, recentReceipts, salesData] = await Promise.all([
       Receipt.countDocuments(),
       Receipt.aggregate([
         { $group: { _id: null, total: { $sum: "$printCount" } } }
@@ -165,14 +165,29 @@ router.get("/stats", requireAuth, async (req, res) => {
       Receipt.find()
         .sort({ createdAt: -1 })
         .limit(10)
-        .populate('saleId', 'receiptNumber total')
+        .populate('saleId', 'receiptNumber total'),
+      Sale.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalSalesRevenue: { $sum: "$total" },
+            totalSalesCount: { $sum: 1 },
+            averageSaleAmount: { $avg: "$total" }
+          }
+        }
+      ])
     ]);
 
+    // Use sales data for more accurate revenue and stats, fallback to receipt data
+    const salesStats = salesData.length > 0 ? salesData[0] : { totalSalesRevenue: 0, totalSalesCount: 0, averageSaleAmount: 0 };
+    const receiptStatsData = receiptRevenue.length > 0 ? receiptRevenue[0] : { totalRevenue: 0, averageSale: 0 };
+
     res.json({
-      totalReceipts,
+      totalReceipts: salesStats.totalSalesCount, // Total sales instead of just printed receipts
       totalPrints: totalPrints.length > 0 ? totalPrints[0].total : 0,
-      totalRevenue: receiptRevenue.length > 0 ? receiptRevenue[0].totalRevenue : 0,
-      averageSale: receiptRevenue.length > 0 ? receiptRevenue[0].averageSale : 0,
+      totalRevenue: salesStats.totalSalesRevenue, // Total sales revenue
+      averageSale: salesStats.averageSaleAmount, // Average from all sales
+      printedReceipts: totalReceipts, // Number of actually printed receipts
       recentReceipts
     });
   } catch (error) {

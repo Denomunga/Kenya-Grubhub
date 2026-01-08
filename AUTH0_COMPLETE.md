@@ -219,3 +219,5 @@ Users can choose between:
 - 🐙 **GitHub Login** (developer-friendly)
 
 All security features preserved and working perfectly! 🛡️
+i sold a product in my pos sales and is visible in my Sales History
+but not visible to my reciept page and also reciept page doesnt update total revenue in reciept page and ticket no but updates reports why?

@@ -508,6 +508,8 @@ export default function POSSystem() {
         const sale = await response.json();
         setCurrentSale(sale);
         fetchSales();
+        // Automatically create receipt for the completed sale
+        await createReceiptForSale(sale);
         setCart([]);
         setPaymentAmount('');
         setCustomerName('');
@@ -525,6 +527,45 @@ export default function POSSystem() {
       setIsProcessing(false);
       setShowSaleConfirmation(false);
       setPendingSale(null);
+    }
+  };
+
+  const createReceiptForSale = async (sale: any) => {
+    try {
+      const receiptData = {
+        items: sale.items.map((item: any) => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.price * item.quantity
+        })),
+        subtotal: sale.subtotal,
+        tax: sale.tax,
+        discount: sale.discount,
+        total: sale.total,
+        paymentMethod: sale.paymentMethod,
+        paymentAmount: sale.paymentAmount,
+        change: sale.change,
+        customerName: sale.customerName,
+        customerPhone: sale.customerPhone,
+        cashier: sale.cashier,
+        storeLocation: sale.storeLocation
+      };
+
+      await apiFetch('/api/receipts/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          saleId: sale._id,
+          receiptData
+        })
+      });
+
+      // Refresh receipts and stats after creating receipt
+      loadReceipts();
+      loadReceiptStats();
+    } catch (error) {
+      console.warn('Failed to create receipt automatically:', error);
     }
   };
 
@@ -1067,7 +1108,7 @@ export default function POSSystem() {
                         const isLowStock = item.stock !== undefined && item.stock <= 5 && item.stock > 0;
                         const isOutOfStock = item.stock === 0;
                         return (
-                          <div key={item.productId} className="flex items-start justify-between gap-3">
+                          <div key={item.productId} className="flex items-start justify-between gap-3">cd
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <div className="font-medium truncate">{item.name}</div>
