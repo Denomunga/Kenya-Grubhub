@@ -690,6 +690,84 @@ router.get("/reports/trends", requireAuth, async (req, res) => {
   }
 });
 
+// Trends comparison for real percentage calculations
+router.get("/reports/trends-comparison", requireAuth, async (req, res) => {
+  try {
+    if (req.user?.role !== "admin" && req.user?.role !== "staff") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const now = new Date();
+    const currentPeriodStart = new Date(now);
+    currentPeriodStart.setDate(currentPeriodStart.getDate() - 7); // Last 7 days
+    
+    const previousPeriodStart = new Date(currentPeriodStart);
+    previousPeriodStart.setDate(previousPeriodStart.getDate() - 7); // Previous 7 days
+    
+    const [currentData, previousData] = await Promise.all([
+      // Calculate current period metrics (last 7 days)
+      Sale.aggregate([
+        { 
+          $match: { 
+            status: 'Completed', 
+            createdAt: { $gte: currentPeriodStart, $lt: now } 
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: '$total' },
+            totalOrders: { $sum: 1 },
+            totalItems: { $sum: { $size: '$items' } }
+          }
+        }
+      ]),
+      // Calculate previous period metrics (previous 7 days)
+      Sale.aggregate([
+        { 
+          $match: { 
+            status: 'Completed', 
+            createdAt: { $gte: previousPeriodStart, $lt: currentPeriodStart } 
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: '$total' },
+            totalOrders: { $sum: 1 },
+            totalItems: { $sum: { $size: '$items' } }
+          }
+        }
+      ])
+    ]);
+    
+    const current = currentData[0] || { totalRevenue: 0, totalOrders: 0, totalItems: 0 };
+    const previous = previousData[0] || { totalRevenue: 0, totalOrders: 0, totalItems: 0 };
+    
+    // Calculate percentages
+    const calculatePercentage = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return ((current - previous) / previous) * 100;
+    };
+    
+    res.json({
+      current,
+      previous,
+      percentages: {
+        revenue: calculatePercentage(current.totalRevenue, previous.totalRevenue),
+        orders: calculatePercentage(current.totalOrders, previous.totalOrders),
+        avgOrderValue: calculatePercentage(
+          current.totalOrders > 0 ? current.totalRevenue / current.totalOrders : 0,
+          previous.totalOrders > 0 ? previous.totalRevenue / previous.totalOrders : 0
+        )
+      }
+    });
+  } catch (error) {
+    console.error("Error generating trends comparison:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Performance metrics
 router.get("/reports/performance", requireAuth, async (req, res) => {
   try {

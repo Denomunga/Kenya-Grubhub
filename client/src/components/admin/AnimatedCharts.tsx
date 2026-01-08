@@ -27,36 +27,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
   const [animatedValues, setAnimatedValues] = useState<{ [key: string]: number }>({});
   const [orderTrends, setOrderTrends] = useState<OrderTrend[]>([]);
   const [localPosRevenue, setLocalPosRevenue] = useState(0);
-
-  // Calculate real trends from existing data
-  const calculateRealTrends = () => {
-    if (orderTrends.length < 14) return; // Need at least 2 weeks of data
-    
-    // Current period (last 7 days)
-    const currentPeriod = orderTrends.slice(-7);
-    const currentRevenue = currentPeriod.reduce((sum, t) => sum + t.revenue, 0);
-    const currentOrders = currentPeriod.reduce((sum, t) => sum + t.orders, 0);
-    
-    // Previous period (previous 7 days)
-    const previousPeriod = orderTrends.slice(-14, -7);
-    const previousRevenue = previousPeriod.reduce((sum, t) => sum + t.revenue, 0);
-    const previousOrders = previousPeriod.reduce((sum, t) => sum + t.orders, 0);
-    
-    // Calculate percentages
-    const calculatePercentage = (current: number, previous: number) => {
-      if (previous === 0) return current > 0 ? 100 : 0;
-      return ((current - previous) / previous) * 100;
-    };
-    
-    return {
-      revenuePercentage: calculatePercentage(currentRevenue, previousRevenue),
-      ordersPercentage: calculatePercentage(currentOrders, previousOrders),
-      avgOrderPercentage: calculatePercentage(
-        currentOrders > 0 ? currentRevenue / currentOrders : 0,
-        previousOrders > 0 ? previousRevenue / previousOrders : 0
-      )
-    };
-  };
+  const [trendsData, setTrendsData] = useState<any>(null);
 
   // Fetch POS total revenue (all-time) for accurate total calculation
   useEffect(() => {
@@ -68,13 +39,56 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
           setLocalPosRevenue(data.totalRevenue || 0);
         }
       } catch (error) {
-        console.error('Failed to fetch POS total revenue in AnimatedCharts:', error);
+        console.error('Failed to fetch POS total revenue:', error);
+      }
+    };
+
+    const fetchTrendsData = async () => {
+      try {
+        const response = await apiFetch('/api/pos/reports/trends-comparison');
+        if (response.ok) {
+          const data = await response.json();
+          setTrendsData(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch trends comparison:', error);
       }
     };
 
     fetchPOSTotal();
-    // Refresh every 2 minutes
-    const interval = setInterval(fetchPOSTotal, 2 * 60 * 1000);
+    fetchTrendsData();
+  }, []);
+
+  // Refresh every 2 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const fetchPOSTotal = async () => {
+        try {
+          const response = await apiFetch('/api/pos/sales/total');
+          if (response.ok) {
+            const data = await response.json();
+            setLocalPosRevenue(data.totalRevenue || 0);
+          }
+        } catch (error) {
+          console.error('Failed to fetch POS total revenue:', error);
+        }
+      };
+
+      const fetchTrendsData = async () => {
+        try {
+          const response = await apiFetch('/api/pos/reports/trends-comparison');
+          if (response.ok) {
+            const data = await response.json();
+            setTrendsData(data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch trends comparison:', error);
+        }
+      };
+
+      fetchPOSTotal();
+      fetchTrendsData();
+    }, 2 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -122,33 +136,30 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
     });
   }, [orders, kpis, posTotalRevenue, localPosRevenue]);
 
-  // Calculate real trends
-  const realTrends = calculateRealTrends();
-
   const chartData: ChartData[] = [
     {
       label: 'Total Revenue',
       value: animatedValues.totalRevenue || 0,
-      trend: (realTrends?.revenuePercentage || 0) >= 0 ? 'up' : 'down',
-      percentage: Math.abs(realTrends?.revenuePercentage || 0)
+      trend: (trendsData?.percentages?.revenue || 0) >= 0 ? 'up' : 'down',
+      percentage: Math.abs(trendsData?.percentages?.revenue || 0)
     },
     {
       label: 'Active Orders',
       value: animatedValues.activeOrders || 0,
-      trend: (realTrends?.ordersPercentage || 0) >= 0 ? 'up' : 'down',
-      percentage: Math.abs(realTrends?.ordersPercentage || 0)
+      trend: (trendsData?.percentages?.orders || 0) >= 0 ? 'up' : 'down',
+      percentage: Math.abs(trendsData?.percentages?.orders || 0)
     },
     {
       label: 'Total Orders',
       value: animatedValues.totalOrders || 0,
-      trend: (realTrends?.ordersPercentage || 0) >= 0 ? 'up' : 'down',
-      percentage: Math.abs(realTrends?.ordersPercentage || 0)
+      trend: (trendsData?.percentages?.orders || 0) >= 0 ? 'up' : 'down',
+      percentage: Math.abs(trendsData?.percentages?.orders || 0)
     },
     {
       label: 'Avg Order Value',
       value: animatedValues.avgOrderValue || 0,
-      trend: (realTrends?.avgOrderPercentage || 0) >= 0 ? 'up' : 'down',
-      percentage: Math.abs(realTrends?.avgOrderPercentage || 0)
+      trend: (trendsData?.percentages?.avgOrderValue || 0) >= 0 ? 'up' : 'down',
+      percentage: Math.abs(trendsData?.percentages?.avgOrderValue || 0)
     }
   ];
 
