@@ -622,7 +622,8 @@ export default function POSSystem() {
       const response = await apiFetch('/api/pos/stock');
       if (response.ok) {
         const data = await response.json();
-        setStockProducts(data.products || []);
+        // The API returns products array directly, not wrapped in a products property
+        setStockProducts(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error('Failed to load stock products:', error);
