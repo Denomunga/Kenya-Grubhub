@@ -116,6 +116,7 @@ export default function POSSystem() {
   const [stockAmount, setStockAmount] = useState<string>('');
   const [bulkStockUpdates, setBulkStockUpdates] = useState<any[]>([]);
   const [isUpdatingStock, setIsUpdatingStock] = useState(false);
+  const [selectedProductDetail, setSelectedProductDetail] = useState<any>(null);
 
   // Sale confirmation state
   const [showSaleConfirmation, setShowSaleConfirmation] = useState(false);
@@ -1540,7 +1541,11 @@ export default function POSSystem() {
                           const isOutOfStock = stockLevel === 0;
 
                           return (
-                            <TableRow key={product._id}>
+                            <TableRow 
+                              key={product._id} 
+                              className="cursor-pointer hover:bg-gray-50"
+                              onClick={() => setSelectedProductDetail(product)}
+                            >
                               <TableCell className="font-medium">{product.name}</TableCell>
                               <TableCell>{product.category || 'N/A'}</TableCell>
                               <TableCell>
@@ -1864,6 +1869,182 @@ export default function POSSystem() {
                   >
                     No, Cancel
                   </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedProductDetail && (
+        <Dialog open={!!selectedProductDetail} onOpenChange={() => setSelectedProductDetail(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>{selectedProductDetail.name}</span>
+                <Badge variant={selectedProductDetail.stock > 0 ? "default" : "destructive"}>
+                  {selectedProductDetail.stock > 0 ? `In Stock (${selectedProductDetail.stock})` : "Out of Stock"}
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Image Gallery */}
+              <div className="space-y-4">
+                <h3 className="font-medium">Product Images</h3>
+                {selectedProductDetail.images && selectedProductDetail.images.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                      <img 
+                        src={selectedProductDetail.images[0]} 
+                        alt={selectedProductDetail.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    {selectedProductDetail.images.length > 1 && (
+                      <div className="grid grid-cols-4 gap-2">
+                        {selectedProductDetail.images.slice(1, 5).map((image: string, index: number) => (
+                          <div key={index} className="aspect-square bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-80">
+                            <img 
+                              src={image} 
+                              alt={`${selectedProductDetail.name} ${index + 2}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+                    No Image Available
+                  </div>
+                )}
+              </div>
+
+              {/* Product Details */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium mb-2">Product Information</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Category:</span>
+                      <span>{selectedProductDetail.category || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Brand:</span>
+                      <span>{selectedProductDetail.brand || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Condition:</span>
+                      <span className="capitalize">{selectedProductDetail.condition || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Price:</span>
+                      <span className="font-medium">{formatPriceKSHS(selectedProductDetail.price)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Current Stock:</span>
+                      <span className={`font-medium ${selectedProductDetail.stock <= 10 ? 'text-orange-600' : ''}`}>
+                        {selectedProductDetail.stock || 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                {selectedProductDetail.description && (
+                  <div>
+                    <h3 className="font-medium mb-2">Description</h3>
+                    <p className="text-sm text-gray-600">{selectedProductDetail.description}</p>
+                  </div>
+                )}
+
+                {/* Specifications */}
+                {selectedProductDetail.specifications && Object.keys(selectedProductDetail.specifications).length > 0 && (
+                  <div>
+                    <h3 className="font-medium mb-2">Specifications</h3>
+                    <div className="space-y-1 text-sm">
+                      {Object.entries(selectedProductDetail.specifications).map(([key, value]) => (
+                        <div key={key} className="flex justify-between">
+                          <span className="text-gray-600 capitalize">{key}:</span>
+                          <span>{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Details */}
+                <div>
+                  <h3 className="font-medium mb-2">Additional Details</h3>
+                  <div className="space-y-1 text-sm">
+                    {selectedProductDetail.size && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Size:</span>
+                        <span>{selectedProductDetail.size}</span>
+                      </div>
+                    )}
+                    {selectedProductDetail.color && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Color:</span>
+                        <span>{selectedProductDetail.color}</span>
+                      </div>
+                    )}
+                    {selectedProductDetail.material && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Material:</span>
+                        <span>{selectedProductDetail.material}</span>
+                      </div>
+                    )}
+                    {selectedProductDetail.year && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Year:</span>
+                        <span>{selectedProductDetail.year}</span>
+                      </div>
+                    )}
+                    {selectedProductDetail.location && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Location:</span>
+                        <span>{selectedProductDetail.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tags */}
+                {selectedProductDetail.tags && selectedProductDetail.tags.length > 0 && (
+                  <div>
+                    <h3 className="font-medium mb-2">Tags</h3>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedProductDetail.tags.map((tag: string, index: number) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Quick Actions */}
+                <div className="pt-4 border-t">
+                  <h3 className="font-medium mb-2">Quick Actions</h3>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        setSelectedStockProduct(selectedProductDetail._id);
+                        setStockOperation('set');
+                        setSelectedProductDetail(null);
+                      }}
+                    >
+                      Update Stock
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      View Sales History
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
