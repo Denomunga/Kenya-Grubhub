@@ -742,11 +742,11 @@ export default function Menu() {
                         <span>No reviews yet</span>
                       )}
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 relative group">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="text-xs"
+                        className="text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                         onClick={() => {
                           setSelectedProductForDetail(item);
                           setProductDetailOpen(true);
@@ -763,10 +763,10 @@ export default function Menu() {
                           e.stopPropagation();
                           handleQuickRating(item.id, 5);
                         }}
-                        className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors"
+                        className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                         title="Quick 5-star rating"
                       >
-                        ⭐
+                        5⭐
                       </Button>
                     </div>
                   </div>
