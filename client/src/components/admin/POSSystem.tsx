@@ -805,7 +805,7 @@ export default function POSSystem() {
           <div class="line"></div>
           <div>Receipt: ${currentSale.receiptNumber}</div>
           <div>Date: ${new Date(currentSale.createdAt).toLocaleString()}</div>
-          <div>Cashier: ${currentSale.cashier?.name || 'Unknown'}</div>
+          <div>Cashier: ${currentSale.cashier?.name || 'Unknown'}</div> 
           ${currentSale.customerName ? `<div>Customer: ${currentSale.customerName}</div>` : ''}
           <div class="line"></div>
           <table>
@@ -898,7 +898,7 @@ export default function POSSystem() {
             <DialogHeader>
               <DialogTitle>Session Timeout Warning</DialogTitle>
             </DialogHeader>
-            <p>Your session will expire in 10 minutes due to inactivity. Would you like to extend your session?</p>
+            <p>Your session will expire in 10 minutes . Would you like to extend your session?</p>
 
             <div className="flex gap-2">
               <Button onClick={extendSession}>Extend Session</Button>
@@ -915,7 +915,7 @@ export default function POSSystem() {
         <div>
           <h2 className="text-2xl font-bold leading-tight">POS</h2>
           <div className="text-sm text-muted-foreground">
-            KENYA GRUBHUB{user?.name ? ` • Cashier: ${user.name}` : ''}
+            MS COMPUTERS{user?.name ? ` • Cashier: ${user.name}` : ''}
           </div>
         </div>
 
@@ -1893,16 +1893,16 @@ export default function POSSystem() {
               {/* Image Gallery */}
               <div className="space-y-4">
                 <h3 className="font-medium">Product Images</h3>
-                {selectedProductDetail.images && selectedProductDetail.images.length > 0 ? (
+                {(selectedProductDetail.images && selectedProductDetail.images.length > 0) || (selectedProductDetail.image) ? (
                   <div className="space-y-2">
                     <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                       <img 
-                        src={selectedProductDetail.images[0]} 
+                        src={selectedProductDetail.images?.[0] || selectedProductDetail.image} 
                         alt={selectedProductDetail.name}
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    {selectedProductDetail.images.length > 1 && (
+                    {selectedProductDetail.images && selectedProductDetail.images.length > 1 && (
                       <div className="grid grid-cols-4 gap-2">
                         {selectedProductDetail.images.slice(1, 5).map((image: string, index: number) => (
                           <div key={index} className="aspect-square bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-80">

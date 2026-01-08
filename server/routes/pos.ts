@@ -766,7 +766,7 @@ router.get("/stock", requireAuth, apiLimiter, async (req, res) => {
     }
 
     const products = await Product.find()
-      .select('name price stock available category brand description condition specifications images tags size color material year location dimensions weight')
+      .select('name price stock available category brand description condition specifications images image tags size color material year location dimensions weight')
       .sort({ category: 1, name: 1 });
 
     res.json(products);
