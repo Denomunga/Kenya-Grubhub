@@ -186,19 +186,10 @@ router.get("/stats", requireAuth, async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const [totalReceipts, totalPrints, receiptRevenue, recentReceipts, salesData] = await Promise.all([
+    const [totalReceipts, totalPrints, recentReceipts, salesData] = await Promise.all([
       Receipt.countDocuments(),
       Receipt.aggregate([
         { $group: { _id: null, total: { $sum: "$printCount" } } }
-      ]),
-      Receipt.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalRevenue: { $sum: "$receiptData.total" },
-            averageSale: { $avg: "$receiptData.total" }
-          }
-        }
       ]),
       Receipt.find()
         .sort({ createdAt: -1 })
@@ -248,7 +239,7 @@ router.post("/create-missing", requireAuth, async (req, res) => {
     
     // Create a Set of sale IDs that already have receipts
     const existingSaleIds = new Set(
-      existingReceipts.map(receipt => receipt.saleId.toString())
+      existingReceipts.map(receipt => receipt.saleId)
     );
 
     // Find sales that don't have receipts
@@ -270,7 +261,7 @@ router.post("/create-missing", requireAuth, async (req, res) => {
     for (const sale of salesWithoutReceipts) {
       try {
         const receipt = new Receipt({
-          saleId: sale._id,
+          saleId: sale._id.toString(),
           receiptNumber: sale.receiptNumber,
           receiptData: {
             items: sale.items,
