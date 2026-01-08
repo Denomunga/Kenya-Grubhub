@@ -530,31 +530,6 @@ export default function POSSystem() {
     }
   };
 
-  const createMissingReceipts = async () => {
-    try {
-      const response = await apiFetch('/api/receipts/create-missing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        toast({ 
-          title: 'Success', 
-          description: `Created ${result.created} missing receipts` 
-        });
-        // Refresh receipts and stats
-        loadReceipts();
-        loadReceiptStats();
-      } else {
-        const error = await response.json();
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
-      }
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to create missing receipts', variant: 'destructive' });
-    }
-  };
-
   const createReceiptForSale = async (sale: any) => {
     try {
       const receiptData = {
@@ -1566,130 +1541,123 @@ export default function POSSystem() {
           )}
 
           {(showSalesHistory || managementTab === 'sales') && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Sales History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Receipt</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Cashier</TableHead>
-                      <TableHead>Items</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sales.map(sale => (
-                      <TableRow key={sale._id}>
-                        <TableCell className="font-mono">{sale.receiptNumber}</TableCell>
-                        <TableCell>{new Date(sale.createdAt).toLocaleDateString()}</TableCell>
-                        <TableCell>{sale.cashier.name}</TableCell>
-                        <TableCell>{sale.items.length} items</TableCell>
-                        <TableCell>{formatPriceKSHS(sale.total)}</TableCell>
-                        <TableCell>{sale.paymentMethod}</TableCell>
-                        <TableCell>
-                          <Badge variant={sale.status === 'Completed' ? 'default' : 'destructive'}>{sale.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setCurrentSale(sale);
-                              setShowSalesHistory(false);
-                            }}
-                          >
-                            <Receipt className="h-3 w-3 mr-1" />
-                            View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-
-          {(showReceipts || managementTab === 'receipts') && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Receipts Management</CardTitle>
-                  <Button variant="outline" onClick={createMissingReceipts}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Missing Receipts
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Total Receipts</h4>
-                    <div className="text-2xl font-bold">{receiptStats.totalReceipts || receipts.length}</div>
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Total Revenue</h4>
-                    <div className="text-2xl font-bold text-green-600">{formatPriceKSHS(receiptStats.totalRevenue || 0)}</div>
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Average Sale</h4>
-                    <div className="text-2xl font-bold">{formatPriceKSHS(receiptStats.averageSale || 0)}</div>
-                  </div>
-                </div>
-
-                {receipts.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Receipt #</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Items</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead>Payment Method</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {receipts.map((receipt: any) => (
-                        <TableRow key={receipt._id}>
-                          <TableCell className="font-mono">{receipt.receiptNumber}</TableCell>
-                          <TableCell>{new Date(receipt.createdAt).toLocaleDateString()}</TableCell>
-                          <TableCell>{receipt.receiptData?.items?.length || 0} items</TableCell>
-                          <TableCell>{formatPriceKSHS(receipt.receiptData?.total || 0)}</TableCell>
-                          <TableCell>{receipt.receiptData?.paymentMethod || 'N/A'}</TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setCurrentSale({
-                                  ...receipt.receiptData,
-                                  _id: receipt.saleId,
-                                  receiptNumber: receipt.receiptNumber,
-                                  createdAt: receipt.createdAt
-                                });
-                              }}
-                            >
-                              <Receipt className="h-3 w-3 mr-1" />
-                              View
-                            </Button>
-                          </TableCell>
+            <><Card>
+                <div>
+                  <CardHeader>
+                    <CardTitle>Sales History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Receipt</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Cashier</TableHead>
+                          <TableHead>Items</TableHead>
+                          <TableHead>Total</TableHead>
+                          <TableHead>Payment</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">No receipts found</div>
-                )}
-              </CardContent>
-            </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {sales.map(sale => (
+                          <TableRow key={sale._id}>
+                            <TableCell className="font-mono">{sale.receiptNumber}</TableCell>
+                            <TableCell>{new Date(sale.createdAt).toLocaleDateString()}</TableCell>
+                            <TableCell>{sale.cashier.name}</TableCell>
+                            <TableCell>{sale.items.length} items</TableCell>
+                            <TableCell>{formatPriceKSHS(sale.total)}</TableCell>
+                            <TableCell>{sale.paymentMethod}</TableCell>
+                            <TableCell>
+                              <Badge variant={sale.status === 'Completed' ? 'default' : 'destructive'}>{sale.status}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setCurrentSale(sale);
+                                  setShowSalesHistory(false);
+                                } }
+                              >
+                                <Receipt className="h-3 w-3 mr-1" />
+                                View
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </div></Card><Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Receipts Management</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Total Receipts</h4>
+                        <div className="text-2xl font-bold">{receiptStats.totalReceipts || receipts.length}</div>
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Total Revenue</h4>
+                        <div className="text-2xl font-bold text-green-600">{formatPriceKSHS(receiptStats.totalRevenue || 0)}</div>
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Average Sale</h4>
+                        <div className="text-2xl font-bold">{formatPriceKSHS(receiptStats.averageSale || 0)}</div>
+                      </div>
+                    </div>
+
+                    {receipts.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Receipt #</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Items</TableHead>
+                            <TableHead>Total</TableHead>
+                            <TableHead>Payment Method</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {receipts.map((receipt: any) => (
+                            <TableRow key={receipt._id}>
+                              <TableCell className="font-mono">{receipt.receiptNumber}</TableCell>
+                              <TableCell>{new Date(receipt.createdAt).toLocaleDateString()}</TableCell>
+                              <TableCell>{receipt.receiptData?.items?.length || 0} items</TableCell>
+                              <TableCell>{formatPriceKSHS(receipt.receiptData?.total || 0)}</TableCell>
+                              <TableCell>{receipt.receiptData?.paymentMethod || 'N/A'}</TableCell>
+                              <TableCell>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setCurrentSale({
+                                      ...receipt.receiptData,
+                                      _id: receipt.saleId,
+                                      receiptNumber: receipt.receiptNumber,
+                                      createdAt: receipt.createdAt
+                                    });
+                                  } }
+                                >
+                                  <Receipt className="h-3 w-3 mr-1" />
+                                  View
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">No receipts found</div>
+                    )}
+                  </CardContent>
+                </Card></>
           )}
         </div>
       )}
