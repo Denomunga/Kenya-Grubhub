@@ -58,7 +58,7 @@ const DraggableMenuItem: React.FC<DraggableMenuItemProps> = ({ item, index, move
       className={`card-3d cursor-move transition-all duration-300 ${isDragging ? 'opacity-50' : 'opacity-100'}`}
       style={{ transform: isDragging ? 'rotate(2deg)' : '' }}
     >
-      <Card className="mb-4 border-animated-gradient depth-layer-3 hover-lift">
+      <Card className="mb-4 border-animated-gradient depth-layer-3 ">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <div className="cursor-grab active:cursor-grabbing">
@@ -806,7 +806,7 @@ const DragDropMenuManager: React.FC = () => {
               <div className="flex gap-2">
                 <Button 
                   onClick={handleUpdateItem} 
-                  className="flex-0 luminous-glow"
+                  className="flex-1 luminous-glow"
                 >
                   Update Item
                 </Button>
@@ -817,7 +817,7 @@ const DragDropMenuManager: React.FC = () => {
                     setEditingItem(null);
                     setEditingImageFiles([]);
                   }}
-                  className="flex-0"
+                  className="flex-1"
                 >
                   Cancel
                 </Button>
