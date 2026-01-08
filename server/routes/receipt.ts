@@ -118,21 +118,59 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
-    const receipts = await Receipt.find()
-      .populate('saleId', 'receiptNumber total createdAt')
+    // Get all sales to show as receipts
+    const sales = await Sale.find()
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Receipt.countDocuments();
+    const totalSales = await Sale.countDocuments();
+
+    // Get actual printed receipts to merge with sales data
+    const printedReceipts = await Receipt.find()
+      .populate('saleId', 'receiptNumber total createdAt')
+      .sort({ createdAt: -1 });
+
+    // Create a map of printed receipts by saleId for quick lookup
+    const printedReceiptsMap = new Map(
+      printedReceipts.map(receipt => [receipt.saleId.toString(), receipt])
+    );
+
+    // Format all sales as receipt-like objects, merging with printed receipt data if available
+    const formattedReceipts = sales.map(sale => {
+      const printedReceipt = printedReceiptsMap.get(sale._id.toString());
+      
+      return {
+        _id: printedReceipt?._id || sale._id,
+        saleId: sale._id,
+        receiptNumber: sale.receiptNumber,
+        createdAt: sale.createdAt,
+        receiptData: {
+          items: sale.items,
+          subtotal: sale.subtotal,
+          tax: sale.tax,
+          discount: sale.discount,
+          total: sale.total,
+          paymentMethod: sale.paymentMethod,
+          paymentAmount: sale.paymentAmount,
+          change: sale.change,
+          customerName: sale.customerName,
+          customerPhone: sale.customerPhone,
+          cashier: sale.cashier,
+          storeLocation: sale.storeLocation
+        },
+        printCount: printedReceipt?.printCount || 0,
+        printedAt: printedReceipt?.printedAt || []
+      };
+    });
 
     res.json({
-      receipts,
+      receipts: formattedReceipts,
       pagination: {
         page,
         limit,
-        total,
-        pages: Math.ceil(total / limit)
+        total: totalSales,
+        pages: Math.ceil(totalSales / limit)
       }
     });
   } catch (error) {
