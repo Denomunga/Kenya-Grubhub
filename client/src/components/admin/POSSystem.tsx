@@ -2162,7 +2162,7 @@ export default function POSSystem() {
             setCurrentSale(null);
           }
         }}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md bg-blue-50 border-2 border-blue-200 shadow-xl">
             <DialogHeader className="text-center pb-4">
               <DialogTitle className="text-lg font-bold">
                 {currentSale.type === 'Order' ? 'Order Receipt' : 'Point of Sale Receipt'}
@@ -2208,15 +2208,15 @@ export default function POSSystem() {
               
               {/* Items */}
               <div className="space-y-2">
-                <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Items</div>
+                <div className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Items</div>
                 <div className="border rounded-lg bg-white divide-y">
                   {currentSale.items.map((item, index) => (
                     <div key={index} className="flex justify-between items-center p-3">
                       <div className="flex-1">
-                        <div className="font-medium text-gray-800">{item.name}</div>
-                        <div className="text-xs text-gray-500">{item.quantity} × {formatPriceKSHS(item.price)}</div>
+                        <div className="font-medium text-black">{item.name}</div>
+                        <div className="text-xs text-black">{item.quantity} × {formatPriceKSHS(item.price)}</div>
                       </div>
-                      <div className="font-mono font-semibold text-gray-800">
+                      <div className="font-mono font-semibold text-black">
                         {formatPriceKSHS(item.price * item.quantity)}
                       </div>
                     </div>
