@@ -2376,7 +2376,14 @@ export default function POSSystem() {
                     {productSalesHistory.map((sale) => {
                       const productItem = sale.items.find(item => item.productId === selectedProductDetail?._id);
                       return (
-                        <TableRow key={sale._id}>
+                        <TableRow 
+                          key={sale._id}
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => {
+                            setCurrentSale(sale);
+                            setShowProductSalesHistory(false);
+                          }}
+                        >
                           <TableCell className="font-mono">{sale.receiptNumber}</TableCell>
                           <TableCell>{new Date(sale.createdAt).toLocaleDateString()}</TableCell>
                           <TableCell>{sale.cashier.name}</TableCell>
