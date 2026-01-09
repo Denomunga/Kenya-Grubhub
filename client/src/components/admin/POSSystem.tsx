@@ -884,9 +884,9 @@ export default function POSSystem() {
           font-size: 12px; 
           max-width: 350px; 
           margin: 0 auto; 
-          background: linear-gradient(to bottom, #f9fafb, #ffffff);
+          background: linear-gradient(to bottom, #f9f, #f9f);
           border-radius: 8px;
-          border: 1px solid #e5e7eb;
+          border: 1px solid #e5e7;
           padding: 20px;
         }
         .center { text-align: center; }
