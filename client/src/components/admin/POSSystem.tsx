@@ -126,6 +126,7 @@ export default function POSSystem() {
   const [selectedProductDetail, setSelectedProductDetail] = useState<any>(null);
   const [showProductSalesHistory, setShowProductSalesHistory] = useState(false);
   const [productSalesHistory, setProductSalesHistory] = useState<Sale[]>([]);
+  const [cameFromProductSalesHistory, setCameFromProductSalesHistory] = useState(false);
 
   // Sale confirmation state
   const [showSaleConfirmation, setShowSaleConfirmation] = useState(false);
@@ -1976,7 +1977,16 @@ export default function POSSystem() {
 
       {/* Receipt Dialog */}
       {currentSale && (
-        <Dialog open={!!currentSale} onOpenChange={() => setCurrentSale(null)}>
+        <Dialog open={!!currentSale} onOpenChange={(open) => {
+          if (!open) {
+            if (cameFromProductSalesHistory) {
+              // Go back to product sales history
+              setCameFromProductSalesHistory(false);
+              setShowProductSalesHistory(true);
+            }
+            setCurrentSale(null);
+          }
+        }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
@@ -2381,6 +2391,7 @@ export default function POSSystem() {
                           className="cursor-pointer hover:bg-gray-50"
                           onClick={() => {
                             setCurrentSale(sale);
+                            setCameFromProductSalesHistory(true);
                             setShowProductSalesHistory(false);
                           }}
                         >
