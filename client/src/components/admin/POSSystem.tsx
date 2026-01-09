@@ -900,24 +900,24 @@ export default function POSSystem() {
         .tagline { font-size: 10px; color: #6b7280; margin-bottom: 2px; }
         .website { font-size: 10px; color: #9ca3af; }
         .section-title { font-size: 10px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .items-container { border: 1px solid #e5e7eb; border-radius: 6px; background: white; margin-bottom: 16px; }
-        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #f3f4f6; }
+        .items-container { border: 1px solid  #3b82f6; border-radius: 6px; background: white; margin-bottom: 16px; }
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid  #3b82f6; }
         .item-name { font-weight: 500; color: #1f2937; font-size: 11px; }
         .item-details { color: #6b7280; font-size: 9px; }
         .item-price { font-family: monospace; font-weight: 600; color: #1f2937; font-size: 11px; }
-        .summary-section { border-top: 1px solid #e5e7eb; padding-top: 16px; }
+        .summary-section { border-top: 1px solid #3b82f6; padding-top: 16px; }
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px; }
         .summary-label { color: #4b5563; }
         .summary-value { font-family: monospace; }
-        .total-row { margin-bottom: 8px; padding-top: 6px; border-top: 1px solid #e5e7eb; }
+        .total-row { margin-bottom: 8px; padding-top: 6px; border-top: 1px solid  #3b82f6; }
         .total-label { font-size: 14px; font-weight: bold; color: #1f2937; }
         .total-value { font-size: 14px; font-weight: bold; font-family: monospace; color: #1f2937; }
         .discount-label { color: #059669; }
         .discount-value { font-family: monospace; color: #059669; }
         .change-label { color: #2563eb; }
         .change-value { font-family: monospace; color: #2563eb; }
-        .footer { text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
-        .thank-you { font-size: 12px; font-weight: 500; color: #374151; margin-bottom: 4px; }
+        .footer { text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid  #3b82; }
+        .thank-you { font-size: 12px; font-weight: 500; color: #; margin-bottom: 4px; }
         .come-again { font-size: 10px; color: #9ca3af; }
         .order-note { font-size: 9px; color: #ea580c; margin-top: 6px; }
       </style>
