@@ -1043,7 +1043,12 @@ export default function POSSystem() {
       {/* M-Pesa Payment Dialog */}
       <MpesaPaymentDialog
         open={waitingForPayment}
-        onClose={() => setWaitingForPayment(false)}
+        onClose={() => {
+          setWaitingForPayment(false);
+          setCurrentSaleId('');
+          // Don't generate receipt when dialog is canceled
+          toast({ title: 'Payment Canceled', description: 'M-Pesa payment was canceled' });
+        }}
         amount={currentSale?.total || 0}
         saleId={currentSaleId}
         onPaymentConfirmed={handleMpesaPaymentConfirmed}
