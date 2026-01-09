@@ -2056,7 +2056,14 @@ export default function POSSystem() {
                 <Download className="h-4 w-4 mr-2" />
                 Save as PDF
               </Button>
-              <Button variant="outline" onClick={() => setCurrentSale(null)}>
+              <Button variant="outline" onClick={() => {
+              if (cameFromProductSalesHistory) {
+                // Go back to product sales history
+                setCameFromProductSalesHistory(false);
+                setShowProductSalesHistory(true);
+              }
+              setCurrentSale(null);
+            }}>
                 Close
               </Button>
             </div>
