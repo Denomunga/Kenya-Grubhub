@@ -34,7 +34,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-// Get all sales (admin only)
+// Get all COMPLETED sales (admin only)
 router.get("/sales", requireAuth, apiLimiter, async (req, res) => {
   try {
     if (req.user?.role !== "admin" && req.user?.role !== "staff") {
@@ -45,7 +45,7 @@ router.get("/sales", requireAuth, apiLimiter, async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined; // Return all if no limit
     const skip = limit ? (page - 1) * limit : 0;
 
-    const query = Sale.find()
+    const query = Sale.find({ status: 'Completed' })
       .populate('cashier', 'name username')
       .sort({ createdAt: -1 });
 
@@ -56,7 +56,7 @@ router.get("/sales", requireAuth, apiLimiter, async (req, res) => {
 
     const sales = await query;
 
-    const total = await Sale.countDocuments();
+    const total = await Sale.countDocuments({ status: 'Completed' });
 
     res.json({
       sales,
