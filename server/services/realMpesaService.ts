@@ -285,10 +285,9 @@ class RealMpesaService {
     }
   }
 
-  // Validate payment against expected amount
-  validatePayment(transaction: MpesaTransaction, expectedAmount: number): boolean {
-    const amountDiff = Math.abs(transaction.amount - expectedAmount);
-    return amountDiff <= 1; // Allow 1 KES difference for rounding
+  // Validate payment matches expected criteria
+  private validatePayment(transaction: MpesaTransaction, expectedAmount: number): boolean {
+    return transaction.amount === expectedAmount;
   }
 }
 
