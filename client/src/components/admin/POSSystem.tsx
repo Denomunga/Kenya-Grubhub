@@ -1070,25 +1070,24 @@ export default function POSSystem() {
           <span style="background: ${currentSale.status === 'Completed' ? '#10b981' : '#6b7280'}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px;">${currentSale.status}</span>
         </div>` : ''}
       </div>
-      <div style="margin-bottom: 16px;">
-        <div style="font-size: 10px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Items</div>
-        <div style="border: 1px solid #e5e7eb; border-radius: 6px; background: white;">
-          ${currentSale.items.map(item => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #f3f4f6;">
-              <div style="flex: 1;">
-                <div style="font-weight: 500; color: #1f2937; font-size: 11px;">${item.name}</div>
-                <div style="color: #6b7280; font-size: 9px;">${item.quantity} × ${formatPriceKSHS(item.price)}</div>
-              </div>
-              <div style="font-family: monospace; font-weight: 600; color: #1f2937; font-size: 11px;">
-                ${formatPriceKSHS(item.price * item.quantity)}
-              </div>
-            </div>
-          `).join('')}
-        </div>
+     <div style="font-size: 10px; font-weight: 600; color: #1e40af; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Items</div>
+<div style="border: 1px solid #3b82f6; border-radius: 6px; background: #f8fafc;">
+  ${currentSale.items.map(item => `
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #e2e8f0;">
+      <div style="flex: 1;">
+        <div style="font-weight: 500; color: #1e293b; font-size: 11px;">${item.name}</div>
+        <div style="color: #64748b; font-size: 9px;">${item.quantity} × ${formatPriceKSHS(item.price)}</div>
       </div>
-           <div style="border-top: 1px solid #e5e7eb; padding-top: 16px;">
+      <div style="font-family: monospace; font-weight: 600; color: #1e40af; font-size: 11px;">
+        ${formatPriceKSHS(item.price * item.quantity)}
+      </div>
+    </div>
+  `).join('')}
+</div>
+      </div>
+           <div style="border-top: 1px solid  #3b82f6; padding-top: 16px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
-          <span style="color: #4b5563;">Subtotal:</span>
+          <span style="color: #4b5;">Subtotal:</span>
           <span style="font-family: monospace;">${formatPriceKSHS(currentSale.subtotal)}</span>
         </div>
         ${currentSale.tax > 0 ? `
