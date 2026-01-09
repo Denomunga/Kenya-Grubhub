@@ -57,6 +57,11 @@ interface Sale {
   auditLog?: any[];
   storeLocation?: string;
   type?: 'POS' | 'Order'; // Add type property to distinguish between POS and Order receipts
+  // M-Pesa specific fields
+  mpesaTransactionId?: string;
+  mpesaReceipt?: string;
+  mpesaStatus?: string;
+  paymentConfirmedAt?: string;
 }
 
 interface POSSettings {
@@ -620,7 +625,12 @@ export default function POSSystem() {
         customerName: sale.customerName,
         customerPhone: sale.customerPhone,
         cashier: sale.cashier,
-        storeLocation: sale.storeLocation
+        storeLocation: sale.storeLocation,
+        // M-Pesa transaction details
+        mpesaTransactionId: sale.mpesaTransactionId,
+        mpesaReceipt: sale.mpesaReceipt,
+        mpesaStatus: sale.mpesaStatus,
+        paymentConfirmedAt: sale.paymentConfirmedAt
       };
 
       await apiFetch('/api/receipts/save', {
@@ -871,6 +881,17 @@ export default function POSSystem() {
             <tr><td>Payment (${currentSale.paymentMethod}):</td><td class="right">${formatPriceKSHS(currentSale.paymentAmount)}</td></tr>
             ${currentSale.change > 0 ? `<tr><td>Change:</td><td class="right">${formatPriceKSHS(currentSale.change)}</td></tr>` : ''}
           </table>
+          <!-- M-Pesa Transaction Details -->
+          ${currentSale.paymentMethod === 'Mobile Money' && currentSale.mpesaTransactionId ? `
+          <div class="line"></div>
+          <table>
+            <tr><td colspan="2" class="center bold">M-Pesa Transaction Details</td></tr>
+            ${currentSale.mpesaTransactionId ? `<tr><td>Transaction ID:</td><td class="right">${currentSale.mpesaTransactionId}</td></tr>` : ''}
+            ${currentSale.mpesaReceipt ? `<tr><td>M-Pesa Receipt:</td><td class="right">${currentSale.mpesaReceipt}</td></tr>` : ''}
+            ${currentSale.customerPhone ? `<tr><td>Payer Phone:</td><td class="right">${currentSale.customerPhone}</td></tr>` : ''}
+            ${currentSale.paymentConfirmedAt ? `<tr><td>Confirmed At:</td><td class="right">${new Date(currentSale.paymentConfirmedAt).toLocaleString()}</td></tr>` : ''}
+          </table>
+          ` : ''}
           <div class="line"></div>
           <div class="center">Thank you for shopping with us!</div>
         </body>
@@ -915,6 +936,17 @@ export default function POSSystem() {
       <div style="display: flex; justify-content: space-between; font-weight: bold;"><span>Total:</span><span>${formatPriceKSHS(currentSale.total)}</span></div>
       <div style="display: flex; justify-content: space-between;"><span>Payment (${currentSale.paymentMethod}):</span><span>${formatPriceKSHS(currentSale.paymentAmount)}</span></div>
       ${currentSale.change > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Change:</span><span>${formatPriceKSHS(currentSale.change)}</span></div>` : ''}
+      
+      <!-- M-Pesa Transaction Details -->
+      ${currentSale.paymentMethod === 'Mobile Money' && currentSale.mpesaTransactionId ? `
+      <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+      <div style="text-align: center; font-weight: bold; margin-bottom: 5px;">M-Pesa Transaction Details</div>
+      <div style="display: flex; justify-content: space-between;"><span>Transaction ID:</span><span>${currentSale.mpesaTransactionId}</span></div>
+      ${currentSale.mpesaReceipt ? `<div style="display: flex; justify-content: space-between;"><span>M-Pesa Receipt:</span><span>${currentSale.mpesaReceipt}</span></div>` : ''}
+      ${currentSale.customerPhone ? `<div style="display: flex; justify-content: space-between;"><span>Payer Phone:</span><span>${currentSale.customerPhone}</span></div>` : ''}
+      ${currentSale.paymentConfirmedAt ? `<div style="display: flex; justify-content: space-between;"><span>Confirmed At:</span><span>${new Date(currentSale.paymentConfirmedAt).toLocaleString()}</span></div>` : ''}
+      ` : ''}
+      
       <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
       <div style="text-align: center;">Thank you for shopping with us!</div>
     `;
@@ -1002,7 +1034,7 @@ export default function POSSystem() {
       <MpesaPaymentDialog
         open={waitingForPayment}
         onClose={() => setWaitingForPayment(false)}
-        amount={pendingSale?.total || 0}
+        amount={currentSale?.total || 0}
         saleId={currentSaleId}
         onPaymentConfirmed={handleMpesaPaymentConfirmed}
       />

@@ -129,15 +129,15 @@ export default function MpesaPaymentDialog({
         
         <div className="text-center space-y-6">
           {/* Amount Display */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Amount to Pay</p>
+          <div className="bg-gray-900 rounded-lg p-4">
+            <p className="text-sm text-gray-900 mb-1">Amount to Pay</p>
             <p className="text-3xl font-bold text-gray-900">
               {formatPriceKSHS(amount)}
             </p>
           </div>
 
           {/* Status */}
-          <div className={`inline-flex items-center gap-3 px-4 py-3 rounded-full ${getStatusColor()} text-white`}>
+          <div className={`inline-flex items-center gap-3 px-4 py-3 rounded-full ${getStatusColor()} text-black`}>
             {getStatusIcon()}
             <span className="font-medium">{getStatusText()}</span>
           </div>
@@ -145,7 +145,7 @@ export default function MpesaPaymentDialog({
           {/* Timer */}
           {status === 'waiting' && (
             <div className="space-y-2">
-              <p className="text-sm text-gray-600">Time remaining</p>
+              <p className="text-sm text-black">Time remaining</p>
               <div className="text-2xl font-mono font-bold text-gray-900">
                 {formatTime(timeLeft)}
               </div>
