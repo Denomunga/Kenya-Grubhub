@@ -707,7 +707,7 @@ export default function Menu() {
                 <CardFooter className="p-6 pt-0 flex gap-3 items-center bg-gray-50/30 border-t border-gray-100">
                   <div className="flex-1 relative group">
                     <Button 
-                      className="w-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
+                      className="w-full sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" 
                       disabled={!item.available}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -746,7 +746,7 @@ export default function Menu() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        className="text-xs sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300"
                         onClick={() => {
                           setSelectedProductForDetail(item);
                           setProductDetailOpen(true);
@@ -763,7 +763,7 @@ export default function Menu() {
                           e.stopPropagation();
                           handleQuickRating(item.id, 5);
                         }}
-                        className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors opacity-0 group-hover:opacity-100 duration-300"
+                        className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors opacity-100"
                         title="Quick 5-star rating"
                       >
                         5⭐
@@ -1220,7 +1220,7 @@ export default function Menu() {
                       addToCart(selectedProductForDetail);
                     }}
                     disabled={!selectedProductForDetail.available}
-                    className="w-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    className="w-full sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300"
                   >
                     <ShoppingBag className="mr-2 h-4 w-4" />
                     Add to Cart

@@ -1324,7 +1324,7 @@ export default function POSSystem() {
                         const isLowStock = item.stock !== undefined && item.stock <= 5 && item.stock > 0;
                         const isOutOfStock = item.stock === 0;
                         return (
-                          <div key={item.productId} className="flex items-start justify-between gap-3">cd
+                          <div key={item.productId} className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <div className="font-medium truncate">{item.name}</div>
