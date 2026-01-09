@@ -40,6 +40,7 @@ import newsletterRouter from "./routes/newsletter";
 import adminNewsletterRouter from "./routes/admin-newsletter";
 import posRouter from "./routes/pos";
 import receiptRouter from "./routes/receipt";
+import mpesaRouter from "./routes/mpesa";
 import { 
   validateThreadAccess, 
   validateThreadParticipation, 
@@ -237,6 +238,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Add Receipt routes (requires authentication)
   app.use("/api/receipts", receiptRouter);
+  
+  // Add M-Pesa routes (requires authentication)
+  app.use("/api/mpesa", mpesaRouter);
   
   // Apply rate limiting
   app.use(generalLimiter);

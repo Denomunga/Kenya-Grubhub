@@ -6,7 +6,7 @@ export interface ISale extends Document {
   subtotal: number;
   tax: number;
   discount: number;
-  status: 'Completed' | 'Refunded' | 'Cancelled';
+  status: 'Completed' | 'Refunded' | 'Cancelled' | 'Pending' | 'Failed';
   paymentMethod: 'Cash' | 'Card' | 'Mobile Money' | 'Other';
   paymentAmount: number;
   change: number;
@@ -22,6 +22,12 @@ export interface ISale extends Document {
     timestamp: Date;
     details?: any;
   }[];
+  // M-Pesa specific fields
+  mpesaTransactionId?: string;
+  mpesaPhoneNumber?: string;
+  mpesaReceipt?: string;
+  mpesaStatus?: 'pending' | 'completed' | 'failed';
+  paymentConfirmedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,7 +45,7 @@ const SaleSchema = new Schema<ISale>(
     subtotal: { type: Number, required: true },
     tax: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
-    status: { type: String, enum: ['Completed', 'Refunded', 'Cancelled'], default: 'Completed' },
+    status: { type: String, enum: ['Completed', 'Refunded', 'Cancelled', 'Pending', 'Failed'], default: 'Completed' },
     paymentMethod: { type: String, enum: ['Cash', 'Card', 'Mobile Money', 'Other'], required: true },
     paymentAmount: { type: Number, required: true },
     change: { type: Number, default: 0 },
@@ -54,7 +60,12 @@ const SaleSchema = new Schema<ISale>(
       user: { type: String, required: true },
       timestamp: { type: Date, default: Date.now },
       details: { type: Schema.Types.Mixed }
-    }]
+    }],
+    mpesaTransactionId: { type: String },
+    mpesaPhoneNumber: { type: String },
+    mpesaReceipt: { type: String },
+    mpesaStatus: { type: String, enum: ['pending', 'completed', 'failed'] },
+    paymentConfirmedAt: { type: Date }
   },
   { timestamps: true }
 );

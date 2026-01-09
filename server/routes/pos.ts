@@ -6,6 +6,7 @@ import { POSSettings } from "../models/POSSettings";
 import { Order } from "../models/Order";
 import rateLimit from 'express-rate-limit';
 import { calculateTotalRevenue } from '../routes';
+import MpesaService from '../services/mpesaService';
 
 const router = Router();
 
@@ -159,11 +160,13 @@ router.post("/sales", requireAuth, apiLimiter, async (req, res) => {
       customerName,
       customerPhone,
       notes,
+      status: paymentMethod === 'Mobile Money' ? 'Pending' : 'Completed',
+      mpesaStatus: paymentMethod === 'Mobile Money' ? 'pending' : undefined,
       auditLog: [{
         action: 'created',
         user: req.user._id,
         timestamp: new Date(),
-        details: { items: validatedItems.length, total }
+        details: { items: validatedItems.length, total, paymentMethod }
       }]
     });
 
@@ -191,6 +194,17 @@ router.post("/sales", requireAuth, apiLimiter, async (req, res) => {
       reqApp.locals.io?.emit('kpi:update', { totalRevenue, activeOrders, ordersPerMinute: opm });
     } catch (err) {
       console.error('Error emitting KPI update after POS sale:', err);
+    }
+
+    // Start M-Pesa payment monitoring if needed
+    if (paymentMethod === 'Mobile Money') {
+      try {
+        const reqApp = req.app as any;
+        const mpesaService = new MpesaService(reqApp.locals.io);
+        mpesaService.startPaymentMonitoring(sale._id.toString(), total);
+      } catch (error) {
+        console.error('Error starting M-Pesa monitoring:', error);
+      }
     }
 
     res.status(201).json(sale);

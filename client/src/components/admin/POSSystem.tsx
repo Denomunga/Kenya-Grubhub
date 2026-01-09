@@ -17,6 +17,7 @@ import { useData } from '@/lib/data';
 import { useHybridAuth } from '@/lib/hybrid-auth';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import MpesaPaymentDialog from './MpesaPaymentDialog';
 
 interface Product {
   id: string;
@@ -122,6 +123,10 @@ export default function POSSystem() {
   // Sale confirmation state
   const [showSaleConfirmation, setShowSaleConfirmation] = useState(false);
   const [pendingSale, setPendingSale] = useState<any>(null);
+
+  // M-Pesa payment waiting state
+  const [waitingForPayment, setWaitingForPayment] = useState(false);
+  const [currentSaleId, setCurrentSaleId] = useState<string>('');
 
   const [posMode, setPosMode] = useState<'sell' | 'management'>('sell');
   const [managementTab, setManagementTab] = useState<'receipts' | 'sales' | 'stock' | 'reports'>('receipts');
@@ -514,15 +519,26 @@ export default function POSSystem() {
         const sale = await response.json();
         setCurrentSale(sale);
         fetchSales();
-        // Automatically create receipt for the completed sale
-        await createReceiptForSale(sale);
-        setCart([]);
-        setPaymentAmount('');
-        setCustomerName('');
-        setCustomerPhone('');
-        setDiscount(0);
-        setTax(0);
-        toast({ title: 'Success', description: 'Sale completed successfully' });
+
+        // Handle M-Pesa payment waiting
+        if (pendingSale.paymentMethod === 'Mobile Money') {
+          setCurrentSaleId(sale._id);
+          setWaitingForPayment(true);
+          toast({ 
+            title: 'Waiting for Payment', 
+            description: `Please pay KES ${formatPriceKSHS(pendingSale.total)} via M-Pesa` 
+          });
+        } else {
+          // For other payment methods, create receipt immediately
+          await createReceiptForSale(sale);
+          setCart([]);
+          setPaymentAmount('');
+          setCustomerName('');
+          setCustomerPhone('');
+          setDiscount(0);
+          setTax(0);
+          toast({ title: 'Success', description: 'Sale completed successfully' });
+        }
       } else {
         const error = await response.json();
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -533,6 +549,30 @@ export default function POSSystem() {
       setIsProcessing(false);
       setShowSaleConfirmation(false);
       setPendingSale(null);
+    }
+  };
+
+  // Handle M-Pesa payment confirmation
+  const handleMpesaPaymentConfirmed = async () => {
+    if (currentSaleId) {
+      try {
+        const response = await apiFetch(`/api/pos/sales/${currentSaleId}`);
+        if (response.ok) {
+          const sale = await response.json();
+          await createReceiptForSale(sale);
+          setCart([]);
+          setPaymentAmount('');
+          setCustomerName('');
+          setCustomerPhone('');
+          setDiscount(0);
+          setTax(0);
+          setWaitingForPayment(false);
+          setCurrentSaleId('');
+          toast({ title: 'Success', description: 'Payment confirmed and receipt generated' });
+        }
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to confirm payment', variant: 'destructive' });
+      }
     }
   };
 
@@ -958,6 +998,15 @@ export default function POSSystem() {
 
   return (
     <div className="space-y-8">
+      {/* M-Pesa Payment Dialog */}
+      <MpesaPaymentDialog
+        open={waitingForPayment}
+        onClose={() => setWaitingForPayment(false)}
+        amount={pendingSale?.total || 0}
+        saleId={currentSaleId}
+        onPaymentConfirmed={handleMpesaPaymentConfirmed}
+      />
+
       {/* Session Warning Dialog */}
       {sessionWarning && (
         <Dialog open={sessionWarning} onOpenChange={(open) => { if (!open) setSessionWarning(false); }}>
