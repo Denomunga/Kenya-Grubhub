@@ -73,73 +73,34 @@ class RealMpesaService {
     }
   }
 
-  // Start waiting for M-Pesa payment
+  // Start waiting for M-Pesa C2B payment
   async startPaymentMonitoring(saleId: string, amount: number, phoneNumber?: string, timeoutMinutes: number = 5) {
     try {
-      // Initiate STK Push
-      const token = await this.generateAccessToken();
+      console.log(`🔄 Waiting for M-Pesa C2B payment for sale ${saleId}: KES ${amount}`);
       
-      // Generate timestamp in correct format: YYYYMMDDHHMMSS (no T separator)
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
-      
-      const timestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
-      const password = Buffer.from(`${this.config.shortcode}${this.config.passkey}${timestamp}`).toString('base64');
-      
-      const response = await axios.post(
-        'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
-        {
-          BusinessShortCode: this.config.shortcode,
-          Password: password,
-          Timestamp: timestamp,
-          TransactionType: 'CustomerPayBillOnline',
-          Amount: amount,
-          PartyA: phoneNumber || '254708374149', // Correct test phone number
-          PartyB: this.config.shortcode,
-          PhoneNumber: phoneNumber || '254708374149', // Correct test phone number
-          CallBackURL: this.config.callbackUrl,
-          AccountReference: saleId,
-          TransactionDesc: `Payment for sale ${saleId}`
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      const { CheckoutRequestID } = response.data;
-      
-      // Notify frontend to show waiting screen
+      // Notify frontend to show waiting screen for C2B payment
       this.io?.emit('mpesa:payment_waiting', {
         saleId,
         amount,
-        checkoutRequestID: CheckoutRequestID,
+        paymentType: 'C2B',
+        message: 'Please pay via M-Pesa to the business number',
         timeoutMinutes
       });
 
-      console.log(`M-Pesa STK Push initiated for sale ${saleId}: KES ${amount}, CheckoutRequestID: ${CheckoutRequestID}`);
-      
-      // Start checking transaction status
-      this.checkTransactionStatusPeriodically(saleId, CheckoutRequestID, timeoutMinutes);
+      // Start checking for C2B transaction confirmation
+      this.checkC2BPaymentPeriodically(saleId, amount, timeoutMinutes, phoneNumber);
       
     } catch (error) {
-      console.error('Error initiating M-Pesa payment:', error);
+      console.error('Error initiating M-Pesa C2B payment monitoring:', error);
       this.io?.emit('mpesa:payment_error', {
         saleId,
-        error: 'Failed to initiate M-Pesa payment'
+        error: 'Failed to start C2B payment monitoring'
       });
     }
   }
 
-  // Check transaction status periodically
-  private async checkTransactionStatusPeriodically(saleId: string, checkoutRequestID: string, timeoutMinutes: number) {
+  // Check C2B payment status periodically
+  private async checkC2BPaymentPeriodically(saleId: string, expectedAmount: number, timeoutMinutes: number, phoneNumber?: string) {
     const startTime = Date.now();
     const timeoutMs = timeoutMinutes * 60 * 1000;
     
@@ -154,38 +115,24 @@ class RealMpesaService {
       }
 
       try {
-        const status = await this.checkTransactionStatus(checkoutRequestID);
-        const resultCode = status.Body.stkCallback.ResultCode;
+        // Check for recent C2B transactions that match this sale
+        const transactions = await this.getRecentTransactions(phoneNumber, expectedAmount);
         
-        if (resultCode === '0') {
-          // Payment successful
-          const metadata = status.Body.stkCallback.CallbackMetadata;
-          const mpesaReceipt = metadata.Item.find((item: any) => item.Name === 'MpesaReceiptNumber')?.Value;
-          const phoneNumber = metadata.Item.find((item: any) => item.Name === 'PhoneNumber')?.Value;
-          const amount = metadata.Item.find((item: any) => item.Name === 'Amount')?.Value;
-          
-          await this.confirmPayment(saleId, {
-            amount,
-            phoneNumber,
-            transactionId: mpesaReceipt,
-            timestamp: new Date(),
-            receipt: mpesaReceipt,
-            status: 'completed'
-          });
-        } else if (resultCode !== '1032' && resultCode !== '1037') {
-          // Payment failed
-          this.updateSaleStatus(saleId, 'Failed');
-          this.io?.emit('mpesa:payment_failed', {
-            saleId,
-            resultCode,
-            message: status.Body.stkCallback.ResultDesc
-          });
+        // Look for a transaction that matches our expected amount and sale
+        const matchingTransaction = transactions.find(tx => 
+          this.validatePayment(tx, expectedAmount) && 
+          tx.status === 'completed'
+        );
+
+        if (matchingTransaction) {
+          // Payment found and confirmed
+          await this.confirmPayment(saleId, matchingTransaction);
         } else {
-          // Still pending, check again in 5 seconds
+          // Still waiting, check again in 5 seconds
           setTimeout(checkStatus, 5000);
         }
       } catch (error) {
-        console.error('Error checking transaction status:', error);
+        console.error('Error checking C2B payment status:', error);
         setTimeout(checkStatus, 5000); // Retry in 5 seconds
       }
     };
