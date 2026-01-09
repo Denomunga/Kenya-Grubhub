@@ -204,7 +204,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
                     >
                       <Button
                         size="sm"
-                        className="gap-1 bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-300 border-0 pointer-events-auto opacity-0 group-hover:opacity-100"
+                        className="gap-1 bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-300 border-0 pointer-events-auto sm:opacity-0 sm:group-hover:opacity-100"
                         variant="default"
                         onClick={(e) => {
                           e.stopPropagation();
