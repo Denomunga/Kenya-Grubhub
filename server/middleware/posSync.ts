@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import { Product } from "../models/Product";
 
 // Middleware to sync POS sales with website inventory
 export const syncPOSWithWebsite = async (req: Request, res: Response, next: NextFunction) => {
@@ -16,16 +15,9 @@ export const syncPOSWithWebsite = async (req: Request, res: Response, next: Next
         
         // Only update inventory for non-M-Pesa payments or completed sales
         // M-Pesa sales should only deduct stock when payment is confirmed
+        // Note: Stock is already deducted in the POS route, so we only emit updates here
         if (saleData.paymentMethod !== 'Mobile Money') {
-          // Update website inventory in real-time
-          saleData.items.forEach(async (item: any) => {
-            await Product.findByIdAndUpdate(item.productId, {
-              $inc: { stock: -item.quantity },
-              $set: { lastUpdated: new Date() }
-            });
-          });
-          
-          // Emit real-time update to connected clients
+          // Emit real-time update to connected clients (no stock deduction here)
           const io = (req.app as any).locals.io;
           if (io) {
             io.emit('inventory:update', {

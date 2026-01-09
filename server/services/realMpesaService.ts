@@ -202,6 +202,7 @@ class RealMpesaService {
       console.error('Error updating sale status:', error);
     }
   }
+
   // Check M-Pesa transaction status
   async checkTransactionStatus(transactionId: string): Promise<any> {
     try {
