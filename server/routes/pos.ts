@@ -6,7 +6,7 @@ import { POSSettings } from "../models/POSSettings";
 import { Order } from "../models/Order";
 import rateLimit from 'express-rate-limit';
 import { calculateTotalRevenue } from '../routes';
-import MpesaService from '../services/mpesaService';
+import MpesaService from '../services/realMpesaService';
 
 const router = Router();
 
