@@ -950,6 +950,11 @@ export default function POSSystem() {
         </div>` : ''}
       </div>
       
+      <div class="summary-row">
+        <span class="summary-label">Receipt:</span>
+        <span class="summary-value">${currentSale.receiptNumber}</span>
+      </div>
+      
       <div class="section-title">Items</div>
       <div class="items-container">
         ${currentSale.items.map(item => `
@@ -1158,6 +1163,13 @@ export default function POSSystem() {
           <span style="font-family: monospace; color: #2563eb;">${formatPriceKSHS(currentSale.change)}</span>
         </div>` : ''}
       </div> 
+      
+      <div style="text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+        <div style="font-size: 12px; font-weight: 500; color: #374151; margin-bottom: 4px;">Thank you for shopping with us!</div>
+        <div style="font-size: 10px; color: #9ca3af;">Please come again</div>
+        ${currentSale.type === 'Order' ? `
+        <div style="font-size: 9px; color: #ea580c; margin-top: 6px;">Order status updates will be sent to your contact</div>` : ''}
+      </div>
     `;
 
     document.body.appendChild(tempDiv);
@@ -2178,6 +2190,7 @@ export default function POSSystem() {
                 <div className="text-2xl font-bold text-gray-800">MS-COMPUTERS</div>
                 <div className="text-xs text-gray-500">Your Trusted Technology Partner</div>
                 <div className="text-xs text-gray-400">www.ms-computers.com</div>
+                <div className="text-sm font-mono text-blue-600 mt-2">Receipt: {currentSale.receiptNumber}</div>
               </div>
               
               {/* Transaction Details */}
