@@ -93,13 +93,23 @@ class MpesaService {
     try {
       // Update sale status in database
       const { Sale } = await import('../models/Sale');
-      await Sale.findByIdAndUpdate(saleId, {
+      const sale = await Sale.findByIdAndUpdate(saleId, {
         status: 'Completed',
         mpesaTransactionId: transaction.transactionId,
         mpesaReceipt: transaction.receipt,
         mpesaStatus: 'completed',
         paymentConfirmedAt: new Date()
       });
+
+      // Deduct stock for M-Pesa payment now that it's confirmed
+      if (sale) {
+        const { Product } = await import('../models/Product');
+        for (const item of sale.items) {
+          await Product.findByIdAndUpdate(item.productId, {
+            $inc: { stock: -item.quantity }
+          });
+        }
+      }
 
       // Remove from pending payments
       this.pendingPayments.delete(saleId);

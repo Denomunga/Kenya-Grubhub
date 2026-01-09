@@ -172,11 +172,14 @@ router.post("/sales", requireAuth, apiLimiter, async (req, res) => {
 
     await sale.save();
 
-    // Update inventory
-    for (const item of validatedItems) {
-      await Product.findByIdAndUpdate(item.productId, {
-        $inc: { stock: -item.quantity }
-      });
+    // Update inventory - only for non-M-Pesa payments
+    // M-Pesa stock will be deducted when payment is confirmed
+    if (paymentMethod !== 'Mobile Money') {
+      for (const item of validatedItems) {
+        await Product.findByIdAndUpdate(item.productId, {
+          $inc: { stock: -item.quantity }
+        });
+      }
     }
 
     // Populate cashier info
