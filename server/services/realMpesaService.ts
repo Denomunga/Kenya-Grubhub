@@ -79,7 +79,7 @@ class RealMpesaService {
       // Initiate STK Push
       const token = await this.generateAccessToken();
       
-      // Generate timestamp in correct format: YYYYMMDDTHHMMSS (no milliseconds, no timezone)
+      // Generate timestamp in correct format: YYYYMMDDHHMMSS (no T separator)
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -88,7 +88,7 @@ class RealMpesaService {
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const seconds = String(now.getSeconds()).padStart(2, '0');
       
-      const timestamp = `${year}${month}${day}T${hours}${minutes}${seconds}`;
+      const timestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
       const password = Buffer.from(`${this.config.shortcode}${this.config.passkey}${timestamp}`).toString('base64');
       
       const response = await axios.post(
@@ -99,9 +99,9 @@ class RealMpesaService {
           Timestamp: timestamp,
           TransactionType: 'CustomerPayBillOnline',
           Amount: amount,
-          PartyA: phoneNumber || '254700000000', // Default phone number
+          PartyA: phoneNumber || '254708374149', // Correct test phone number
           PartyB: this.config.shortcode,
-          PhoneNumber: phoneNumber || '254700000000',
+          PhoneNumber: phoneNumber || '254708374149', // Correct test phone number
           CallBackURL: this.config.callbackUrl,
           AccountReference: saleId,
           TransactionDesc: `Payment for sale ${saleId}`
@@ -260,7 +260,7 @@ class RealMpesaService {
     try {
       const token = await this.generateAccessToken();
       
-      // Generate timestamp in correct format: YYYYMMDDTHHMMSS
+      // Generate timestamp in correct format: YYYYMMDDHHMMSS (no T separator)
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -269,7 +269,7 @@ class RealMpesaService {
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const seconds = String(now.getSeconds()).padStart(2, '0');
       
-      const timestamp = `${year}${month}${day}T${hours}${minutes}${seconds}`;
+      const timestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
       
       const response = await axios.post(
         'https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query',
