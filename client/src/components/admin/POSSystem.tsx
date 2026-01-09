@@ -55,6 +55,7 @@ interface Sale {
   cashier: { name: string; username: string };
   auditLog?: any[];
   storeLocation?: string;
+  type?: 'POS' | 'Order'; // Add type property to distinguish between POS and Order receipts
 }
 
 interface POSSettings {
@@ -858,7 +859,7 @@ export default function POSSystem() {
       <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
       <div>Receipt: ${currentSale.receiptNumber}</div>
       <div>Date: ${new Date(currentSale.createdAt).toLocaleString()}</div>
-      <div>Cashier: ${currentSale.cashier?.name || 'Unknown'}</div>
+      <div>Cashier: ${currentSale.cashier?.name || 'Admin'}</div>
       ${currentSale.customerName ? `<div>Customer: ${currentSale.customerName}</div>` : ''}
       <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
       ${currentSale.items.map(item => `
@@ -888,6 +889,68 @@ export default function POSSystem() {
       const imgHeight = canvas.height * ratio;
       pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight);
       pdf.save(`receipt-${currentSale.receiptNumber}.pdf`);
+    } finally {
+      document.body.removeChild(tempDiv);
+    }
+  };
+
+  const saveReceiptAsPDFForSale = async (saleData: any) => {
+    if (!saleData) return;
+
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.top = '-9999px';
+    tempDiv.style.width = '300px';
+    tempDiv.style.fontFamily = 'monospace';
+    tempDiv.style.fontSize = '12px';
+
+    const isOrder = saleData.type === 'Order';
+    const title = isOrder ? 'Order Receipt' : 'Point of Sale Receipt';
+    const companyName = isOrder ? 'MS_COMPUTERS' : 'MS_COMPUTERS';
+
+    tempDiv.innerHTML = `
+      <div style="text-align: center; font-weight: bold;">${companyName}</div>
+      <div style="text-align: center;">${title}</div>
+      <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
+      <div>Receipt: ${saleData.receiptNumber}</div>
+      <div>Date: ${new Date(saleData.createdAt).toLocaleString()}</div>
+      <div>Cashier: ${saleData.cashier?.name || 'Admin'}</div>
+      ${saleData.customerName ? `<div>Customer: ${saleData.customerName}</div>` : ''}
+      ${isOrder && saleData.status ? `<div>Status: ${saleData.status}</div>` : ''}
+      <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
+      ${saleData.items.map((item: any) => `
+        <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+          <span>${item.name}</span>
+          <span>${item.quantity}x ${formatPriceKSHS(item.price * item.quantity)}</span>
+        </div>
+      `).join('')}
+      <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
+      <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span><span>${formatPriceKSHS(saleData.subtotal)}</span></div>
+      ${saleData.tax > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Tax:</span><span>${formatPriceKSHS(saleData.tax)}</span></div>` : ''}
+      ${saleData.discount > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Discount:</span><span>${formatPriceKSHS(saleData.discount)}</span></div>` : ''}
+      <div style="display: flex; justify-content: space-between; font-weight: bold;"><span>Total:</span><span>${formatPriceKSHS(saleData.total)}</span></div>
+      <div style="display: flex; justify-content: space-between;"><span>Payment (${saleData.paymentMethod}):</span><span>${formatPriceKSHS(saleData.paymentAmount)}</span></div>
+      ${saleData.change > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Change:</span><span>${formatPriceKSHS(saleData.change)}</span></div>` : ''}
+      <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+      <div style="text-align: center;">Thank you for shopping with us!</div>
+    `;
+
+    document.body.appendChild(tempDiv);
+    try {
+      const canvas = await html2canvas(tempDiv);
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const ratio = pageWidth / canvas.width;
+      const imgHeight = canvas.height * ratio;
+      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight);
+      
+      const filename = isOrder 
+        ? `order-receipt-${saleData.receiptNumber}.pdf`
+        : `receipt-${saleData.receiptNumber}.pdf`;
+      
+      pdf.save(filename);
     } finally {
       document.body.removeChild(tempDiv);
     }
@@ -1676,6 +1739,7 @@ export default function POSSystem() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Receipt #</TableHead>
+                        <TableHead>Type</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Items</TableHead>
                         <TableHead>Total</TableHead>
@@ -1687,26 +1751,69 @@ export default function POSSystem() {
                       {receipts.map((receipt: any) => (
                         <TableRow key={receipt._id}>
                           <TableCell className="font-mono">{receipt.receiptNumber}</TableCell>
+                          <TableCell>
+                            <Badge variant={receipt.type === 'Order' ? 'secondary' : 'default'}>
+                              {receipt.type || 'POS'}
+                            </Badge>
+                            {receipt.status && (
+                              <Badge variant="outline" className="ml-1">
+                                {receipt.status}
+                              </Badge>
+                            )}
+                          </TableCell>
                           <TableCell>{new Date(receipt.createdAt).toLocaleDateString()}</TableCell>
                           <TableCell>{receipt.receiptData?.items?.length || 0} items</TableCell>
                           <TableCell>{formatPriceKSHS(receipt.receiptData?.total || 0)}</TableCell>
                           <TableCell>{receipt.receiptData?.paymentMethod || 'N/A'}</TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setCurrentSale({
-                                  ...receipt.receiptData,
-                                  _id: receipt.saleId,
-                                  receiptNumber: receipt.receiptNumber,
-                                  createdAt: receipt.createdAt
-                                });
-                              }}
-                            >
-                              <Receipt className="h-3 w-3 mr-1" />
-                              View
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setCurrentSale({
+                                    ...receipt.receiptData,
+                                    _id: receipt.saleId,
+                                    receiptNumber: receipt.receiptNumber,
+                                    createdAt: receipt.createdAt,
+                                    type: receipt.type,
+                                    status: receipt.status
+                                  });
+                                }}
+                              >
+                                <Receipt className="h-3 w-3 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  // Set current sale and trigger PDF save
+                                  setCurrentSale({
+                                    ...receipt.receiptData,
+                                    _id: receipt.saleId,
+                                    receiptNumber: receipt.receiptNumber,
+                                    createdAt: receipt.createdAt,
+                                    type: receipt.type,
+                                    status: receipt.status
+                                  });
+                                  // Trigger PDF save after a brief delay to ensure currentSale is set
+                                  setTimeout(() => {
+                                    const saleData = {
+                                      ...receipt.receiptData,
+                                      _id: receipt.saleId,
+                                      receiptNumber: receipt.receiptNumber,
+                                      createdAt: receipt.createdAt,
+                                      type: receipt.type,
+                                      status: receipt.status
+                                    };
+                                    saveReceiptAsPDFForSale(saleData);
+                                  }, 100);
+                                }}
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1726,18 +1833,21 @@ export default function POSSystem() {
         <Dialog open={!!currentSale} onOpenChange={() => setCurrentSale(null)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Receipt - {currentSale.receiptNumber}</DialogTitle>
+              <DialogTitle>
+                {currentSale.type === 'Order' ? 'Order Receipt' : 'Point of Sale Receipt'} - {currentSale.receiptNumber}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 font-mono text-sm">
               <div className="text-center border-b pb-2">
                 <div className="font-bold">MS-COMPUTERS</div>
-                <div>Point of Sale Receipt</div>
+                <div>{currentSale.type === 'Order' ? 'Order Receipt' : 'Point of Sale Receipt'}</div>
               </div>
               <div>
                 <div>Receipt: {currentSale.receiptNumber}</div>
                 <div>Date: {new Date(currentSale.createdAt).toLocaleString()}</div>
                 <div>Cashier: {currentSale.cashier?.name || 'Unknown'}</div>
                 {currentSale.customerName && <div>Customer: {currentSale.customerName}</div>}
+                {currentSale.type === 'Order' && currentSale.status && <div>Status: {currentSale.status}</div>}
               </div>
               <div className="border-t border-b py-2">
                 {currentSale.items.map((item, index) => (

@@ -1853,6 +1853,47 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       // Create the order
       const o = await Order.create({ items, total, user, userId, userEmail, userPhone, eta, location });
 
+      // Create a receipt for the order
+      try {
+        const Receipt = (await import('./models/Receipt')).Receipt;
+        const receiptNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+        
+        const receipt = new Receipt({
+          saleId: o._id.toString(), // Use order ID as saleId for tracking
+          receiptNumber,
+          receiptData: {
+            items: items.map((item: any) => ({
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              total: item.price * item.quantity
+            })),
+            subtotal: total,
+            tax: 0,
+            discount: 0,
+            total,
+            paymentMethod: 'Website Order',
+            paymentAmount: total,
+            change: 0,
+            customerName: user,
+            customerPhone: userPhone,
+            cashier: {
+              name: 'Website Order',
+              username: 'website'
+            },
+            storeLocation: location?.address || 'Online Order'
+          },
+          printCount: 0,
+          printedAt: []
+        });
+        
+        await receipt.save();
+        console.log(`Receipt ${receiptNumber} created for order ${o._id}`);
+      } catch (receiptError) {
+        console.error('Failed to create receipt for order:', receiptError);
+        // Don't fail the order creation if receipt fails
+      }
+
       // Update inventory - reduce stock levels
       for (const item of items) {
         await Product.findByIdAndUpdate(item.productId, {
@@ -1937,6 +1978,18 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
       
       found.status = 'Cancelled';
       await found.save();
+
+      // Delete the associated receipt when order is cancelled
+      try {
+        const Receipt = (await import('./models/Receipt')).Receipt;
+        const deletedReceipt = await Receipt.findOneAndDelete({ saleId: found._id.toString() });
+        if (deletedReceipt) {
+          console.log(`Receipt ${deletedReceipt.receiptNumber} deleted for cancelled order ${found._id}`);
+        }
+      } catch (receiptError) {
+        console.error('Failed to delete receipt for cancelled order:', receiptError);
+        // Don't fail the cancellation if receipt deletion fails
+      }
 
       // Restore inventory - increase stock levels back
       for (const item of found.items) {

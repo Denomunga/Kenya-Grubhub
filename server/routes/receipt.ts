@@ -126,9 +126,17 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
 
     const totalSales = await Sale.countDocuments();
 
-    // Get actual printed receipts to merge with sales data
+    // Get all orders to show as receipts too (excluding cancelled orders)
+    const { Order } = await import("../models/Order");
+    const orders: any[] = await Order.find({ status: { $ne: 'Cancelled' } })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalOrders = await Order.countDocuments({ status: { $ne: 'Cancelled' } });
+
+    // Get actual printed receipts to merge with sales/order data
     const printedReceipts = await Receipt.find()
-      .populate('saleId', 'receiptNumber total createdAt')
       .sort({ createdAt: -1 });
 
     // Create a map of printed receipts by saleId for quick lookup
@@ -136,8 +144,8 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
       printedReceipts.map(receipt => [receipt.saleId.toString(), receipt])
     );
 
-    // Format all sales as receipt-like objects, merging with printed receipt data if available
-    const formattedReceipts = sales.map(sale => {
+    // Format all sales as receipt-like objects
+    const salesReceipts = sales.map(sale => {
       const printedReceipt = printedReceiptsMap.get(sale._id.toString());
       
       return {
@@ -145,6 +153,7 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
         saleId: sale._id,
         receiptNumber: sale.receiptNumber,
         createdAt: sale.createdAt,
+        type: 'POS',
         receiptData: {
           items: sale.items,
           subtotal: sale.subtotal,
@@ -164,13 +173,54 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
       };
     });
 
+    // Format all orders as receipt-like objects
+    const orderReceipts = orders.map(order => {
+      const printedReceipt = printedReceiptsMap.get(order._id.toString());
+      
+      return {
+        _id: printedReceipt?._id || order._id,
+        saleId: order._id,
+        receiptNumber: printedReceipt?.receiptNumber || `ORD-${order._id.toString().slice(-6)}`,
+        createdAt: order.createdAt,
+        type: 'Order',
+        status: order.status,
+        receiptData: {
+          items: order.items,
+          subtotal: order.total,
+          tax: 0,
+          discount: 0,
+          total: order.total,
+          paymentMethod: 'Website Order',
+          paymentAmount: order.total,
+          change: 0,
+          customerName: order.user,
+          customerPhone: order.userPhone,
+          cashier: {
+            name: 'Website Order',
+            username: 'website'
+          },
+          storeLocation: order.location?.address || 'Online Order'
+        },
+        printCount: printedReceipt?.printCount || 0,
+        printedAt: printedReceipt?.printedAt || []
+      };
+    });
+
+    // Combine and sort all receipts by date
+    const allReceipts = [...salesReceipts, ...orderReceipts].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    // Apply pagination to combined results
+    const paginatedReceipts = allReceipts.slice(skip, skip + limit);
+
     res.json({
-      receipts: formattedReceipts,
+      receipts: paginatedReceipts,
       pagination: {
         page,
         limit,
-        total: totalSales,
-        pages: Math.ceil(totalSales / limit)
+        total: totalSales + totalOrders,
+        pages: Math.ceil((totalSales + totalOrders) / limit)
       }
     });
   } catch (error) {
@@ -224,20 +274,23 @@ router.get("/stats", requireAuth, async (req, res) => {
   }
 });
 
-// Create missing receipts for existing sales
+// Create missing receipts for existing sales and orders
 router.post("/create-missing", requireAuth, async (req, res) => {
   try {
     if (req.user?.role !== "admin") {
       return res.status(403).json({ message: "Admin access required" });
     }
 
-    // Get all sales
-    const allSales = await Sale.find().sort({ createdAt: -1 });
+    // Get all sales and orders (excluding cancelled orders)
+    const [allSales, allOrders] = await Promise.all([
+      Sale.find().sort({ createdAt: -1 }),
+      (await import("../models/Order")).Order.find({ status: { $ne: 'Cancelled' } }).sort({ createdAt: -1 })
+    ]);
     
     // Get all existing receipts
     const existingReceipts = await Receipt.find();
     
-    // Create a Set of sale IDs that already have receipts
+    // Create a Set of sale/order IDs that already have receipts
     const existingSaleIds = new Set(
       existingReceipts.map(receipt => receipt.saleId)
     );
@@ -247,11 +300,16 @@ router.post("/create-missing", requireAuth, async (req, res) => {
       !existingSaleIds.has(sale._id.toString())
     );
 
-    console.log(`Found ${salesWithoutReceipts.length} sales without receipts`);
+    // Find orders that don't have receipts
+    const ordersWithoutReceipts = allOrders.filter(order => 
+      !existingSaleIds.has(order._id.toString())
+    );
 
-    if (salesWithoutReceipts.length === 0) {
+    console.log(`Found ${salesWithoutReceipts.length} sales and ${ordersWithoutReceipts.length} orders without receipts`);
+
+    if (salesWithoutReceipts.length === 0 && ordersWithoutReceipts.length === 0) {
       return res.json({
-        message: "All sales already have receipts",
+        message: "All sales and orders already have receipts",
         created: 0
       });
     }
@@ -288,8 +346,43 @@ router.post("/create-missing", requireAuth, async (req, res) => {
       }
     }
 
+    // Create receipts for missing orders
+    for (const order of ordersWithoutReceipts) {
+      try {
+        const receiptNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+        const receipt = new Receipt({
+          saleId: order._id.toString(),
+          receiptNumber,
+          receiptData: {
+            items: order.items,
+            subtotal: order.total,
+            tax: 0,
+            discount: 0,
+            total: order.total,
+            paymentMethod: 'Website Order',
+            paymentAmount: order.total,
+            change: 0,
+            customerName: order.user,
+            customerPhone: order.userPhone,
+            cashier: {
+              name: 'Website Order',
+              username: 'website'
+            },
+            storeLocation: order.location?.address || 'Online Order'
+          },
+          printCount: 0,
+          printedAt: []
+        });
+
+        await receipt.save();
+        createdReceipts.push(receipt);
+      } catch (error) {
+        console.error(`Failed to create receipt for order ${order._id}:`, error instanceof Error ? error.message : String(error));
+      }
+    }
+
     res.json({
-      message: `Successfully created ${createdReceipts.length} missing receipts`,
+      message: `Successfully created ${createdReceipts.length} missing receipts (${salesWithoutReceipts.length} sales, ${ordersWithoutReceipts.length} orders)`,
       created: createdReceipts.length,
       receipts: createdReceipts.map(r => ({
         receiptNumber: r.receiptNumber,
