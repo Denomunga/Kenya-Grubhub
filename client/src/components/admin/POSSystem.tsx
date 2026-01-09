@@ -1074,6 +1074,10 @@ export default function POSSystem() {
           <span style="color: #4b5563; font-weight: 500;">Status:</span>
           <span style="background: ${currentSale.status === 'Completed' ? '#10b981' : '#6b7280'}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px;">${currentSale.status}</span>
         </div>` : ''}
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 11px;">
+  <span style="color: #4b5563; font-weight: 500;">Receipt:</span>
+  <span style="font-family: monospace;">${currentSale.receiptNumber}</span>
+</div>
       </div>
      <div style="font-size: 10px; font-weight: 600; color: #1e40af; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Items</div>
 <div style="border: 1px solid #3b82f6; border-radius: 6px; background: #f8fafc;">
