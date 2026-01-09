@@ -124,6 +124,8 @@ export default function POSSystem() {
   const [bulkStockUpdates, setBulkStockUpdates] = useState<any[]>([]);
   const [isUpdatingStock, setIsUpdatingStock] = useState(false);
   const [selectedProductDetail, setSelectedProductDetail] = useState<any>(null);
+  const [showProductSalesHistory, setShowProductSalesHistory] = useState(false);
+  const [productSalesHistory, setProductSalesHistory] = useState<Sale[]>([]);
 
   // Sale confirmation state
   const [showSaleConfirmation, setShowSaleConfirmation] = useState(false);
@@ -261,6 +263,22 @@ export default function POSSystem() {
       }
     } catch (error) {
       console.error('Error fetching sales:', error);
+    }
+  };
+
+  const fetchProductSalesHistory = async (productId: string) => {
+    try {
+      const response = await apiFetch('/api/pos/sales?limit=100');
+      if (response.ok) {
+        const data = await response.json();
+        // Filter sales that contain the specific product
+        const productSales = data.sales.filter((sale: Sale) => 
+          sale.items.some(item => item.productId === productId)
+        );
+        setProductSalesHistory(productSales);
+      }
+    } catch (error) {
+      console.error('Error fetching product sales history:', error);
     }
   };
 
@@ -2301,12 +2319,126 @@ export default function POSSystem() {
                     >
                       Update Stock
                     </Button>
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        if (selectedProductDetail?._id) {
+                          fetchProductSalesHistory(selectedProductDetail._id);
+                          setShowProductSalesHistory(true);
+                        }
+                      }}
+                    >
                       View Sales History
                     </Button>
                   </div>
                 </div>
               </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Product Sales History Modal */}
+      {showProductSalesHistory && (
+        <Dialog open={showProductSalesHistory} onOpenChange={setShowProductSalesHistory}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Sales History - {selectedProductDetail?.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="text-sm text-gray-600">
+                Showing all sales that include this product
+              </div>
+              
+              {productSalesHistory.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No sales found for this product
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Receipt</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Cashier</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Unit Price</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {productSalesHistory.map((sale) => {
+                      const productItem = sale.items.find(item => item.productId === selectedProductDetail?._id);
+                      return (
+                        <TableRow key={sale._id}>
+                          <TableCell className="font-mono">{sale.receiptNumber}</TableCell>
+                          <TableCell>{new Date(sale.createdAt).toLocaleDateString()}</TableCell>
+                          <TableCell>{sale.cashier.name}</TableCell>
+                          <TableCell>{productItem?.quantity || 0}</TableCell>
+                          <TableCell>{formatPriceKSHS(productItem?.price || 0)}</TableCell>
+                          <TableCell>{formatPriceKSHS((productItem?.price || 0) * (productItem?.quantity || 0))}</TableCell>
+                          <TableCell>{sale.paymentMethod}</TableCell>
+                          <TableCell>
+                            <Badge variant={sale.status === 'Completed' ? 'default' : 'destructive'}>
+                              {sale.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+              
+              {/* Summary Statistics */}
+              {productSalesHistory.length > 0 && (
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-2">Summary</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Total Sales:</span>
+                      <div className="font-medium">{productSalesHistory.length}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Total Quantity Sold:</span>
+                      <div className="font-medium">
+                        {productSalesHistory.reduce((sum, sale) => {
+                          const item = sale.items.find(item => item.productId === selectedProductDetail?._id);
+                          return sum + (item?.quantity || 0);
+                        }, 0)}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Total Revenue:</span>
+                      <div className="font-medium">
+                        {formatPriceKSHS(
+                          productSalesHistory.reduce((sum, sale) => {
+                            const item = sale.items.find(item => item.productId === selectedProductDetail?._id);
+                            return sum + ((item?.price || 0) * (item?.quantity || 0));
+                          }, 0)
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Average Price:</span>
+                      <div className="font-medium">
+                        {formatPriceKSHS(
+                          productSalesHistory.reduce((sum, sale) => {
+                            const item = sale.items.find(item => item.productId === selectedProductDetail?._id);
+                            return sum + (item?.price || 0);
+                          }, 0) / productSalesHistory.length
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
