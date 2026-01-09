@@ -9,14 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, Printer, Search, BarChart3, Users, TrendingUp, Heart, LogOut, Download, RotateCcw, Clock } from 'lucide-react';
+import { Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, Printer, Search, BarChart3, Users, TrendingUp, Heart, LogOut,  RotateCcw, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiFetch } from '@/lib/api';
 import { formatPriceKSHS } from '@/lib/format';
 import { useData } from '@/lib/data';
 import { useHybridAuth } from '@/lib/hybrid-auth';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import MpesaPaymentDialog from './MpesaPaymentDialog';
 
 interface Product {
@@ -1037,334 +1035,7 @@ export default function POSSystem() {
     receiptWindow.print();
   };
 
-  const saveReceiptAsPDF = async () => {
-    if (!currentSale) return;
 
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.top = '-9999px';
-    tempDiv.style.width = '300px';
-    tempDiv.style.fontFamily = 'monospace';
-    tempDiv.style.fontSize = '12px';
-
-    tempDiv.innerHTML = `
-      <div style="text-align: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
-        <div style="font-size: 20px; font-weight: bold; color: #1f2937; margin-bottom: 4px;">MS-COMPUTERS</div>
-        <div style="font-size: 10px; color: #6b7280; margin-bottom: 2px;">Your Trusted Technology Partner</div>
-        <div style="font-size: 10px; color: #9ca3af;">www.ms-computers.com</div>
-      </div>
-      
-      <div style="margin-bottom: 16px; font-size: 11px;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-          <span style="color: #4b5563; font-weight: 500;">Date:</span>
-          <span style="font-family: monospace;">${new Date(currentSale.createdAt).toLocaleString()}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-          <span style="color: #4b5563; font-weight: 500;">Cashier:</span>
-          <span>${currentSale.cashier?.name || 'Admin'}</span>
-        </div>
-        ${currentSale.customerName ? `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-          <span style="color: #4b5563; font-weight: 500;">Customer:</span>
-          <span>${currentSale.customerName}</span>
-        </div>` : ''}
-        ${currentSale.type === 'Order' && currentSale.status ? `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-          <span style="color: #4b5563; font-weight: 500;">Status:</span>
-          <span style="background: ${currentSale.status === 'Completed' ? '#10b981' : '#6b7280'}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px;">${currentSale.status}</span>
-        </div>` : ''}
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 11px;">
-  <span style="color: #4b5563; font-weight: 500;">Receipt:</span>
-  <span style="font-family: monospace;">${currentSale.receiptNumber}</span>
-</div>
-      </div>
-     <div style="font-size: 10px; font-weight: 600; color: #1e40af; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Items</div>
-<div style="border: 1px solid #3b82f6; border-radius: 6px; background: #f8fafc;">
-  ${currentSale.items.map(item => `
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #e2e8f0;">
-      <div style="flex: 1;">
-        <div style="font-weight: 500; color: #1e293b; font-size: 11px;">${item.name}</div>
-        <div style="color: #64748b; font-size: 9px;">${item.quantity} × ${formatPriceKSHS(item.price)}</div>
-      </div>
-      <div style="font-family: monospace; font-weight: 600; color: #1e40af; font-size: 11px;">
-        ${formatPriceKSHS(item.price * item.quantity)}
-      </div>
-    </div>
-  `).join('')}
-</div>
-      </div>
-           <div style="border-top: 1px solid  #3b82f6; padding-top: 16px;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
-          <span style="color: #4b5;">Subtotal:</span>
-          <span style="font-family: monospace;">${formatPriceKSHS(currentSale.subtotal)}</span>
-        </div>
-        ${currentSale.tax > 0 ? `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
-          <span style="color: #4b5563;">Tax:</span>
-          <span style="font-family: monospace;">${formatPriceKSHS(currentSale.tax)}</span>
-        </div>` : ''}
-        ${currentSale.discount > 0 ? `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
-          <span style="color: #059669;">Discount:</span>
-          <span style="font-family: monospace; color: #059669;">-${formatPriceKSHS(currentSale.discount)}</span>
-        </div>` : ''}
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding-top: 6px; border-top: 1px solid #e5e7eb;">
-          <span style="font-size: 14px; font-weight: bold; color: #1f2937;">Total:</span>
-          <span style="font-size: 14px; font-weight: bold; font-family: monospace; color: #1f2937;">
-            ${formatPriceKSHS(currentSale.total)}
-          </span>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
-          <span style="color: #4b5563;">Payment (${currentSale.paymentMethod}):</span>
-          <span style="font-family: monospace;">${formatPriceKSHS(currentSale.paymentAmount)}</span>
-        </div>
-        ${currentSale.change > 0 ? `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
-          <span style="color: #2563eb;">Change:</span>
-          <span style="font-family: monospace; color: #2563eb;">${formatPriceKSHS(currentSale.change)}</span>
-        </div>` : ''}
-      </div>
-      
-      <!-- M-Pesa Transaction Details -->
-      ${currentSale.paymentMethod === 'Mobile Money' && currentSale.mpesaTransactionId ? `
-      <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
-      <div style="text-align: center; font-weight: bold; margin-bottom: 5px;">M-Pesa Transaction Details</div>
-      <div style="display: flex; justify-content: space-between;"><span>Transaction ID:</span><span>${currentSale.mpesaTransactionId}</span></div>
-      ${currentSale.mpesaReceipt ? `<div style="display: flex; justify-content: space-between;"><span>M-Pesa Receipt:</span><span>${currentSale.mpesaReceipt}</span></div>` : ''}
-      ${currentSale.customerPhone ? `<div style="display: flex; justify-content: space-between;"><span>Payer Phone:</span><span>${currentSale.customerPhone}</span></div>` : ''}
-      ${currentSale.paymentConfirmedAt ? `<div style="display: flex; justify-content: space-between;"><span>Confirmed At:</span><span>${new Date(currentSale.paymentConfirmedAt).toLocaleString()}</span></div>` : ''}
-      ` : ''}
-      
-           <div style="border-top: 1px solid #e5e7eb; padding-top: 16px;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
-          <span style="color: #4b5563;">Subtotal:</span>
-          <span style="font-family: monospace;">${formatPriceKSHS(currentSale.subtotal)}</span>
-        </div>
-        ${currentSale.tax > 0 ? `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
-          <span style="color: #4b5563;">Tax:</span>
-          <span style="font-family: monospace;">${formatPriceKSHS(currentSale.tax)}</span>
-        </div>` : ''}
-        ${currentSale.discount > 0 ? `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
-          <span style="color: #059669;">Discount:</span>
-          <span style="font-family: monospace; color: #059669;">-${formatPriceKSHS(currentSale.discount)}</span>
-        </div>` : ''}
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding-top: 6px; border-top: 1px solid #e5e7eb;">
-          <span style="font-size: 14px; font-weight: bold; color: #1f2937;">Total:</span>
-          <span style="font-size: 14px; font-weight: bold; font-family: monospace; color: #1f2937;">
-            ${formatPriceKSHS(currentSale.total)}
-          </span>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
-          <span style="color: #4b5563;">Payment (${currentSale.paymentMethod}):</span>
-          <span style="font-family: monospace;">${formatPriceKSHS(currentSale.paymentAmount)}</span>
-        </div>
-        ${currentSale.change > 0 ? `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
-          <span style="color: #2563eb;">Change:</span>
-          <span style="font-family: monospace; color: #2563eb;">${formatPriceKSHS(currentSale.change)}</span>
-        </div>` : ''}
-      </div> 
-      
-      <div style="text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
-        <div style="font-size: 12px; font-weight: 500; color: #374151; margin-bottom: 4px;">Thank you for shopping with us!</div>
-        <div style="font-size: 10px; color: #9ca3af;">Please come again</div>
-        ${currentSale.type === 'Order' ? `
-        <div style="font-size: 9px; color: #ea580c; margin-top: 6px;">Order status updates will be sent to your contact</div>` : ''}
-      </div>
-    `;
-
-    document.body.appendChild(tempDiv);
-    try {
-      const canvas = await html2canvas(tempDiv);
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const ratio = pageWidth / canvas.width;
-      const imgHeight = canvas.height * ratio;
-      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight);
-      pdf.save(`receipt-${currentSale.receiptNumber}.pdf`);
-    } finally {
-      document.body.removeChild(tempDiv);
-    }
-  };
-
-  const saveReceiptAsPDFForSale = async (saleData: any) => {
-    if (!saleData) return;
-
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.top = '-9999px';
-    tempDiv.style.width = '280px';
-    tempDiv.style.fontFamily = 'monospace';
-    tempDiv.style.fontSize = '10px';
-    tempDiv.style.padding = '20px';
-    tempDiv.style.backgroundColor = 'white';
-
-    const isOrder = saleData.type === 'Order';
-
-    tempDiv.innerHTML = `
-      <style>
-        .center { text-align: center; }
-        .bold { font-weight: bold; }
-        .line { border-bottom: 1px dashed #000; margin: 10px 0; }
-        .right { text-align: right; }
-        .header { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb; }
-        .company-name { font-size: 16px; font-weight: bold; color: #1f2937; margin-bottom: 4px; }
-        .tagline { font-size: 9px; color: #6b7280; margin-bottom: 2px; }
-        .website { font-size: 9px; color: #9ca3af; }
-        .section-title { font-size: 9px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .items-container { border: 1px solid #3b82f6; border-radius: 6px; background: white; margin-bottom: 16px; }
-        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid #3b82f6; }
-        .item-name { font-weight: 500; color: #1f2937; font-size: 10px; }
-        .item-details { color: #6b7280; font-size: 8px; }
-        .item-price { font-family: monospace; font-weight: 600; color: #1f2937; font-size: 10px; }
-        .summary-section { border-top: 1px solid #3b82f6; padding-top: 16px; }
-        .summary-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 10px; }
-        .summary-label { color: #4b5563; }
-        .summary-value { font-family: monospace; }
-        .total-row { margin-bottom: 8px; padding-top: 6px; border-top: 1px solid #3b82f6; }
-        .total-label { font-size: 12px; font-weight: bold; color: #1f2937; }
-        .total-value { font-size: 12px; font-weight: bold; font-family: monospace; color: #1f2937; }
-        .discount-label { color: #059669; }
-        .discount-value { font-family: monospace; color: #059669; }
-        .change-label { color: #2563eb; }
-        .change-value { font-family: monospace; color: #2563eb; }
-        .footer { text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
-        .thank-you { font-size: 10px; font-weight: 500; color: #374151; margin-bottom: 4px; }
-        .come-again { font-size: 9px; color: #9ca3af; }
-        .order-note { font-size: 8px; color: #ea580c; margin-top: 6px; }
-      </style>
-      
-      <div class="header">
-        <div class="center company-name">MS-COMPUTERS</div>
-        <div class="center tagline">Your Trusted Technology Partner</div>
-        <div class="center website">www.ms-computers.com</div>
-      </div>
-      
-      <div style="margin-bottom: 16px; font-size: 10px;">
-        <div class="summary-row">
-          <span class="summary-label">Date:</span>
-          <span class="summary-value">${new Date(saleData.createdAt).toLocaleString()}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">Cashier:</span>
-          <span>${saleData.cashier?.name || 'Unknown'}</span>
-        </div>
-        ${saleData.customerName ? `
-        <div class="summary-row">
-          <span class="summary-label">Customer:</span>
-          <span>${saleData.customerName}</span>
-        </div>` : ''}
-        ${isOrder && saleData.status ? `
-        <div class="summary-row">
-          <span class="summary-label">Status:</span>
-          <span style="background: ${saleData.status === 'Completed' ? '#10b981' : '#6b7280'}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8px;">${saleData.status}</span>
-        </div>` : ''}
-      </div>
-      
-      <div class="summary-row">
-        <span class="summary-label">Receipt:</span>
-        <span class="summary-value">${saleData.receiptNumber}</span>
-      </div>
-      
-      <div class="section-title">Items</div>
-      <div class="items-container">
-        ${saleData.items.map((item: any) => `
-          <div class="item-row">
-            <div style="flex: 1;">
-              <div class="item-name">${item.name}</div>
-              <div class="item-details">${item.quantity} × ${formatPriceKSHS(item.price)}</div>
-            </div>
-            <div class="item-price">${formatPriceKSHS(item.price * item.quantity)}</div>
-          </div>
-        `).join('')}
-      </div>
-      
-      <div class="summary-section">
-        <div class="summary-row">
-          <span class="summary-label">Subtotal:</span>
-          <span class="summary-value">${formatPriceKSHS(saleData.subtotal)}</span>
-        </div>
-        ${saleData.tax > 0 ? `
-        <div class="summary-row">
-          <span class="summary-label">Tax:</span>
-          <span class="summary-value">${formatPriceKSHS(saleData.tax)}</span>
-        </div>` : ''}
-        ${saleData.discount > 0 ? `
-        <div class="summary-row">
-          <span class="discount-label">Discount:</span>
-          <span class="discount-value">-${formatPriceKSHS(saleData.discount)}</span>
-        </div>` : ''}
-        <div class="summary-row total-row">
-          <span class="total-label">Total:</span>
-          <span class="total-value">${formatPriceKSHS(saleData.total)}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">Payment (${saleData.paymentMethod}):</span>
-          <span class="summary-value">${formatPriceKSHS(saleData.paymentAmount)}</span>
-        </div>
-        ${saleData.change > 0 ? `
-        <div class="summary-row">
-          <span class="change-label">Change:</span>
-          <span class="change-value">${formatPriceKSHS(saleData.change)}</span>
-        </div>` : ''}
-      </div>
-      
-      ${saleData.paymentMethod === 'Mobile Money' && saleData.mpesaTransactionId ? `
-      <div class="line"></div>
-      <div class="center bold" style="margin-bottom: 8px; font-size: 10px;">M-Pesa Transaction Details</div>
-      <div class="summary-row">
-        <span>Transaction ID:</span>
-        <span class="summary-value">${saleData.mpesaTransactionId}</span>
-      </div>
-      ${saleData.mpesaReceipt ? `
-      <div class="summary-row">
-        <span>M-Pesa Receipt:</span>
-        <span class="summary-value">${saleData.mpesaReceipt}</span>
-      </div>` : ''}
-      ${saleData.customerPhone ? `
-      <div class="summary-row">
-        <span>Payer Phone:</span>
-        <span class="summary-value">${saleData.customerPhone}</span>
-      </div>` : ''}
-      ${saleData.paymentConfirmedAt ? `
-      <div class="summary-row">
-        <span>Confirmed At:</span>
-        <span class="summary-value">${new Date(saleData.paymentConfirmedAt).toLocaleString()}</span>
-      </div>` : ''}
-      ` : ''}
-      
-      <div class="footer">
-        <div class="thank-you">Thank you for shopping with us!</div>
-        <div class="come-again">Please come again</div>
-        ${isOrder ? `
-        <div class="order-note">Order status updates will be sent to your contact</div>` : ''}
-      </div>
-    `;
-
-    document.body.appendChild(tempDiv);
-    try {
-      const canvas = await html2canvas(tempDiv);
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const ratio = pageWidth / canvas.width;
-      const imgHeight = canvas.height * ratio;
-      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight);
-      
-      const filename = isOrder 
-        ? `order-receipt-${saleData.receiptNumber}.pdf`
-        : `receipt-${saleData.receiptNumber}.pdf`;
-      
-      pdf.save(filename);
-    } finally {
-      document.body.removeChild(tempDiv);
-    }
-  };
 
   return (
     <div className="space-y-8">
@@ -2235,7 +1906,7 @@ export default function POSSystem() {
                                 <Receipt className="h-3 w-3 mr-1" />
                                 View
                               </Button>
-                              <Button
+                              {/* <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => {
@@ -2263,7 +1934,7 @@ export default function POSSystem() {
                                 }}
                               >
                                 <Download className="h-3 w-3" />
-                              </Button>
+                              </Button> */}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -2291,7 +1962,7 @@ export default function POSSystem() {
             setCurrentSale(null);
           }
         }}>
-          <DialogContent className="max-w-md bg-blue-50 border-2 border-blue-200 shadow-xl">
+          <DialogContent className="max-w-[95vw] w-full mx-4 bg-blue-50 border-2 border-blue-200 shadow-xl">
             <DialogHeader className="text-center pb-4">
               <DialogTitle className="text-lg font-bold">
                 {currentSale.type === 'Order' ? 'Order Receipt' : 'Point of Sale Receipt'}
@@ -2301,7 +1972,7 @@ export default function POSSystem() {
               </div>
             </DialogHeader>
             
-            <div className="bg-linear-to-b from-gray-50 to-white rounded-lg p-6 space-y-6 border">
+            <div className="bg-linear-to-b from-gray-50 to-white rounded-lg p-3 sm:p-6 space-y-4 sm:space-y-6 border overflow-x-auto">
               {/* Header */}
               <div className="text-center space-y-2 border-b pb-4">
                 <div className="text-2xl font-bold text-gray-800">MS-COMPUTERS</div>
@@ -2402,15 +2073,15 @@ export default function POSSystem() {
               </div>
             </div>
             
-            <div className="flex gap-2 mt-4">
-              <Button onClick={printReceipt} className="flex-1">
+            <div className="flex flex-col sm:flex-row gap-2 mt-4">
+              <Button onClick={printReceipt} className="flex-1 w-full sm:w-auto">
                 <Printer className="h-4 w-4 mr-2" />
                 Print Receipt
               </Button>
-              <Button onClick={saveReceiptAsPDF} variant="outline" className="flex-1">
+              {/* <Button onClick={saveReceiptAsPDF} variant="outline" className="flex-1">
                 <Download className="h-4 w-4 mr-2" />
                 Save as PDF
-              </Button>
+              </Button> */}
               <Button variant="outline" onClick={() => {
                 if (cameFromProductSalesHistory) {
                   // Go back to product sales history
