@@ -564,16 +564,26 @@ export default function POSSystem() {
         const response = await apiFetch(`/api/pos/sales/${currentSaleId}`);
         if (response.ok) {
           const sale = await response.json();
-          await createReceiptForSale(sale);
-          setCart([]);
-          setPaymentAmount('');
-          setCustomerName('');
-          setCustomerPhone('');
-          setDiscount(0);
-          setTax(0);
-          setWaitingForPayment(false);
-          setCurrentSaleId('');
-          toast({ title: 'Success', description: 'Payment confirmed and receipt generated' });
+          
+          // Only generate receipt if payment status is completed
+          if (sale.mpesaStatus === 'completed' || sale.status === 'Completed') {
+            await createReceiptForSale(sale);
+            setCart([]);
+            setPaymentAmount('');
+            setCustomerName('');
+            setCustomerPhone('');
+            setDiscount(0);
+            setTax(0);
+            setWaitingForPayment(false);
+            setCurrentSaleId('');
+            toast({ title: 'Success', description: 'Payment confirmed and receipt generated' });
+          } else {
+            toast({ 
+              title: 'Payment Not Completed', 
+              description: 'Payment status is not completed. Receipt not generated.',
+              variant: 'destructive' 
+            });
+          }
         }
       } catch (error) {
         toast({ title: 'Error', description: 'Failed to confirm payment', variant: 'destructive' });

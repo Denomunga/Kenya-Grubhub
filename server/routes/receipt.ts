@@ -118,13 +118,13 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
-    // Get all sales to show as receipts
-    const sales = await Sale.find()
+    // Get all COMPLETED sales to show as receipts
+    const sales = await Sale.find({ status: 'Completed' })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const totalSales = await Sale.countDocuments();
+    const totalSales = await Sale.countDocuments({ status: 'Completed' });
 
     // Get all orders to show as receipts too (excluding cancelled orders)
     const { Order } = await import("../models/Order");
@@ -246,6 +246,7 @@ router.get("/stats", requireAuth, async (req, res) => {
         .limit(10)
         .populate('saleId', 'receiptNumber total'),
       Sale.aggregate([
+        { $match: { status: 'Completed' } },
         {
           $group: {
             _id: null,
@@ -281,9 +282,9 @@ router.post("/create-missing", requireAuth, async (req, res) => {
       return res.status(403).json({ message: "Admin access required" });
     }
 
-    // Get all sales and orders (excluding cancelled orders)
+    // Get all COMPLETED sales and orders (excluding cancelled orders)
     const [allSales, allOrders] = await Promise.all([
-      Sale.find().sort({ createdAt: -1 }),
+      Sale.find({ status: 'Completed' }).sort({ createdAt: -1 }),
       (await import("../models/Order")).Order.find({ status: { $ne: 'Cancelled' } }).sort({ createdAt: -1 })
     ]);
     
@@ -295,7 +296,7 @@ router.post("/create-missing", requireAuth, async (req, res) => {
       existingReceipts.map(receipt => receipt.saleId)
     );
 
-    // Find sales that don't have receipts
+    // Find completed sales that don't have receipts
     const salesWithoutReceipts = allSales.filter(sale => 
       !existingSaleIds.has(sale._id.toString())
     );
