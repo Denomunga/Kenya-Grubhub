@@ -1017,12 +1017,12 @@ export default function POSSystem() {
       </div>` : ''}
       ` : ''}
       
-      <div class="footer">
-        <div class="thank-you">Thank you for shopping with us!</div>
-        <div class="come-again">Please come again</div>
-        ${currentSale.type === 'Order' ? `
-        <div class="order-note">Order status updates will be sent to your contact</div>` : ''}
-      </div>
+     <div style="text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+  <div style="font-size: 12px; font-weight: 500; color: #374151; margin-bottom: 4px;">Thank you for shopping with us!</div>
+  <div style="font-size: 10px; color: #9ca3af;">Please come again</div>
+  ${currentSale.type === 'Order' ? `
+  <div style="font-size: 9px; color: #ea580c; margin-top: 6px;">Order status updates will be sent to your contact</div>` : ''}
+</div>
     </body>
   </html>
 `;
