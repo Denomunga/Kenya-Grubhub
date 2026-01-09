@@ -2243,13 +2243,13 @@ export default function POSSystem() {
                   </div>
                 )}
                 <div className="flex justify-between items-center pt-2 border-t">
-                  <span className="text-lg font-bold text-gray-800">Total:</span>
-                  <span className="text-lg font-bold font-mono text-gray-800">
+                  <span className="text-lg font-bold text-black">Total:</span>
+                  <span className="text-lg font-bold font-mono text-black">
                     {formatPriceKSHS(currentSale.total)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm pt-1">
-                  <span className="text-gray-600">Payment ({currentSale.paymentMethod}):</span>
+                  <span className="text-black">Payment ({currentSale.paymentMethod}):</span>
                   <span className="font-mono">{formatPriceKSHS(currentSale.paymentAmount)}</span>
                 </div>
                 {currentSale.change > 0 && (
@@ -2262,8 +2262,8 @@ export default function POSSystem() {
               
               {/* Footer */}
               <div className="text-center space-y-2 border-t pt-4">
-                <div className="text-sm font-medium text-gray-700">Thank you for shopping with us!</div>
-                <div className="text-xs text-gray-400">Please come again</div>
+                <div className="text-sm font-medium text-black">Thank you for shopping with us!</div>
+                <div className="text-xs text-black">Please come again</div>
                 {currentSale.type === 'Order' && (
                   <div className="text-xs text-orange-600 mt-2">
                     Order status updates will be sent to your contact
