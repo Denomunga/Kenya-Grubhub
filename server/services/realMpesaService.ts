@@ -78,7 +78,17 @@ class RealMpesaService {
     try {
       // Initiate STK Push
       const token = await this.generateAccessToken();
-      const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.[0-9]{3}/g, '');
+      
+      // Generate timestamp in correct format: YYYYMMDDTHHMMSS (no milliseconds, no timezone)
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      
+      const timestamp = `${year}${month}${day}T${hours}${minutes}${seconds}`;
       const password = Buffer.from(`${this.config.shortcode}${this.config.passkey}${timestamp}`).toString('base64');
       
       const response = await axios.post(
@@ -245,16 +255,27 @@ class RealMpesaService {
       console.error('Error updating sale status:', error);
     }
   }
+  // Check M-Pesa transaction status
   async checkTransactionStatus(transactionId: string): Promise<any> {
     try {
       const token = await this.generateAccessToken();
-      const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.[0-9]{3}/g, '');
+      
+      // Generate timestamp in correct format: YYYYMMDDTHHMMSS
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      
+      const timestamp = `${year}${month}${day}T${hours}${minutes}${seconds}`;
       
       const response = await axios.post(
         'https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query',
         {
           BusinessShortCode: this.config.shortcode,
-          Password: this.config.passkey,
+          Password: Buffer.from(`${this.config.shortcode}${this.config.passkey}${timestamp}`).toString('base64'),
           Timestamp: timestamp,
           CheckoutRequestID: transactionId
         },
@@ -266,7 +287,6 @@ class RealMpesaService {
         }
       );
 
-      // Use accessToken to avoid unused warning
       console.log(`Checking transaction status for ${transactionId} with token ${token.substring(0, 10)}...`);
 
       return response.data;
