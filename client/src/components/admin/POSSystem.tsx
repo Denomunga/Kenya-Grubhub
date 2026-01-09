@@ -917,7 +917,7 @@ export default function POSSystem() {
         .change-label { color: #2563eb; }
         .change-value { font-family: monospace; color: #2563eb; }
         .footer { text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid  #3b82; }
-        .thank-you { font-size: 12px; font-weight: 500; color: #; margin-bottom: 4px; }
+        .thank-you { font-size: 12px; font-weight: 500; color: #374151; margin-bottom: 4px; }
         .come-again { font-size: 10px; color: #9ca3af; }
         .order-note { font-size: 9px; color: #ea580c; margin-top: 6px; }
       </style>
