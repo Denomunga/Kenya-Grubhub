@@ -129,9 +129,9 @@ export default function MpesaPaymentDialog({
         
         <div className="text-center space-y-6">
           {/* Amount Display */}
-          <div className="bg-gray-900 rounded-lg p-4">
-            <p className="text-sm text-gray-900 mb-1">Amount to Pay</p>
-            <p className="text-3xl font-bold text-gray-900">
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-sm text-black mb-1">Amount to Pay</p>
+            <p className="text-3xl font-bold text-black">
               {formatPriceKSHS(amount)}
             </p>
           </div>
@@ -146,10 +146,10 @@ export default function MpesaPaymentDialog({
           {status === 'waiting' && (
             <div className="space-y-2">
               <p className="text-sm text-black">Time remaining</p>
-              <div className="text-2xl font-mono font-bold text-gray-900">
+              <div className="text-2xl font-mono font-bold text-black">
                 {formatTime(timeLeft)}
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-black">
                 Please make payment to your M-Pesa business number
               </p>
             </div>
