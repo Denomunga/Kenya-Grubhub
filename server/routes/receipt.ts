@@ -43,10 +43,19 @@ router.post("/save", requireAuth, apiLimiter, async (req, res) => {
       return res.status(400).json({ message: "Sale ID and receipt data are required" });
     }
 
-    // Verify the sale exists
+    // Verify the sale exists and is completed
     const sale = await Sale.findById(saleId);
     if (!sale) {
       return res.status(404).json({ message: "Sale not found" });
+    }
+
+    // Only allow receipts for completed sales
+    if (sale.status !== 'Completed' && sale.mpesaStatus !== 'completed') {
+      return res.status(400).json({ 
+        message: "Cannot create receipt for incomplete or failed sale",
+        saleStatus: sale.status,
+        mpesaStatus: sale.mpesaStatus
+      });
     }
 
     // Check if receipt already exists for this sale

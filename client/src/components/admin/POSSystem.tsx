@@ -618,6 +618,11 @@ export default function POSSystem() {
 
   const createReceiptForSale = async (sale: any) => {
     try {
+      // Only create receipts for successfully completed sales
+      if (sale.status !== 'Completed' && sale.mpesaStatus !== 'completed') {
+        console.warn('Skipping receipt creation for non-completed sale:', sale.receiptNumber, sale.status, sale.mpesaStatus);
+        return;
+      }
       const receiptData = {
         items: sale.items.map((item: any) => ({
           name: item.name,
@@ -1043,9 +1048,36 @@ export default function POSSystem() {
       {/* M-Pesa Payment Dialog */}
       <MpesaPaymentDialog
         open={waitingForPayment}
-        onClose={() => {
+        onClose={async () => {
           setWaitingForPayment(false);
           setCurrentSaleId('');
+          setCurrentSale(null); // Clear the current sale to prevent receipt dialog
+          
+          // Clear cart and reset form for clean state after cancellation
+          setCart([]);
+          setPaymentAmount('');
+          setCustomerName('');
+          setCustomerPhone('');
+          setDiscount(0);
+          setTax(0);
+          
+          // Cancel the M-Pesa payment by updating sale status to Failed
+          if (currentSaleId) {
+            try {
+              await apiFetch(`/api/pos/sales/${currentSaleId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  status: 'Failed',
+                  mpesaStatus: 'failed'
+                })
+              });
+              console.log('M-Pesa payment cancelled and sale status updated to Failed');
+            } catch (error) {
+              console.error('Failed to cancel M-Pesa payment:', error);
+            }
+          }
+          
           // Don't generate receipt when dialog is canceled
           toast({ title: 'Payment Canceled', description: 'M-Pesa payment was canceled' });
         }}

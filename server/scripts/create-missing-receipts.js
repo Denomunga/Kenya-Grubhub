@@ -12,9 +12,9 @@ async function createMissingReceipts() {
   try {
     console.log('Starting to create missing receipts...');
 
-    // Get all sales
-    const allSales = await Sale.find().sort({ createdAt: -1 });
-    console.log(`Found ${allSales.length} total sales`);
+    // Get all COMPLETED sales only
+    const allSales = await Sale.find({ status: 'Completed' }).sort({ createdAt: -1 });
+    console.log(`Found ${allSales.length} completed sales`);
 
     // Get all existing receipts
     const existingReceipts = await Receipt.find();

@@ -243,9 +243,9 @@ router.patch("/sales/:id([0-9a-fA-F]{24})", requireAuth, async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const { status, notes } = req.body;
+    const { status, notes, mpesaStatus } = req.body;
 
-    if (!['Completed', 'Refunded', 'Cancelled'].includes(status)) {
+    if (!['Completed', 'Refunded', 'Cancelled', 'Failed'].includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
     }
 
@@ -265,6 +265,7 @@ router.patch("/sales/:id([0-9a-fA-F]{24})", requireAuth, async (req, res) => {
 
     sale.status = status;
     if (notes) sale.notes = notes;
+    if (mpesaStatus) sale.mpesaStatus = mpesaStatus;
     
     // Add audit log
     sale.auditLog.push({
