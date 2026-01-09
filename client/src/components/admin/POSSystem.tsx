@@ -463,7 +463,11 @@ export default function POSSystem() {
     const payment = parseFloat(paymentAmount);
 
     if (isNaN(payment) || payment < total) {
-      toast({ title: 'Error', description: 'Invalid payment amount', variant: 'destructive' });
+      toast({ 
+        title: 'Error', 
+        description: `Payment amount (${formatPriceKSHS(payment)}) is less than total (${formatPriceKSHS(total)})`, 
+        variant: 'destructive' 
+      });
       return;
     }
 
@@ -1185,7 +1189,16 @@ export default function POSSystem() {
                       min="0"
                       step="0.01"
                       value={discount}
-                      onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const newDiscount = parseFloat(e.target.value) || 0;
+                        setDiscount(newDiscount);
+                        // Auto-adjust payment amount if it's less than the new total
+                        const currentPayment = parseFloat(paymentAmount) || 0;
+                        const newTotal = getSubtotal() + tax - newDiscount;
+                        if (currentPayment < newTotal) {
+                          setPaymentAmount(newTotal.toString());
+                        }
+                      }}
                     />
                   </div>
                   <div>
@@ -1196,7 +1209,16 @@ export default function POSSystem() {
                       min="0"
                       step="0.01"
                       value={tax}
-                      onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const newTax = parseFloat(e.target.value) || 0;
+                        setTax(newTax);
+                        // Auto-adjust payment amount if it's less than the new total
+                        const currentPayment = parseFloat(paymentAmount) || 0;
+                        const newTotal = getSubtotal() + newTax - discount;
+                        if (currentPayment < newTotal) {
+                          setPaymentAmount(newTotal.toString());
+                        }
+                      }}
                     />
                   </div>
                 </div>
