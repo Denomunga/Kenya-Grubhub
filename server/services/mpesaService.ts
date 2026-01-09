@@ -157,10 +157,21 @@ class MpesaService {
   private async updateSaleStatus(saleId: string, status: string) {
     try {
       const { Sale } = await import('../models/Sale');
-      await Sale.findByIdAndUpdate(saleId, {
+      
+      // For failed payments, clear M-Pesa transaction details
+      const updateData: any = {
         status,
         mpesaStatus: status.toLowerCase()
-      });
+      };
+      
+      if (status === 'Failed') {
+        // Clear M-Pesa transaction details for failed payments
+        updateData.mpesaTransactionId = undefined;
+        updateData.mpesaReceipt = undefined;
+        updateData.mpesaPhoneNumber = undefined;
+      }
+      
+      await Sale.findByIdAndUpdate(saleId, updateData);
     } catch (error) {
       console.error('Error updating sale status:', error);
     }

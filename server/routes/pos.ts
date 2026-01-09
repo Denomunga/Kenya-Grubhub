@@ -267,6 +267,14 @@ router.patch("/sales/:id([0-9a-fA-F]{24})", requireAuth, async (req, res) => {
     if (notes) sale.notes = notes;
     if (mpesaStatus) sale.mpesaStatus = mpesaStatus;
     
+    // For failed payments, clear M-Pesa transaction details
+    if (status === 'Failed') {
+      sale.mpesaTransactionId = undefined;
+      sale.mpesaReceipt = undefined;
+      sale.mpesaPhoneNumber = undefined;
+      sale.mpesaStatus = 'failed';
+    }
+    
     // Add audit log
     sale.auditLog.push({
       action: `status_changed_to_${status.toLowerCase()}`,
