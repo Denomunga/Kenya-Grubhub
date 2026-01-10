@@ -67,6 +67,13 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    // Added security headers
+    headers: {
+      'X-Frame-Options': 'DENY',
+      'X-Content-Type-Options': 'nosniff',
+      'X-XSS-Protection': '1; mode=block',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    },
     // Added proxy to connect to your backend
     proxy: {
       "/api": {
