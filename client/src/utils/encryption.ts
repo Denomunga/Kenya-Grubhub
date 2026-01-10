@@ -10,6 +10,14 @@ const ENCRYPTION_KEY = import.meta.env.VITE_MESSAGE_ENCRYPTION_KEY || 'default-e
  */
 export function encryptMessage(text: string): string {
   try {
+    // Input validation
+    if (!text || typeof text !== 'string') {
+      throw new Error('Invalid input: text must be a non-empty string');
+    }
+    if (text.length > 10000) {
+      throw new Error('Input too long: maximum 10,000 characters allowed');
+    }
+    
     const encrypted = CryptoJS.AES.encrypt(text, ENCRYPTION_KEY);
     return encrypted.toString();
   } catch (error) {
@@ -25,6 +33,14 @@ export function encryptMessage(text: string): string {
  */
 export function decryptMessage(encryptedText: string): string {
   try {
+    // Input validation
+    if (!encryptedText || typeof encryptedText !== 'string') {
+      throw new Error('Invalid input: encryptedText must be a non-empty string');
+    }
+    if (encryptedText.length > 50000) {
+      throw new Error('Input too long: maximum 50,000 characters allowed');
+    }
+    
     const decrypted = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
     const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
     if (!decryptedText) {
@@ -53,9 +69,11 @@ export function isValidEncryptedFormat(encryptedText: string): boolean {
       return false;
     }
     
-    // Try to decrypt a test string to see if it's valid
+    // Try to decrypt to validate format
     try {
-      // If it doesn't throw an error, it's valid format
+      const testDecrypted = CryptoJS.AES.decrypt(encryptedText, 'test-key');
+      testDecrypted.toString(CryptoJS.enc.Utf8);
+      // If we get here without throwing, it has valid CryptoJS format
       return true;
     } catch (e) {
       return false;
@@ -72,6 +90,14 @@ export function isValidEncryptedFormat(encryptedText: string): boolean {
  * @returns Thread-specific encryption key for individual user
  */
 export function generateThreadKey(threadId: string, userId: string): string {
+  // Input validation
+  if (!threadId || !userId || typeof threadId !== 'string' || typeof userId !== 'string') {
+    throw new Error('Invalid input: threadId and userId must be non-empty strings');
+  }
+  if (threadId.length > 100 || userId.length > 100) {
+    throw new Error('Input too long: maximum 100 characters allowed for IDs');
+  }
+  
   return CryptoJS.SHA256(`${threadId}:${userId}:${ENCRYPTION_KEY}`).toString();
 }
 
@@ -81,6 +107,14 @@ export function generateThreadKey(threadId: string, userId: string): string {
  * @returns Shared thread encryption key
  */
 export function generateSharedThreadKey(threadId: string): string {
+  // Input validation
+  if (!threadId || typeof threadId !== 'string') {
+    throw new Error('Invalid input: threadId must be a non-empty string');
+  }
+  if (threadId.length > 100) {
+    throw new Error('Input too long: maximum 100 characters allowed for threadId');
+  }
+  
   return CryptoJS.SHA256(`${threadId}:shared:${ENCRYPTION_KEY}`).toString();
 }
 
@@ -139,6 +173,14 @@ export function decryptMessageForRecipient(encryptedText: string, threadId: stri
  * @returns Admin master key for the thread
  */
 export function generateAdminMasterKey(threadId: string): string {
+  // Input validation
+  if (!threadId || typeof threadId !== 'string') {
+    throw new Error('Invalid input: threadId must be a non-empty string');
+  }
+  if (threadId.length > 100) {
+    throw new Error('Input too long: maximum 100 characters allowed for threadId');
+  }
+  
   return CryptoJS.SHA256(`${threadId}:admin:master:${ENCRYPTION_KEY}`).toString();
 }
 

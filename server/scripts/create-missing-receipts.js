@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { Sale } = require('../models/Sale');
 const { Receipt } = require('../models/Receipt');
+const { User } = require('../models/User');
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/kenya-grubhub', {
@@ -41,6 +42,9 @@ async function createMissingReceipts() {
     const createdReceipts = [];
     for (const sale of salesWithoutReceipts) {
       try {
+        // Find the cashier user to get name and username
+        const cashier = await User.findById(sale.cashier);
+        
         const receipt = new Receipt({
           saleId: sale._id,
           receiptNumber: sale.receiptNumber,
@@ -55,7 +59,10 @@ async function createMissingReceipts() {
             change: sale.change,
             customerName: sale.customerName,
             customerPhone: sale.customerPhone,
-            cashier: sale.cashier,
+            cashier: {
+              name: cashier?.name || 'Unknown',
+              username: cashier?.username || 'unknown'
+            },
             storeLocation: sale.storeLocation
           },
           printCount: 0,

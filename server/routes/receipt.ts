@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { Receipt } from "../models/Receipt";
 import { Sale } from "../models/Sale";
+import { User } from "../models/User";
 import rateLimit from 'express-rate-limit';
 
 const router = Router();
@@ -129,6 +130,7 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
 
     // Get all COMPLETED sales to show as receipts
     const sales = await Sale.find({ status: 'Completed' })
+      .populate('cashier', 'name username')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -328,6 +330,9 @@ router.post("/create-missing", requireAuth, async (req, res) => {
     const createdReceipts = [];
     for (const sale of salesWithoutReceipts) {
       try {
+        // Find the cashier user to get name and username
+        const cashier = await User.findById(sale.cashier);
+        
         const receipt = new Receipt({
           saleId: sale._id.toString(),
           receiptNumber: sale.receiptNumber,
@@ -342,7 +347,10 @@ router.post("/create-missing", requireAuth, async (req, res) => {
             change: sale.change,
             customerName: sale.customerName,
             customerPhone: sale.customerPhone,
-            cashier: sale.cashier,
+            cashier: {
+              name: cashier?.name || 'Unknown',
+              username: cashier?.username || 'unknown'
+            },
             storeLocation: sale.storeLocation
           },
           printCount: 0,
