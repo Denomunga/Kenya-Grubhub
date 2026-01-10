@@ -21,7 +21,6 @@ import { UserAudit } from "./models/UserAudit";
 import { ChatMessage } from "./models/ChatMessage";
 import session from "express-session";
 import MongoStore from "connect-mongo";
-import offlineSyncRoutes from './routes/offline-sync';
 import { 
   authLimiter, 
   generalLimiter, 
@@ -242,9 +241,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Add M-Pesa routes (requires authentication)
   app.use("/api/mpesa", mpesaRouter);
-  
-  // Add Offline Sync routes (for professional offline POS functionality)
-  app.use("/api", offlineSyncRoutes);
   
   // Apply rate limiting
   app.use(generalLimiter);

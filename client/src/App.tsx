@@ -14,7 +14,6 @@ import { CSRFTokenManager } from "@/lib/csrf";
 import { Auth0Provider } from "@auth0/auth0-react";
 import { HybridAuthProvider } from "@/lib/hybrid-auth";
 import { auth0Config } from "@/lib/auth0-config";
-import { OfflinePOSWrapper } from "@/components/OfflinePOSWrapper";
 
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -131,32 +130,30 @@ function Router() {
 
 function App() {
   return (
-    <OfflinePOSWrapper>
-      <QueryClientProvider client={queryClient}>
-        <DndProvider backend={HTML5Backend}>
-          <Auth0Provider
-            domain={auth0Config.domain}
-            clientId={auth0Config.clientId}
-            authorizationParams={{
-              redirect_uri: auth0Config.redirectUri,
-              audience: auth0Config.audience,
-              scope: auth0Config.scope
-            }}
-          >
-            <HybridAuthProvider>
-              <ChristmasProvider>
-                <ChatProvider>
-                  <DataProvider>
-                    <Router />
-                    <Toaster />
-                  </DataProvider>
-                </ChatProvider>
-              </ChristmasProvider>
-            </HybridAuthProvider>
-          </Auth0Provider>
-        </DndProvider>
-      </QueryClientProvider>
-    </OfflinePOSWrapper>
+    <QueryClientProvider client={queryClient}>
+      <DndProvider backend={HTML5Backend}>
+        <Auth0Provider
+          domain={auth0Config.domain}
+          clientId={auth0Config.clientId}
+          authorizationParams={{
+            redirect_uri: auth0Config.redirectUri,
+            audience: auth0Config.audience,
+            scope: auth0Config.scope
+          }}
+        >
+          <HybridAuthProvider>
+            <ChristmasProvider>
+              <ChatProvider>
+                <DataProvider>
+                  <Router />
+                  <Toaster />
+                </DataProvider>
+              </ChatProvider>
+            </ChristmasProvider>
+          </HybridAuthProvider>
+        </Auth0Provider>
+      </DndProvider>
+    </QueryClientProvider>
   );
 }
 
