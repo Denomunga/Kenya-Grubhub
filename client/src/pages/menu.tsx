@@ -228,8 +228,10 @@ export default function Menu() {
   // Use searched products if available, otherwise use category filtering
   const displayProducts = useMemo(() => {
     const baseItems = searchedProducts.length > 0 ? searchedProducts : menu;
-    if (activeCategory === "All") return baseItems;
-    return baseItems.filter((item: MenuItem) => item.category?.toLowerCase() === activeCategory.toLowerCase());
+    // Filter for available products only
+    const availableItems = baseItems.filter((item: MenuItem) => item.available);
+    if (activeCategory === "All") return availableItems;
+    return availableItems.filter((item: MenuItem) => item.category?.toLowerCase() === activeCategory.toLowerCase());
   }, [menu, activeCategory, searchedProducts]);
 
   const addToCart = (item: MenuItem) => {

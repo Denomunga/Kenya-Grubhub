@@ -119,8 +119,10 @@ export default function Home() {
   // Filter menu items based on active category and search - memoized
   const filteredItems = useMemo(() => {
     const baseItems = searchedProducts.length > 0 ? searchedProducts : menu;
-    if (activeCategory === 'all') return baseItems;
-    return baseItems.filter(item => item.category?.toLowerCase() === activeCategory.toLowerCase());
+    // Filter for available products only
+    const availableItems = baseItems.filter(item => item.available);
+    if (activeCategory === 'all') return availableItems;
+    return availableItems.filter(item => item.category?.toLowerCase() === activeCategory.toLowerCase());
   }, [menu, activeCategory, searchedProducts]);
     
   const featuredItems = useMemo(() => filteredItems.slice(0, 6), [filteredItems]);

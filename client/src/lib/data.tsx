@@ -541,6 +541,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       
+      // Fetch menu from server first
+      await fetchMenuFromServer();
+      
       // Fallback to initial data only if server fetch failed
       // if (!menuLoaded) {
       //   setMenu(INITIAL_MENU);

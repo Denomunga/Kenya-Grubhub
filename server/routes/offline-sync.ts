@@ -158,8 +158,8 @@ router.post('/payments/sync', async (req, res) => {
   }
 });
 
-// Get menu items for caching
-router.get('/menu', async (_req, res) => {
+// Get menu items for caching (offline POS specific endpoint)
+router.get('/offline/menu', async (_req, res) => {
   try {
     const menuItems = await Product.find({ available: true }).sort({ category: 1, name: 1 });
     res.json(menuItems);

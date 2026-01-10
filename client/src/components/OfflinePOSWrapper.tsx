@@ -70,7 +70,7 @@ export function OfflinePOSWrapper({ children }: OfflinePOSWrapperProps) {
     const cacheMenuItems = async () => {
       if (isOnline) {
         try {
-          const response = await fetch('/api/menu');
+          const response = await fetch('/api/offline/menu');
           if (response.ok) {
             const menuItems = await response.json();
             await offlineStorage.saveMenuItems(menuItems);
