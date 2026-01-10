@@ -1962,7 +1962,7 @@ export default function POSSystem() {
             setCurrentSale(null);
           }
         }}>
-          <DialogContent className="max-w-[95vw] w-full mx-4 bg-blue-50 border-2 border-blue-200 shadow-xl">
+          <DialogContent className="max-w-2xl w-full mx-4 bg-white border border-gray-200 shadow-lg">
             <DialogHeader className="text-center pb-4">
               <DialogTitle className="text-lg font-bold">
                 {currentSale.type === 'Order' ? 'Order Receipt' : 'Point of Sale Receipt'}
@@ -1972,7 +1972,7 @@ export default function POSSystem() {
               </div>
             </DialogHeader>
             
-            <div className="bg-linear-to-b from-gray-50 to-white rounded-lg p-3 sm:p-6 space-y-4 sm:space-y-6 border overflow-x-auto">
+            <div className="bg-white rounded-lg p-4 sm:p-6 space-y-4 sm:space-y-6 border border-gray-200">
               {/* Header */}
               <div className="text-center space-y-2 border-b pb-4">
                 <div className="text-2xl font-bold text-gray-800">MS-COMPUTERS</div>
