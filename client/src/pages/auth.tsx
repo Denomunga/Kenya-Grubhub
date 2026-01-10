@@ -1,7 +1,7 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { UtensilsCrossed, ArrowRight, Shield, MapPin, Clock } from 'lucide-react';
+import { Laptop, ArrowRight, Shield, MapPin, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function AuthPage() {
@@ -62,7 +62,7 @@ export default function AuthPage() {
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl border border-white/20">
-                <UtensilsCrossed className="h-8 w-8 text-yellow-400" />
+                <Laptop className="h-8 w-8 text-yellow-400" />
               </div>
               <h1 className="text-4xl font-bold font-serif">MS-COMPUTERS</h1>
             </div>
@@ -106,7 +106,7 @@ export default function AuthPage() {
             <CardHeader className="text-center space-y-4 pb-8">
               <div className="lg:hidden flex items-center justify-center gap-3 mb-4">
                 <div className="bg-blue-600 p-3 rounded-full">
-                  <UtensilsCrossed className="h-6 w-6 text-white" />
+                  <Laptop className="h-6 w-6 text-white" />
                 </div>
                 <h1 className="text-2xl font-bold font-serif">MS-COMPUTERS</h1>
               </div>
