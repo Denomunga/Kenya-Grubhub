@@ -862,6 +862,12 @@ export default function Menu() {
       {/* Order Confirmation Dialog */}
       <Dialog open={orderConfirmationOpen} onOpenChange={setOrderConfirmationOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Order Confirmation</DialogTitle>
+            <DialogDescription>
+              Your order has been successfully placed and is being prepared.
+            </DialogDescription>
+          </DialogHeader>
           {lastOrder && (
             <OrderConfirmation
               order={lastOrder}

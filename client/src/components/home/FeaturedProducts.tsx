@@ -21,18 +21,18 @@ const ProductImageSlideshow = ({ images, productName }: { images: string[], prod
   useEffect(() => {
     if (!images || images.length <= 1) return;
 
-    console.log(`Starting slideshow for ${productName} with ${images.length} images`);
+    // console.log(`Starting slideshow for ${productName} with ${images.length} images`);
 
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => {
         const next = (prev + 1) % images.length;
-        console.log(`Changing image for ${productName}: ${prev} -> ${next}`);
+        // console.log(`Changing image for ${productName}: ${prev} -> ${next}`);
         return next;
       });
     }, 2500); // Change every 2.5 seconds
 
     return () => {
-      console.log(`Stopping slideshow for ${productName}`);
+      // console.log(`Stopping slideshow for ${productName}`);
       clearInterval(interval);
     };
   }, [images, productName]);
