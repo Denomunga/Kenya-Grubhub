@@ -56,6 +56,23 @@ const UNIT_OPTIONS = [
   "box",
 ];
 
+const AGROVET_CATEGORIES = new Set([
+  "Seeds & Planting Materials",
+  "Fertilizers & Soil Enhancers",
+  "Crop Protection Chemicals",
+  "Farm Equipment & Tools",
+  "Animal Nutrition",
+  "Veterinary Medicines",
+  "Animal Care Supplies",
+  "Livestock & Animal Health",
+  "Agrovet (Other)",
+]);
+
+const isAgrovetCategory = (category?: string) => {
+  if (!category) return false;
+  return AGROVET_CATEGORIES.has(category);
+};
+
 interface DraggableMenuItemProps {
   item: MenuItem;
   index: number;
@@ -397,6 +414,9 @@ const DragDropMenuManager: React.FC = () => {
     toast({ title: 'Success', description: `${updatedItem.name} updated successfully` });
   };
 
+  const showLaptopFieldsForNewItem = !isAgrovetCategory(newItem.category);
+  const showLaptopFieldsForEditingItem = editingItem ? !isAgrovetCategory(editingItem.category) : true;
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
@@ -436,59 +456,63 @@ const DragDropMenuManager: React.FC = () => {
               onChange={(e) => setNewItem({ ...newItem, subcategory: e.target.value })}
               className="liquid-transition"
             />
-            <Input
-              placeholder="Brand (optional)"
-              value={newItem.brand || ''}
-              onChange={(e) => setNewItem({ ...newItem, brand: e.target.value })}
-              className="liquid-transition"
-            />
-            <Select
-              value={newItem.condition || ''}
-              onValueChange={(value: "new" | "used" | "refurbished" | "") => 
-                setNewItem({ ...newItem, condition: value || undefined })
-              }
-            >
-              <SelectTrigger className="liquid-transition">
-                <SelectValue placeholder="Condition (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No condition</SelectItem>
-                <SelectItem value="new">New</SelectItem>
-                <SelectItem value="used">Used</SelectItem>
-                <SelectItem value="refurbished">Refurbished</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="Size (optional)"
-              value={newItem.size || ''}
-              onChange={(e) => setNewItem({ ...newItem, size: e.target.value })}
-              className="liquid-transition"
-            />
-            <Input
-              placeholder="Color (optional)"
-              value={newItem.color || ''}
-              onChange={(e) => setNewItem({ ...newItem, color: e.target.value })}
-              className="liquid-transition"
-            />
-            <Input
-              type="number"
-              placeholder="Year (optional)"
-              value={newItem.year || ''}
-              onChange={(e) => setNewItem({ ...newItem, year: parseInt(e.target.value) || undefined })}
-              className="liquid-transition"
-            />
-            <Input
-              placeholder="Material (optional)"
-              value={newItem.material || ''}
-              onChange={(e) => setNewItem({ ...newItem, material: e.target.value })}
-              className="liquid-transition"
-            />
-            <Input
-              placeholder="Location (optional)"
-              value={newItem.location || ''}
-              onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
-              className="liquid-transition"
-            />
+            {showLaptopFieldsForNewItem && (
+              <>
+                <Input
+                  placeholder="Brand (optional)"
+                  value={newItem.brand || ''}
+                  onChange={(e) => setNewItem({ ...newItem, brand: e.target.value })}
+                  className="liquid-transition"
+                />
+                <Select
+                  value={newItem.condition || ''}
+                  onValueChange={(value: "new" | "used" | "refurbished" | "") => 
+                    setNewItem({ ...newItem, condition: value || undefined })
+                  }
+                >
+                  <SelectTrigger className="liquid-transition">
+                    <SelectValue placeholder="Condition (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No condition</SelectItem>
+                    <SelectItem value="new">New</SelectItem>
+                    <SelectItem value="used">Used</SelectItem>
+                    <SelectItem value="refurbished">Refurbished</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder="Size (optional)"
+                  value={newItem.size || ''}
+                  onChange={(e) => setNewItem({ ...newItem, size: e.target.value })}
+                  className="liquid-transition"
+                />
+                <Input
+                  placeholder="Color (optional)"
+                  value={newItem.color || ''}
+                  onChange={(e) => setNewItem({ ...newItem, color: e.target.value })}
+                  className="liquid-transition"
+                />
+                <Input
+                  type="number"
+                  placeholder="Year (optional)"
+                  value={newItem.year || ''}
+                  onChange={(e) => setNewItem({ ...newItem, year: parseInt(e.target.value) || undefined })}
+                  className="liquid-transition"
+                />
+                <Input
+                  placeholder="Material (optional)"
+                  value={newItem.material || ''}
+                  onChange={(e) => setNewItem({ ...newItem, material: e.target.value })}
+                  className="liquid-transition"
+                />
+                <Input
+                  placeholder="Location (optional)"
+                  value={newItem.location || ''}
+                  onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
+                  className="liquid-transition"
+                />
+              </>
+            )}
             <Input
               type="number"
               placeholder="Stock (optional)"
@@ -645,59 +669,63 @@ const DragDropMenuManager: React.FC = () => {
                 onChange={(e) => setEditingItem({ ...editingItem, subcategory: e.target.value })}
                 className="liquid-transition"
               />
-              <Input
-                placeholder="Brand (optional)"
-                value={editingItem.brand || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, brand: e.target.value })}
-                className="liquid-transition"
-              />
-              <Select
-                value={editingItem.condition || ''}
-                onValueChange={(value: "new" | "used" | "refurbished" | "") => 
-                  setEditingItem({ ...editingItem, condition: value || undefined })
-                }
-              >
-                <SelectTrigger className="liquid-transition">
-                  <SelectValue placeholder="Condition (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No condition</SelectItem>
-                  <SelectItem value="new">New</SelectItem>
-                  <SelectItem value="used">Used</SelectItem>
-                  <SelectItem value="refurbished">Refurbished</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Size (optional)"
-                value={editingItem.size || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, size: e.target.value })}
-                className="liquid-transition"
-              />
-              <Input
-                placeholder="Color (optional)"
-                value={editingItem.color || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, color: e.target.value })}
-                className="liquid-transition"
-              />
-              <Input
-                type="number"
-                placeholder="Year (optional)"
-                value={editingItem.year || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, year: parseInt(e.target.value) || undefined })}
-                className="liquid-transition"
-              />
-              <Input
-                placeholder="Material (optional)"
-                value={editingItem.material || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, material: e.target.value })}
-                className="liquid-transition"
-              />
-              <Input
-                placeholder="Location (optional)"
-                value={editingItem.location || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, location: e.target.value })}
-                className="liquid-transition"
-              />
+              {showLaptopFieldsForEditingItem && (
+                <>
+                  <Input
+                    placeholder="Brand (optional)"
+                    value={editingItem.brand || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, brand: e.target.value })}
+                    className="liquid-transition"
+                  />
+                  <Select
+                    value={editingItem.condition || ''}
+                    onValueChange={(value: "new" | "used" | "refurbished" | "") => 
+                      setEditingItem({ ...editingItem, condition: value || undefined })
+                    }
+                  >
+                    <SelectTrigger className="liquid-transition">
+                      <SelectValue placeholder="Condition (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No condition</SelectItem>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="used">Used</SelectItem>
+                      <SelectItem value="refurbished">Refurbished</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="Size (optional)"
+                    value={editingItem.size || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, size: e.target.value })}
+                    className="liquid-transition"
+                  />
+                  <Input
+                    placeholder="Color (optional)"
+                    value={editingItem.color || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, color: e.target.value })}
+                    className="liquid-transition"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Year (optional)"
+                    value={editingItem.year || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, year: parseInt(e.target.value) || undefined })}
+                    className="liquid-transition"
+                  />
+                  <Input
+                    placeholder="Material (optional)"
+                    value={editingItem.material || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, material: e.target.value })}
+                    className="liquid-transition"
+                  />
+                  <Input
+                    placeholder="Location (optional)"
+                    value={editingItem.location || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, location: e.target.value })}
+                    className="liquid-transition"
+                  />
+                </>
+              )}
               <Input
                 type="number"
                 placeholder="Stock (optional)"
@@ -728,45 +756,51 @@ const DragDropMenuManager: React.FC = () => {
                   className="liquid-transition"
                 />
               </div>
-              <Input
-                type="number"
-                placeholder="Weight (kg, optional)"
-                value={editingItem.weight || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, weight: parseFloat(e.target.value) || undefined })}
-                className="liquid-transition"
-              />
+              {showLaptopFieldsForEditingItem && (
+                <Input
+                  type="number"
+                  placeholder="Weight (kg, optional)"
+                  value={editingItem.weight || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, weight: parseFloat(e.target.value) || undefined })}
+                  className="liquid-transition"
+                />
+              )}
               <Input
                 placeholder="Tags (comma-separated, optional)"
                 value={editingItem.tags?.join(', ') || ''}
                 onChange={(e) => setEditingItem({ ...editingItem, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) })}
                 className="liquid-transition"
               />
-              <Input
-                placeholder="Dimensions (JSON format, optional)"
-                value={editingItem.dimensions ? JSON.stringify(editingItem.dimensions) : ''}
-                onChange={(e) => {
-                  try {
-                    const dimensions = e.target.value ? JSON.parse(e.target.value) : undefined;
-                    setEditingItem({ ...editingItem, dimensions });
-                  } catch (error) {
-                    // Invalid JSON, ignore
-                  }
-                }}
-                className="liquid-transition"
-              />
-              <Input
-                placeholder="Specifications (JSON format, optional)"
-                value={editingItem.specifications ? JSON.stringify(editingItem.specifications) : ''}
-                onChange={(e) => {
-                  try {
-                    const specifications = e.target.value ? JSON.parse(e.target.value) : undefined;
-                    setEditingItem({ ...editingItem, specifications });
-                  } catch (error) {
-                    // Invalid JSON, ignore
-                  }
-                }}
-                className="liquid-transition"
-              />
+              {showLaptopFieldsForEditingItem && (
+                <>
+                  <Input
+                    placeholder="Dimensions (JSON format, optional)"
+                    value={editingItem.dimensions ? JSON.stringify(editingItem.dimensions) : ''}
+                    onChange={(e) => {
+                      try {
+                        const dimensions = e.target.value ? JSON.parse(e.target.value) : undefined;
+                        setEditingItem({ ...editingItem, dimensions });
+                      } catch (error) {
+                        // Invalid JSON, ignore
+                      }
+                    }}
+                    className="liquid-transition"
+                  />
+                  <Input
+                    placeholder="Specifications (JSON format, optional)"
+                    value={editingItem.specifications ? JSON.stringify(editingItem.specifications) : ''}
+                    onChange={(e) => {
+                      try {
+                        const specifications = e.target.value ? JSON.parse(e.target.value) : undefined;
+                        setEditingItem({ ...editingItem, specifications });
+                      } catch (error) {
+                        // Invalid JSON, ignore
+                      }
+                    }}
+                    className="liquid-transition"
+                  />
+                </>
+              )}
               <Input
                 placeholder="Description"
                 value={editingItem.description}
