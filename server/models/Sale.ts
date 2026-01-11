@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface ISale extends Document {
-  items: { productId: string; name: string; quantity: number; price: number; stock?: number }[];
+  items: { productId: string; name: string; quantity: number; unit?: string; price: number; stock?: number }[];
   total: number;
   subtotal: number;
   tax: number;
@@ -38,6 +38,7 @@ const SaleSchema = new Schema<ISale>(
       productId: { type: String, required: true },
       name: { type: String, required: true },
       quantity: { type: Number, required: true },
+      unit: { type: String },
       price: { type: Number, required: true },
       stock: { type: Number } // Stock at time of sale
     }],

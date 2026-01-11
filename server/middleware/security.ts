@@ -131,6 +131,15 @@ export const validateMenuItem = [
     .withMessage('Category is required')
     .trim(),
   // All other fields are optional based on product type
+  body('unit')
+    .optional()
+    .isLength({ max: 20 })
+    .withMessage('Unit must be less than 20 characters')
+    .trim(),
+  body('quantityStep')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Quantity step must be a non-negative number'),
   body('subcategory')
     .optional()
     .isLength({ max: 50 })
@@ -147,8 +156,8 @@ export const validateMenuItem = [
     .withMessage('Condition must be new, used, or refurbished'),
   body('stock')
     .optional()
-    .isInt({ min: 0 })
-    .withMessage('Stock must be a non-negative integer'),
+    .isFloat({ min: 0 })
+    .withMessage('Stock must be a non-negative number'),
   body('location')
     .optional()
     .isLength({ max: 200 })

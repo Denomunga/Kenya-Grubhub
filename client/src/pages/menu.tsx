@@ -256,10 +256,24 @@ export default function Menu() {
     }
   };
 
+  const getStepDecimals = (step: number) => {
+    const s = String(step);
+    const i = s.indexOf('.');
+    return i === -1 ? 0 : (s.length - i - 1);
+  };
+
+  const normalizeToStep = (value: number, step: number) => {
+    if (!step || step <= 0) return value;
+    const decimals = getStepDecimals(step);
+    const normalized = Math.round(value / step) * step;
+    return Number(normalized.toFixed(decimals));
+  };
+
   const updateQuantity = (itemId: string, delta: number) => {
     setCart(prev => prev.map(i => {
       if (i.item.id === itemId) {
-        const newQ = i.quantity + delta;
+        const step = i.item.quantityStep || 1;
+        const newQ = normalizeToStep(i.quantity + delta, step);
         return newQ > 0 ? { ...i, quantity: newQ } : i;
       }
       return i;
@@ -414,11 +428,11 @@ export default function Menu() {
                         <h4 className="font-bold text-sm">{item.name}</h4>
                         <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
                         <div className="flex items-center gap-2 mt-2">
-                          <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, -1)}>
+                          <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, -(item.quantityStep || 1))}>
                             <Minus className="h-3 w-3" />
                           </Button>
                           <span className="text-xs font-bold w-4 text-center">{quantity}</span>
-                          <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, 1)}>
+                          <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantityStep || 1)}>
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
@@ -697,7 +711,7 @@ export default function Menu() {
                   {/* Stock status for all items */}
                   {item.stock !== undefined && (
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Stock: {item.stock} units</span>
+                      <span>Stock: {item.stock} {item.unit || 'units'}</span>
                       {item.stock <= 5 && (
                         <span className="text-orange-600 font-medium">Low stock!</span>
                       )}

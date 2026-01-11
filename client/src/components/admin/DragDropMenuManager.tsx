@@ -22,6 +22,40 @@ const sanitizeInput = (input: string): string => {
     .slice(0, 1000); // Limit length to prevent abuse
 };
 
+const CATEGORY_OPTIONS = [
+  "HP",
+  "Dell",
+  "Lenovo",
+  "Asus",
+  "Apple (MacBooks)",
+  "Toshiba",
+  "Acer",
+  "Microsoft Surface",
+  "Stationery",
+  "Mobilephones",
+  "Others",
+  "Seeds & Planting Materials",
+  "Fertilizers & Soil Enhancers",
+  "Crop Protection Chemicals",
+  "Farm Equipment & Tools",
+  "Animal Nutrition",
+  "Veterinary Medicines",
+  "Animal Care Supplies",
+  "Livestock & Animal Health",
+  "Agrovet (Other)",
+];
+
+const UNIT_OPTIONS = [
+  "pcs",
+  "kg",
+  "litre",
+  "packet",
+  "bottle",
+  "bag",
+  "tube",
+  "box",
+];
+
 interface DraggableMenuItemProps {
   item: MenuItem;
   index: number;
@@ -123,6 +157,8 @@ const DragDropMenuManager: React.FC = () => {
     description: string;
     imageFiles: File[];
     subcategory?: string;
+    unit?: string;
+    quantityStep?: number;
     brand?: string;
     condition?: "new" | "used" | "refurbished";
     size?: string;
@@ -132,7 +168,7 @@ const DragDropMenuManager: React.FC = () => {
     location?: string;
     stock?: number;
     tags?: string[];
-  }>({ name: '', category: 'HP', price: 0, images: [], description: '', imageFiles: [] });
+  }>({ name: '', category: 'HP', price: 0, images: [], description: '', imageFiles: [], unit: 'pcs', quantityStep: 1 });
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingImageFiles, setEditingImageFiles] = useState<File[]>([]);
@@ -214,6 +250,8 @@ const DragDropMenuManager: React.FC = () => {
       available: true,
       images: uploadedImages.length > 0 ? uploadedImages : ["https://placehold.co/400x300?text=Product"],
       subcategory: newItem.subcategory ? sanitizeInput(newItem.subcategory) : undefined,
+      unit: newItem.unit ? sanitizeInput(newItem.unit) : undefined,
+      quantityStep: newItem.quantityStep,
       brand: newItem.brand ? sanitizeInput(newItem.brand) : undefined,
       condition: newItem.condition,
       size: newItem.size ? sanitizeInput(newItem.size) : undefined,
@@ -235,6 +273,8 @@ const DragDropMenuManager: React.FC = () => {
       description: '', 
       imageFiles: [],
       subcategory: '',
+      unit: 'pcs',
+      quantityStep: 1,
       brand: '',
       condition: undefined,
       size: '',
@@ -340,6 +380,7 @@ const DragDropMenuManager: React.FC = () => {
       name: sanitizeInput(editingItem.name),
       description: sanitizeInput(editingItem.description || ''),
       subcategory: editingItem.subcategory ? sanitizeInput(editingItem.subcategory) : undefined,
+      unit: (editingItem as any).unit ? sanitizeInput((editingItem as any).unit) : undefined,
       brand: editingItem.brand ? sanitizeInput(editingItem.brand) : undefined,
       size: editingItem.size ? sanitizeInput(editingItem.size) : undefined,
       color: editingItem.color ? sanitizeInput(editingItem.color) : undefined,
@@ -384,17 +425,9 @@ const DragDropMenuManager: React.FC = () => {
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="HP">HP</SelectItem>
-                <SelectItem value="Dell">Dell</SelectItem>
-                <SelectItem value="Lenovo">Lenovo</SelectItem>
-                <SelectItem value="Asus">Asus</SelectItem>
-                <SelectItem value="Apple (MacBooks)">Apple (MacBooks)</SelectItem>
-                <SelectItem value="Toshiba">Toshiba</SelectItem>
-                <SelectItem value="Acer">Acer</SelectItem>
-                <SelectItem value="Microsoft Surface">Microsoft Surface</SelectItem>
-                <SelectItem value="Stationery">Stationery</SelectItem>
-                <SelectItem value="Mobilephones">Mobilephones</SelectItem>
-                <SelectItem value="Others">Others</SelectItem>
+                {CATEGORY_OPTIONS.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Input
@@ -460,9 +493,32 @@ const DragDropMenuManager: React.FC = () => {
               type="number"
               placeholder="Stock (optional)"
               value={newItem.stock || ''}
-              onChange={(e) => setNewItem({ ...newItem, stock: parseInt(e.target.value) || undefined })}
+              onChange={(e) => setNewItem({ ...newItem, stock: parseFloat(e.target.value) || undefined })}
               className="liquid-transition"
             />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                value={newItem.unit || 'pcs'}
+                onValueChange={(value: string) => setNewItem({ ...newItem, unit: value })}
+              >
+                <SelectTrigger className="liquid-transition">
+                  <SelectValue placeholder="Unit (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {UNIT_OPTIONS.map((u) => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="Quantity step (optional)"
+                value={newItem.quantityStep ?? ''}
+                onChange={(e) => setNewItem({ ...newItem, quantityStep: e.target.value ? parseFloat(e.target.value) : undefined })}
+                className="liquid-transition"
+              />
+            </div>
             <Input
               placeholder="Tags (comma separated, optional)"
               value={newItem.tags?.join(', ') || ''}
@@ -578,17 +634,9 @@ const DragDropMenuManager: React.FC = () => {
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="HP">HP</SelectItem>
-                  <SelectItem value="Dell">Dell</SelectItem>
-                  <SelectItem value="Lenovo">Lenovo</SelectItem>
-                  <SelectItem value="Asus">Asus</SelectItem>
-                  <SelectItem value="Apple (MacBooks)">Apple (MacBooks)</SelectItem>
-                  <SelectItem value="Toshiba">Toshiba</SelectItem>
-                  <SelectItem value="Acer">Acer</SelectItem>
-                  <SelectItem value="Microsoft Surface">Microsoft Surface</SelectItem>
-                  <SelectItem value="Stationery">Stationery</SelectItem>
-                  <SelectItem value="Mobilephones">Mobilephones</SelectItem>
-                  <SelectItem value="Others">Others</SelectItem>
+                  {CATEGORY_OPTIONS.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Input
@@ -654,9 +702,32 @@ const DragDropMenuManager: React.FC = () => {
                 type="number"
                 placeholder="Stock (optional)"
                 value={editingItem.stock || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, stock: parseInt(e.target.value) || undefined })}
+                onChange={(e) => setEditingItem({ ...editingItem, stock: parseFloat(e.target.value) || undefined })}
                 className="liquid-transition"
               />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select
+                  value={(editingItem as any).unit || 'pcs'}
+                  onValueChange={(value: string) => setEditingItem({ ...(editingItem as any), unit: value } as any)}
+                >
+                  <SelectTrigger className="liquid-transition">
+                    <SelectValue placeholder="Unit (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UNIT_OPTIONS.map((u) => (
+                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Quantity step (optional)"
+                  value={(editingItem as any).quantityStep ?? ''}
+                  onChange={(e) => setEditingItem({ ...(editingItem as any), quantityStep: e.target.value ? parseFloat(e.target.value) : undefined } as any)}
+                  className="liquid-transition"
+                />
+              </div>
               <Input
                 type="number"
                 placeholder="Weight (kg, optional)"

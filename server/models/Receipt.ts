@@ -4,7 +4,7 @@ export interface IReceipt extends Document {
   saleId: string; // Reference to the Sale
   receiptNumber: string;
   receiptData: {
-    items: { name: string; quantity: number; price: number; total: number }[];
+    items: { name: string; quantity: number; unit?: string; price: number; total: number }[];
     subtotal: number;
     tax: number;
     discount: number;
@@ -31,6 +31,7 @@ const ReceiptSchema = new Schema<IReceipt>(
       items: [{
         name: { type: String, required: true },
         quantity: { type: Number, required: true },
+        unit: { type: String },
         price: { type: Number, required: true },
         total: { type: Number, required: true }
       }],

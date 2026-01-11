@@ -12,6 +12,8 @@ export interface MenuItem {
   price: number; // in KSHS
   category: string; // Now flexible - can be "HP", "Dell", "Lenovo", "Asus", "Apple (MacBooks)", "Toshiba", "Acer", "Microsoft Surface", "Stationery", "Mobilephones", "Others", etc.
   subcategory?: string;
+  unit?: string; // e.g. pcs, kg, litre, packet, bottle
+  quantityStep?: number; // e.g. 1 for pcs, 0.5 for kg
   brand?: string; // Optional - mainly for laptops, mobiles, stationery
   condition?: "new" | "used" | "refurbished"; // Optional - mainly for laptops, mobiles, stationery
   specifications?: Record<string, any>; // Optional - for technical specs of laptops/mobiles
@@ -512,6 +514,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
             price: m.price,
             category: m.category,
             subcategory: m.subcategory,
+            unit: m.unit,
+            quantityStep: m.quantityStep,
             brand: m.brand,
             condition: m.condition,
             specifications: m.specifications,
@@ -737,6 +741,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           price: item.price,
           category: item.category,
           subcategory: item.subcategory,
+          unit: item.unit,
+          quantityStep: item.quantityStep,
           brand: item.brand,
           condition: item.condition,
           specifications: item.specifications,
@@ -766,6 +772,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           price: p.price,
           category: p.category,
           subcategory: p.subcategory,
+          unit: p.unit,
+          quantityStep: p.quantityStep,
           brand: p.brand,
           condition: p.condition,
           specifications: p.specifications,
@@ -836,6 +844,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           price: item.price,
           category: item.category,
           subcategory: item.subcategory,
+          unit: item.unit,
+          quantityStep: item.quantityStep,
           brand: item.brand,
           condition: item.condition,
           specifications: item.specifications,
@@ -1315,6 +1325,7 @@ const fetchReviewsFromServer = async () => {
           productId: i.item.id,
           name: i.item.name,
           quantity: i.quantity,
+          unit: i.item.unit,
           price: i.item.price
         })),
         total,

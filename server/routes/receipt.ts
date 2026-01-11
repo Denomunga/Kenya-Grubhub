@@ -66,6 +66,15 @@ router.post("/save", requireAuth, apiLimiter, async (req, res) => {
       // Update existing receipt - increment print count and add print timestamp
       receipt.printCount += 1;
       receipt.printedAt.push(new Date());
+      if (!receipt.receiptData?.cashier?.name || !receipt.receiptData?.cashier?.username) {
+        receipt.receiptData = {
+          ...receipt.receiptData,
+          cashier: {
+            name: req.user.name,
+            username: req.user.username
+          }
+        } as any;
+      }
       await receipt.save();
     } else {
       // Create new receipt
@@ -135,6 +144,17 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
       .skip(skip)
       .limit(limit);
 
+    const cashierIds = Array.from(
+      new Set(
+        sales
+          .map((s: any) => (typeof s.cashier === 'string' ? s.cashier : s.cashier?._id?.toString?.()))
+          .filter(Boolean)
+      )
+    );
+
+    const cashierUsers = await User.find({ _id: { $in: cashierIds } }).select('name username');
+    const cashierMap = new Map(cashierUsers.map((u: any) => [u._id.toString(), { name: u.name, username: u.username }]));
+
     const totalSales = await Sale.countDocuments({ status: 'Completed' });
 
     // Get all orders to show as receipts too (excluding cancelled orders)
@@ -158,7 +178,17 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
     // Format all sales as receipt-like objects
     const salesReceipts = sales.map(sale => {
       const printedReceipt = printedReceiptsMap.get(sale._id.toString());
-      
+
+      const saleCashierId = typeof (sale as any).cashier === 'string'
+        ? (sale as any).cashier
+        : (sale as any).cashier?._id?.toString?.();
+
+      const resolvedCashier = printedReceipt?.receiptData?.cashier
+        || (typeof (sale as any).cashier === 'object' && (sale as any).cashier?.name
+          ? { name: (sale as any).cashier.name, username: (sale as any).cashier.username }
+          : (saleCashierId ? cashierMap.get(saleCashierId) : undefined))
+        || { name: 'Unknown', username: 'unknown' };
+
       return {
         _id: printedReceipt?._id || sale._id,
         saleId: sale._id,
@@ -176,7 +206,7 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
           change: sale.change,
           customerName: sale.customerName,
           customerPhone: sale.customerPhone,
-          cashier: sale.cashier,
+          cashier: resolvedCashier,
           storeLocation: sale.storeLocation
         },
         printCount: printedReceipt?.printCount || 0,
@@ -187,6 +217,7 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
     // Format all orders as receipt-like objects
     const orderReceipts = orders.map(order => {
       const printedReceipt = printedReceiptsMap.get(order._id.toString());
+
       
       return {
         _id: printedReceipt?._id || order._id,

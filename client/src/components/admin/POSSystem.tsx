@@ -24,6 +24,8 @@ interface Product {
   stock?: number;
   available: boolean;
   category?: string;
+  unit?: string;
+  quantityStep?: number;
   brand?: string;
   description?: string;
 }
@@ -34,6 +36,8 @@ interface CartItem {
   price: number;
   quantity: number;
   stock?: number;
+  unit?: string;
+  quantityStep?: number;
 }
 
 interface Sale {
@@ -354,6 +358,27 @@ export default function POSSystem() {
     toast({ title: 'New Sale', description: 'Cart cleared and POS reset.' });
   };
 
+  const getStepDecimals = (step: number) => {
+    const s = String(step);
+    const i = s.indexOf('.');
+    return i === -1 ? 0 : (s.length - i - 1);
+  };
+
+  const normalizeToStep = (value: number, step: number) => {
+    if (!step || step <= 0) return value;
+    const decimals = getStepDecimals(step);
+    const normalized = Math.round(value / step) * step;
+    return Number(normalized.toFixed(decimals));
+  };
+
+  const getSelectedProductMeta = () => {
+    const product = (products as Product[]).find((p: Product) => p.id === selectedProduct);
+    return {
+      unit: product?.unit || 'pcs',
+      step: product?.quantityStep || 1,
+    };
+  };
+
   const addProductToCart = (productId: string, qty: number) => {
     if (!productId) {
       toast({ title: "Error", description: "Please select a product", variant: "destructive" });
@@ -388,7 +413,9 @@ export default function POSSystem() {
         name: product.name,
         price: product.price,
         quantity: qty,
-        stock: product.stock
+        stock: product.stock,
+        unit: product.unit,
+        quantityStep: product.quantityStep
       }]);
     }
 
@@ -406,12 +433,15 @@ export default function POSSystem() {
     }
 
     const product = products.find((p: Product) => p.id === productId);
-    if (product?.stock !== undefined && product.stock < newQuantity) {
+    const step = product?.quantityStep || 1;
+    const normalizedQuantity = normalizeToStep(newQuantity, step);
+
+    if (product?.stock !== undefined && product.stock < normalizedQuantity) {
       toast({ title: 'Error', description: `Insufficient stock. Available: ${product.stock}`, variant: 'destructive' });
       return;
     }
 
-    setCart(cart.map(item => (item.productId === productId ? { ...item, quantity: newQuantity } : item)));
+    setCart(cart.map(item => (item.productId === productId ? { ...item, quantity: normalizedQuantity } : item)));
   };
 
   const removeFromCart = (productId: string) => {
@@ -446,6 +476,8 @@ export default function POSSystem() {
           category: p?.category,
           brand: p?.brand,
           description: p?.description,
+          unit: p?.unit,
+          quantityStep: p?.quantityStep
         })) as Product[];
         setSearchResults(normalized.filter(p => !!p.id));
       }
@@ -644,6 +676,7 @@ export default function POSSystem() {
         items: sale.items.map((item: any) => ({
           name: item.name,
           quantity: item.quantity,
+          unit: item.unit,
           price: item.price,
           total: item.price * item.quantity
         })),
@@ -755,7 +788,7 @@ export default function POSSystem() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          stock: parseInt(stockAmount),
+          stock: parseFloat(stockAmount),
           operation: stockOperation
         })
       });
@@ -786,7 +819,7 @@ export default function POSSystem() {
     const existingIndex = bulkStockUpdates.findIndex(update => update.productId === selectedStockProduct);
     const entry = {
       productId: selectedStockProduct,
-      stock: parseInt(stockAmount),
+      stock: parseFloat(stockAmount),
       operation: stockOperation
     };
 
@@ -841,6 +874,7 @@ export default function POSSystem() {
         items: currentSale.items.map((item: any) => ({
           name: item.name,
           quantity: item.quantity,
+          unit: item.unit,
           price: item.price,
           total: item.price * item.quantity
         })),
@@ -871,6 +905,10 @@ export default function POSSystem() {
 
     const receiptWindow = window.open('', '_blank', 'width=400,height=600');
     if (!receiptWindow) return;
+
+    const cashierNameForPrint = user?.name
+      || (currentSale.cashier && typeof currentSale.cashier === 'object' ? currentSale.cashier.name : '')
+      || 'Unknown';
 
     const receiptHTML = `
   <html>
@@ -934,7 +972,7 @@ export default function POSSystem() {
         </div>
         <div class="summary-row">
           <span class="summary-label">Cashier:</span>
-          <span>${currentSale.cashier?.name || 'Unknown'}</span>
+          <span>${cashierNameForPrint}</span>
         </div>
         ${currentSale.customerName ? `
         <div class="summary-row">
@@ -959,7 +997,7 @@ export default function POSSystem() {
           <div class="item-row">
             <div style="flex: 1;">
               <div class="item-name">${item.name}</div>
-              <div class="item-details">${item.quantity} × ${formatPriceKSHS(item.price)}</div>
+              <div class="item-details">${item.quantity}${item.unit ? ` ${item.unit}` : ''} × ${formatPriceKSHS(item.price)}</div>
             </div>
             <div class="item-price">${formatPriceKSHS(item.price * item.quantity)}</div>
           </div>
@@ -1034,8 +1072,6 @@ export default function POSSystem() {
     receiptWindow.document.close();
     receiptWindow.print();
   };
-
-
 
   return (
     <div className="space-y-8">
@@ -1296,8 +1332,13 @@ export default function POSSystem() {
                       id="quantity"
                       type="number"
                       min="1"
+                      step={getSelectedProductMeta().step}
                       value={quantity}
-                      onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                      onChange={(e) => {
+                        const step = getSelectedProductMeta().step;
+                        const v = parseFloat(e.target.value);
+                        setQuantity(normalizeToStep(isNaN(v) ? step : v, step) || step);
+                      }}
                     />
                   </div>
                 </div>
@@ -1332,15 +1373,15 @@ export default function POSSystem() {
                                 {isLowStock && <Badge variant="secondary">Low</Badge>}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {formatPriceKSHS(item.price)} x {item.quantity} • {formatPriceKSHS(item.price * item.quantity)}
+                                {formatPriceKSHS(item.price)} x {item.quantity}{item.unit ? ` ${item.unit}` : ''} • {formatPriceKSHS(item.price * item.quantity)}
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <Button size="sm" variant="outline" onClick={() => updateQuantity(item.productId, item.quantity - 1)}>
+                              <Button size="sm" variant="outline" onClick={() => updateQuantity(item.productId, item.quantity - (item.quantityStep || 1))}>
                                 <Minus className="h-3 w-3" />
                               </Button>
                               <span className="w-8 text-center">{item.quantity}</span>
-                              <Button size="sm" variant="outline" onClick={() => updateQuantity(item.productId, item.quantity + 1)}>
+                              <Button size="sm" variant="outline" onClick={() => updateQuantity(item.productId, item.quantity + (item.quantityStep || 1))}>
                                 <Plus className="h-3 w-3" />
                               </Button>
                               <Button size="sm" variant="destructive" onClick={() => removeFromCart(item.productId)}>

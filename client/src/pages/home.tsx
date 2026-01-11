@@ -122,6 +122,14 @@ export default function Home() {
     if (activeCategory === 'all') return baseItems;
     return baseItems.filter(item => item.category?.toLowerCase() === activeCategory.toLowerCase());
   }, [menu, activeCategory, searchedProducts]);
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    menu.forEach((m: any) => {
+      if (m?.category && typeof m.category === 'string') set.add(m.category);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [menu]);
     
   const featuredItems = useMemo(() => filteredItems.slice(0, 6), [filteredItems]);
 
@@ -310,6 +318,7 @@ export default function Home() {
           <CategoryFilter 
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
+            categories={categories}
           />
         </div>
         

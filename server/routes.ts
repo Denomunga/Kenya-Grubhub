@@ -1210,6 +1210,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price: p.price,
         category: p.category,
         subcategory: p.subcategory,
+        unit: p.unit,
+        quantityStep: p.quantityStep,
         brand: p.brand,
         condition: p.condition,
         specifications: p.specifications,
@@ -1246,6 +1248,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price, 
         category, 
         subcategory,
+        unit,
+        quantityStep,
         brand,
         condition,
         specifications,
@@ -1268,6 +1272,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price, 
         category,
         subcategory,
+        unit,
+        quantityStep,
         brand,
         condition,
         specifications,
@@ -1294,6 +1300,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: created.price,
           category: created.category,
           subcategory: created.subcategory,
+          unit: created.unit,
+          quantityStep: created.quantityStep,
           brand: created.brand,
           condition: created.condition,
           specifications: created.specifications,
@@ -1324,7 +1332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin/staff access required" });
       }
 
-      let name, description, price, category, subcategory, brand, condition, specifications, images, available, stock, location, tags, size, color, year, material, weight, dimensions;
+      let name, description, price, category, subcategory, unit, quantityStep, brand, condition, specifications, images, available, stock, location, tags, size, color, year, material, weight, dimensions;
 
       // Handle multipart form data (with file upload)
       if (req.is('multipart/form-data')) {
@@ -1333,11 +1341,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price = parseFloat(req.body.price);
         category = req.body.category;
         subcategory = req.body.subcategory;
+        unit = req.body.unit;
+        quantityStep = req.body.quantityStep ? parseFloat(req.body.quantityStep) : undefined;
         brand = req.body.brand;
         condition = req.body.condition;
         specifications = req.body.specifications ? JSON.parse(req.body.specifications) : undefined;
         available = req.body.available === 'true' || req.body.available === true;
-        stock = req.body.stock ? parseInt(req.body.stock) : undefined;
+        stock = req.body.stock ? parseFloat(req.body.stock) : undefined;
         location = req.body.location;
         tags = req.body.tags ? JSON.parse(req.body.tags) : [];
         size = req.body.size;
@@ -1382,7 +1392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Condition must be new, used, or refurbished" });
         }
         if (stock !== undefined && (isNaN(stock) || stock < 0)) {
-          return res.status(400).json({ message: "Stock must be a non-negative integer" });
+          return res.status(400).json({ message: "Stock must be a non-negative number" });
         }
         if (year !== undefined && (isNaN(year) || year < 1900 || year > new Date().getFullYear() + 1)) {
           return res.status(400).json({ message: "Year must be valid" });
@@ -1398,6 +1408,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price, 
         category,
         subcategory,
+        unit,
+        quantityStep,
         brand,
         condition,
         specifications,
@@ -1422,6 +1434,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: created.price, 
           category: created.category,
           subcategory: created.subcategory,
+          unit: created.unit,
+          quantityStep: created.quantityStep,
           brand: created.brand,
           condition: created.condition,
           specifications: created.specifications,
@@ -1457,6 +1471,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price, 
         category,
         subcategory,
+        unit,
+        quantityStep,
         brand,
         condition,
         specifications,
@@ -1483,6 +1499,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price, 
         category,
         subcategory,
+        unit,
+        quantityStep,
         brand,
         condition,
         specifications,
@@ -1524,6 +1542,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: updated.price, 
           category: updated.category,
           subcategory: updated.subcategory,
+          unit: updated.unit,
+          quantityStep: updated.quantityStep,
           brand: updated.brand,
           condition: updated.condition,
           specifications: updated.specifications,
@@ -1869,6 +1889,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
             items: items.map((item: any) => ({
               name: item.name,
               quantity: item.quantity,
+              unit: item.unit,
               price: item.price,
               total: item.price * item.quantity
             })),

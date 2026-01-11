@@ -132,6 +132,7 @@ router.post("/sales", requireAuth, apiLimiter, async (req, res) => {
         productId: item.productId,
         name: product.name,
         quantity: item.quantity,
+        unit: product.unit,
         price: item.price,
         stock: product.stock
       });
@@ -870,7 +871,7 @@ router.get("/stock", requireAuth, apiLimiter, async (req, res) => {
     }
 
     const products = await Product.find()
-      .select('name price stock available category brand description condition specifications images image tags size color material year location dimensions weight')
+      .select('name price stock unit quantityStep available category brand description condition specifications images image tags size color material year location dimensions weight')
       .sort({ category: 1, name: 1 });
 
     res.json(products);

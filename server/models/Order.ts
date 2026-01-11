@@ -9,7 +9,7 @@ export interface OrderLocation {
 }
 
 export interface OrderDoc extends Document {
-  items: { productId?: string; name: string; quantity: number; price: number }[];
+  items: { productId?: string; name: string; quantity: number; unit?: string; price: number }[];
   total: number;
   status: 'Pending' | 'Preparing' | 'Ready' | 'Delivered' | 'Cancelled';
   user?: string;
@@ -23,7 +23,7 @@ export interface OrderDoc extends Document {
 }
 
 const OrderSchema = new Schema<OrderDoc>({
-  items: [{ name: String, productId: String, quantity: Number, price: Number }],
+  items: [{ name: String, productId: String, quantity: Number, unit: String, price: Number }],
   total: { type: Number, default: 0 },
   status: { type: String, default: 'Pending' },
   user: { type: String },

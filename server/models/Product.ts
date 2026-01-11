@@ -6,6 +6,8 @@ export interface IProduct extends Document {
   price: number;
   category: string;
   subcategory?: string;
+  unit?: string; // e.g. pcs, kg, litre, packet, bottle
+  quantityStep?: number; // e.g. 1 for pcs, 0.5 for kg
   brand?: string; // Optional - mainly for electronics, fashion, vehicles
   condition?: "new" | "used" | "refurbished"; // Optional - mainly for electronics, vehicles, fashion
   specifications?: Record<string, any>; // Optional - for technical specs
@@ -31,6 +33,8 @@ const ProductSchema = new Schema<IProduct>(
     price: { type: Number, required: true },
     category: { type: String, required: true },
     subcategory: { type: String },
+    unit: { type: String, default: "pcs" },
+    quantityStep: { type: Number, default: 1 },
     brand: { type: String },
     condition: { 
       type: String, 
