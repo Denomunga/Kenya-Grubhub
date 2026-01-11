@@ -1240,7 +1240,7 @@ export default function Menu() {
                       addToCart(selectedProductForDetail);
                     }}
                     disabled={!selectedProductForDetail.available}
-                    className="w-full sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300"
+                    className="w-full"
                   >
                     <ShoppingBag className="mr-2 h-4 w-4" />
                     Add to Cart
