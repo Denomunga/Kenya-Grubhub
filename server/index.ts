@@ -1,6 +1,5 @@
 import "dotenv/config";
 import express from "express";
-import cors from "cors";
 import fs from "fs";
 import { resolve } from "node:path";
 import { registerRoutes } from "./routes.js";
@@ -29,55 +28,14 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
     ].filter(Boolean) // Remove any empty/null values
   : ['http://localhost:5173', 'http://localhost:3000'];
 
-// Important: For wildcards, cors() needs a different approach
-app.use(cors({ 
-  origin: function(origin, callback) {
-    console.log('CORS request from origin:', origin);
-    console.log('Allowed origins:', allowedOrigins);
-    
-    if (!origin) return callback(null, true);
-    
-    // Always allow your specific Vercel domains in production
-    if (process.env.NODE_ENV === 'production') {
-      const specificDomains = [
-        'https://kenya-grubhub-gx7x-46ng1iexk-denos-projects-1cfdba9d.vercel.app',
-        'https://kenya-grubhub-gx7x.vercel.app',
-        'https://kenya-grubhub.onrender.com'
-      ];
-      if (specificDomains.includes(origin)) {
-        console.log('CORS allowed for specific domain:', origin);
-        return callback(null, true);
-      }
-    }
-    
-    if (Array.isArray(allowedOrigins)) {
-      for (const allowed of allowedOrigins) {
-        if (typeof allowed === 'string' && origin === allowed) {
-          console.log('CORS allowed for string match:', origin);
-          return callback(null, true);
-        }
-        if (allowed instanceof RegExp && allowed.test(origin)) {
-          console.log('CORS allowed for regex match:', origin);
-          return callback(null, true);
-        }
-      }
-    }
-    
-    console.log('CORS blocked for origin:', origin);
-    callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token']
-}));
-
 // Don't parse JSON for multipart/form-data requests
+const jsonParser = express.json({ limit: "10mb" });
 app.use((req, res, next) => {
   if (req.is('multipart/form-data')) {
     // Skip JSON parsing for file uploads
     next();
   } else {
-    express.json({ limit: "10mb" })(req, res, next);
+    jsonParser(req, res, next);
   }
 });
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
@@ -88,20 +46,27 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   const url = req.path;
 
   if (url.startsWith("/api")) {
+    const logResponseBody = process.env.NODE_ENV !== "production";
     let capturedJsonResponse: any;
 
-    const originalJson = res.json.bind(res);
-    res.json = function (body: any) {
-      capturedJsonResponse = body;
-      return originalJson(body);
-    };
+    if (logResponseBody) {
+      const originalJson = res.json.bind(res);
+      res.json = function (body: any) {
+        capturedJsonResponse = body;
+        return originalJson(body);
+      };
+    }
 
     res.on("finish", () => {
       const duration = Date.now() - start;
       let line = `${req.method} ${url} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        const responseStr = JSON.stringify(capturedJsonResponse);
-        line += ` :: ${responseStr.length > 200 ? responseStr.substring(0, 200) + '...' : responseStr}`;
+      if (logResponseBody && capturedJsonResponse) {
+        try {
+          const responseStr = JSON.stringify(capturedJsonResponse);
+          line += ` :: ${responseStr.length > 200 ? responseStr.substring(0, 200) + '...' : responseStr}`;
+        } catch {
+          // ignore serialization issues
+        }
       }
       log(line);
     });
@@ -149,7 +114,14 @@ async function startServer() {
     try {
       const uploadsDir = resolve(process.cwd(), "uploads");
       if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-      app.use("/uploads", express.static(uploadsDir));
+      app.use(
+        "/uploads",
+        express.static(uploadsDir, {
+          etag: true,
+          maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+          immutable: process.env.NODE_ENV === 'production',
+        })
+      );
       log("✅ Static uploads served at /uploads");
     } catch (err) {
       console.warn("⚠️  Could not setup uploads static path:", err);
@@ -159,7 +131,19 @@ async function startServer() {
     try {
       const clientDistPath = resolve(process.cwd(), "..", "client", "dist");
       if (fs.existsSync(clientDistPath)) {
-        app.use(express.static(clientDistPath));
+        app.use(
+          express.static(clientDistPath, {
+            etag: true,
+            maxAge: process.env.NODE_ENV === 'production' ? '365d' : 0,
+            immutable: process.env.NODE_ENV === 'production',
+            setHeaders: (res, path) => {
+              // Never aggressively cache the HTML entrypoint.
+              if (path.endsWith('.html')) {
+                res.setHeader('Cache-Control', 'no-cache');
+              }
+            },
+          })
+        );
         log("✅ Frontend static files served from:", clientDistPath);
       } else {
         console.warn("⚠️  Client dist directory not found at:", clientDistPath);
@@ -209,6 +193,7 @@ async function startServer() {
       });
       log('✅ Socket.IO initialized');
       // Periodically emit server health metrics
+      const healthIntervalMs = process.env.NODE_ENV === 'production' ? 30000 : 5000;
       setInterval(() => {
         try {
           const memory = process.memoryUsage();
@@ -216,7 +201,7 @@ async function startServer() {
           const uptime = process.uptime();
           io.emit('server:health', { memory, load, uptime, ts: Date.now() });
         } catch (err) { /* ignore */ }
-      }, 5000);
+      }, healthIntervalMs);
     } catch (err) {
       console.warn('⚠️ Socket.IO initialization failed', err);
     }

@@ -19,7 +19,6 @@ const requireAuth = async (req: Request, res: Response, next: any) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
   try {
-    const User = (await import("../models/User")).User;
     const user = await User.findById(req.session.userId).select("-password");
     if (!user) {
       return res.status(401).json({ message: "User not found" });
@@ -137,12 +136,13 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
-    // Get all COMPLETED sales to show as receipts
+    // Get page of COMPLETED sales to show as receipts
     const sales = await Sale.find({ status: 'Completed' })
       .populate('cashier', 'name username')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
     const cashierIds = Array.from(
       new Set(
@@ -152,7 +152,7 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
       )
     );
 
-    const cashierUsers = await User.find({ _id: { $in: cashierIds } }).select('name username');
+    const cashierUsers = await User.find({ _id: { $in: cashierIds } }).select('name username').lean();
     const cashierMap = new Map(cashierUsers.map((u: any) => [u._id.toString(), { name: u.name, username: u.username }]));
 
     const totalSales = await Sale.countDocuments({ status: 'Completed' });
@@ -162,21 +162,27 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
     const orders: any[] = await Order.find({ status: { $ne: 'Cancelled' } })
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
     const totalOrders = await Order.countDocuments({ status: { $ne: 'Cancelled' } });
 
-    // Get actual printed receipts to merge with sales/order data
-    const printedReceipts = await Receipt.find()
-      .sort({ createdAt: -1 });
+    // Fetch only printed receipts relevant to this page (avoids loading entire collection)
+    const pageIds = [
+      ...sales.map((s: any) => s._id?.toString?.()).filter(Boolean),
+      ...orders.map((o: any) => o._id?.toString?.()).filter(Boolean),
+    ];
 
-    // Create a map of printed receipts by saleId for quick lookup
+    const printedReceipts = pageIds.length
+      ? await Receipt.find({ saleId: { $in: pageIds } }).lean()
+      : [];
+
     const printedReceiptsMap = new Map(
-      printedReceipts.map(receipt => [receipt.saleId.toString(), receipt])
+      printedReceipts.map((receipt: any) => [receipt.saleId.toString(), receipt])
     );
 
     // Format all sales as receipt-like objects
-    const salesReceipts = sales.map(sale => {
+    const salesReceipts = sales.map((sale: any) => {
       const printedReceipt = printedReceiptsMap.get(sale._id.toString());
 
       const saleCashierId = typeof (sale as any).cashier === 'string'
@@ -215,10 +221,9 @@ router.get("/", requireAuth, apiLimiter, async (req, res) => {
     });
 
     // Format all orders as receipt-like objects
-    const orderReceipts = orders.map(order => {
+    const orderReceipts = orders.map((order: any) => {
       const printedReceipt = printedReceiptsMap.get(order._id.toString());
 
-      
       return {
         _id: printedReceipt?._id || order._id,
         saleId: order._id,
