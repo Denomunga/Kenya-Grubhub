@@ -1112,7 +1112,7 @@ export default function Menu() {
                           : (selectedProductForDetail.available ? 'text-green-600' : 'text-red-600')
                       }`}>
                         {selectedProductForDetail.stock !== undefined 
-                          ? `${selectedProductForDetail.stock} units${selectedProductForDetail.stock <= 5 ? ' (Low)' : ''}`
+                          ? `${selectedProductForDetail.stock} ${selectedProductForDetail.unit || 'units'}${selectedProductForDetail.stock <= 5 ? ' (Low)' : ''}`
                           : (selectedProductForDetail.available ? 'In Stock' : 'Out of Stock')
                         }
                       </span>

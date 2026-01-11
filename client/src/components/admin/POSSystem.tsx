@@ -1798,7 +1798,7 @@ export default function POSSystem() {
                               <TableCell>{product.category || 'N/A'}</TableCell>
                               <TableCell>
                                 <span className={isLowStock ? "text-orange-600 font-medium" : isOutOfStock ? "text-red-600 font-medium" : ""}>
-                                  {stockLevel}
+                                  {stockLevel}{product.unit ? ` ${product.unit}` : ''}
                                 </span>
                               </TableCell>
                               <TableCell>{formatPriceKSHS(product.price)}</TableCell>
@@ -2056,7 +2056,7 @@ export default function POSSystem() {
                     <div key={index} className="flex justify-between items-center p-3">
                       <div className="flex-1">
                         <div className="font-medium text-black">{item.name}</div>
-                        <div className="text-xs text-black">{item.quantity} × {formatPriceKSHS(item.price)}</div>
+                        <div className="text-xs text-black">{item.quantity}{item.unit ? ` ${item.unit}` : ''} × {formatPriceKSHS(item.price)}</div>
                       </div>
                       <div className="font-mono font-semibold text-black">
                         {formatPriceKSHS(item.price * item.quantity)}
@@ -2084,18 +2084,18 @@ export default function POSSystem() {
                     <span className="font-mono text-green-600">-{formatPriceKSHS(currentSale.discount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center pt-2 border-t">
+                <div className="flex justify-between pt-2 border-t">
                   <span className="text-lg font-bold text-black">Total:</span>
                   <span className="text-lg font-bold font-mono text-black">
                     {formatPriceKSHS(currentSale.total)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-sm pt-1">
+                <div className="flex justify-between text-sm pt-1">
                   <span className="text-black">Payment ({currentSale.paymentMethod}):</span>
                   <span className="font-mono">{formatPriceKSHS(currentSale.paymentAmount)}</span>
                 </div>
                 {currentSale.change > 0 && (
-                  <div className="flex justify-between items-center text-sm">
+                  <div className="flex justify-between text-sm">
                     <span className="text-blue-600">Change:</span>
                     <span className="font-mono text-blue-600">{formatPriceKSHS(currentSale.change)}</span>
                   </div>
@@ -2154,7 +2154,7 @@ export default function POSSystem() {
                   <div className="font-medium">Items ({pendingSale.items.length} items):</div>
                   {pendingSale.items.map((item: any, index: number) => (
                     <div key={index} className="flex justify-between text-sm">
-                      <span>{item.name} x{item.quantity}</span>
+                      <span>{item.name} x{item.quantity}{item.unit ? ` ${item.unit}` : ''}</span>
                       <span>{formatPriceKSHS(item.price * item.quantity)}</span>
                     </div>
                   ))}
@@ -2246,7 +2246,7 @@ export default function POSSystem() {
               <DialogTitle className="flex items-center justify-between">
                 <span>{selectedProductDetail.name}</span>
                 <Badge variant={selectedProductDetail.stock > 0 ? "default" : "destructive"}>
-                  {selectedProductDetail.stock > 0 ? `In Stock (${selectedProductDetail.stock})` : "Out of Stock"}
+                  {selectedProductDetail.stock > 0 ? `In Stock (${selectedProductDetail.stock}${selectedProductDetail.unit ? ` ${selectedProductDetail.unit}` : ''})` : "Out of Stock"}
                 </Badge>
               </DialogTitle>
             </DialogHeader>
@@ -2309,7 +2309,7 @@ export default function POSSystem() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Current Stock:</span>
                       <span className={`font-medium ${selectedProductDetail.stock <= 10 ? 'text-orange-600' : ''}`}>
-                        {selectedProductDetail.stock || 0}
+                        {selectedProductDetail.stock || 0}{selectedProductDetail.unit ? ` ${selectedProductDetail.unit}` : ''}
                       </span>
                     </div>
                   </div>
