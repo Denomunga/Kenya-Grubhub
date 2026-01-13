@@ -286,7 +286,12 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                       )}
                     </div>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" align="start">
+                  <PopoverContent
+                    className="w-full p-0"
+                    align="start"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                    onCloseAutoFocus={(e) => e.preventDefault()}
+                  >
                     <div className="max-h-48 overflow-y-auto">
                       {suggestions.map((suggestion, index) => (
                         <button
