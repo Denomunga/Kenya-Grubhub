@@ -37,12 +37,12 @@ export function GlassCard({
   return (
     <motion.div
       className={cn(
-        'rounded-2xl bg-white/10 border border-white/20',
+        'rounded-2xl bg-background/10 border border-border/40',
         blurMap[blur],
         shadowMap[shadow],
         className
       )}
-      style={{ backgroundColor: `rgba(255, 255, 255, ${opacity})` }}
+      style={{ backgroundColor: `hsl(var(--background) / ${opacity})` }}
       whileHover={{ 
         scale: 1.02,
         boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.2), 0 10px 20px -5px rgba(0, 0, 0, 0.1)'
@@ -354,7 +354,7 @@ export function FloatingActionButton({
         
         {/* Ripple Effect */}
         <motion.div
-          className="absolute inset-0 rounded-full bg-white opacity-0"
+          className="absolute inset-0 rounded-full bg-background opacity-0"
           whileTap={{
             opacity: 0.3,
             scale: 1.5
@@ -433,7 +433,7 @@ export function ParticleBackground({ particleCount = 50, className }: ParticleBa
       {particles.map((particle) => (
         <motion.div
           key={particle.id}
-          className="absolute bg-white rounded-full opacity-50"
+          className="absolute bg-foreground rounded-full opacity-20"
           style={{
             left: `${particle.x}%`,
             top: `${particle.y}%`,

@@ -69,11 +69,11 @@ export default function OrderConfirmation({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Preparing': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Ready': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'Delivered': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Pending': return 'bg-yellow-500/15 text-yellow-800 dark:text-yellow-200 border border-yellow-500/20';
+      case 'Preparing': return 'bg-blue-500/15 text-blue-800 dark:text-blue-200 border border-blue-500/20';
+      case 'Ready': return 'bg-purple-500/15 text-purple-800 dark:text-purple-200 border border-purple-500/20';
+      case 'Delivered': return 'bg-green-500/15 text-green-800 dark:text-green-200 border border-green-500/20';
+      default: return 'bg-muted text-foreground border border-border';
     }
   };
 
@@ -92,13 +92,13 @@ export default function OrderConfirmation({
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Success Header */}
-      <Card className="border-green-200 bg-green-50">
+      <Card className="border border-green-500/20 bg-green-500/10">
         <CardHeader className="text-center pb-4">
-          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+          <div className="mx-auto w-16 h-16 bg-green-500/15 rounded-full flex items-center justify-center mb-4 border border-green-500/20">
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
-          <CardTitle className="text-2xl text-green-800">Order Confirmed!</CardTitle>
-          <p className="text-green-700">
+          <CardTitle className="text-2xl text-foreground">Order Confirmed!</CardTitle>
+          <p className="text-muted-foreground">
             Thank you for your order. We're preparing it with care.
           </p>
         </CardHeader>
@@ -243,8 +243,8 @@ export default function OrderConfirmation({
             <div className="flex items-center gap-3">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 ['Pending', 'Preparing', 'Ready', 'Delivered'].includes(order.status) 
-                  ? 'bg-green-100 text-green-600' 
-                  : 'bg-gray-100 text-gray-400'
+                  ? 'bg-green-500/15 text-green-600 border border-green-500/20' 
+                  : 'bg-muted text-muted-foreground border border-border'
               }`}>
                 <CheckCircle className="h-4 w-4" />
               </div>
@@ -259,17 +259,15 @@ export default function OrderConfirmation({
             <div className="flex items-center gap-3">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 ['Preparing', 'Ready', 'Delivered'].includes(order.status) 
-                  ? 'bg-blue-100 text-blue-600' 
-                  : 'bg-gray-100 text-gray-400'
+                  ? 'bg-blue-500/15 text-blue-600 border border-blue-500/20' 
+                  : 'bg-muted text-muted-foreground border border-border'
               }`}>
                 <ChefHat className="h-4 w-4" />
               </div>
               <div>
                 <p className="font-medium">Preparing</p>
                 <p className="text-sm text-muted-foreground">
-                  {['Preparing', 'Ready', 'Delivered'].includes(order.status) 
-                    ? 'Your order is being prepared' 
-                    : 'Waiting to start preparation'}
+                  Your order is being prepared
                 </p>
               </div>
             </div>
@@ -277,17 +275,15 @@ export default function OrderConfirmation({
             <div className="flex items-center gap-3">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 ['Ready', 'Delivered'].includes(order.status) 
-                  ? 'bg-purple-100 text-purple-600' 
-                  : 'bg-gray-100 text-gray-400'
+                  ? 'bg-purple-500/15 text-purple-600 border border-purple-500/20' 
+                  : 'bg-muted text-muted-foreground border border-border'
               }`}>
                 <Package className="h-4 w-4" />
               </div>
               <div>
-                <p className="font-medium">Ready for Delivery</p>
+                <p className="font-medium">Ready</p>
                 <p className="text-sm text-muted-foreground">
-                  {['Ready', 'Delivered'].includes(order.status) 
-                    ? 'Order is ready and on the way' 
-                    : 'Preparing your order'}
+                  Your order is ready for delivery
                 </p>
               </div>
             </div>
@@ -295,17 +291,15 @@ export default function OrderConfirmation({
             <div className="flex items-center gap-3">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 order.status === 'Delivered' 
-                  ? 'bg-green-100 text-green-600' 
-                  : 'bg-gray-100 text-gray-400'
+                  ? 'bg-green-500/15 text-green-600 border border-green-500/20' 
+                  : 'bg-muted text-muted-foreground border border-border'
               }`}>
                 <Truck className="h-4 w-4" />
               </div>
               <div>
                 <p className="font-medium">Delivered</p>
                 <p className="text-sm text-muted-foreground">
-                  {order.status === 'Delivered' 
-                    ? 'Order has been delivered' 
-                    : 'Out for delivery'}
+                  Your order has been delivered
                 </p>
               </div>
             </div>

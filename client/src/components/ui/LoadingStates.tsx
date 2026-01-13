@@ -19,7 +19,7 @@ export function Skeleton({
   lines = 3 
 }: SkeletonProps) {
 
-  const baseClasses = "bg-linear-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%] animate-shimmer rounded";
+  const baseClasses = "bg-linear-to-r from-muted via-muted/70 to-muted bg-[length:200%_100%] animate-shimmer rounded";
 
   if (variant === 'text') {
     return (
@@ -119,7 +119,7 @@ export function PageLoader() {
 
         {/* Loading Progress */}
         <div className="w-64 space-y-2">
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
             <motion.div
               className="w-full h-full bg-blue-500 rounded-lg animate-pulse"
               initial={{ width: 0 }}
@@ -207,7 +207,7 @@ export function LoadingButton({ loading, children, className, disabled }: Loadin
 export function ProductCardSkeleton() {
   return (
     <motion.div
-      className="bg-white rounded-xl shadow-lg overflow-hidden"
+      className="bg-card rounded-xl shadow-lg overflow-hidden border border-border"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -267,7 +267,7 @@ export function ProgressiveImage({ src, alt, className, placeholder }: Progressi
 
       {/* Loading Indicator */}
       {!imageLoaded && !error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100/50">
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -279,10 +279,10 @@ export function ProgressiveImage({ src, alt, className, placeholder }: Progressi
 
       {/* Error State */}
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+        <div className="absolute inset-0 flex items-center justify-center bg-muted">
           <div className="text-center space-y-2">
-            <Package className="w-12 h-12 text-gray-400 mx-auto" />
-            <p className="text-sm text-gray-500">Failed to load image</p>
+            <Package className="w-12 h-12 text-muted-foreground mx-auto" />
+            <p className="text-sm text-muted-foreground">Failed to load image</p>
           </div>
         </div>
       )}
@@ -297,7 +297,7 @@ export function ListLoader({ items = 5 }: { items?: number }) {
       {Array.from({ length: items }).map((_, i) => (
         <motion.div
           key={i}
-          className="bg-white rounded-lg p-4 shadow-sm"
+          className="bg-card rounded-lg p-4 shadow-sm border border-border"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: i * 0.1 }}
@@ -363,7 +363,7 @@ export function StarRatingLoader({ rating = 0 }: { rating?: number }) {
         >
           <Star 
             className={`w-5 h-5 ${
-              star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+              star <= rating ? 'text-yellow-400 fill-current' : 'text-muted-foreground/40'
             }`} 
           />
         </motion.div>

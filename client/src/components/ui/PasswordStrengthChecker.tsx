@@ -104,7 +104,7 @@ export default function PasswordStrengthChecker({ password, onStrengthChange }: 
             {getStrengthText()}
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-muted rounded-full h-2">
           <div 
             className={`h-2 rounded-full transition-all duration-300 ${getStrengthColor()}`}
             style={{ width: `${Math.min(strength, 100)}%` }}
@@ -131,9 +131,9 @@ export default function PasswordStrengthChecker({ password, onStrengthChange }: 
 
       {/* Security tips */}
       {strength < 70 && password.length > 0 && (
-        <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded-md">
+        <div className="flex items-start gap-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-md">
           <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-          <div className="text-xs text-amber-800">
+          <div className="text-xs text-amber-800 dark:text-amber-200">
             <p className="font-medium">Security Tip:</p>
             <p>
               {strength < 30 
@@ -149,9 +149,9 @@ export default function PasswordStrengthChecker({ password, onStrengthChange }: 
 
       {/* Success message for strong passwords */}
       {strength >= 90 && (
-        <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-md">
+        <div className="flex items-center gap-2 p-2 bg-green-500/10 border border-green-500/20 rounded-md">
           <Check className="h-4 w-4 text-green-600" />
-          <p className="text-xs text-green-800 font-medium">
+          <p className="text-xs text-green-800 dark:text-green-200 font-medium">
             Excellent! Your password meets all security requirements.
           </p>
         </div>

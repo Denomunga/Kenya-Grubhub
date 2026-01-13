@@ -1771,7 +1771,7 @@ export default function POSSystem() {
                           {bulkStockUpdates.map((update, index) => {
                             const product = stockProducts.find((p: any) => p._id === update.productId);
                             return (
-                              <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                              <div key={index} className="flex items-center justify-between p-2 bg-muted/30 rounded border border-border">
                                 <span className="text-sm">{product?.name} - {update.operation} {update.stock}</span>
                                 <Button size="sm" variant="outline" onClick={() => removeFromBulkUpdates(update.productId)}>
                                   <Trash2 className="h-3 w-3" />
@@ -1815,7 +1815,7 @@ export default function POSSystem() {
                           return (
                             <TableRow 
                               key={product._id} 
-                              className="cursor-pointer hover:bg-gray-50"
+                              className="cursor-pointer hover:bg-muted/30"
                               onClick={() => setSelectedProductDetail(product)}
                             >
                               <TableCell className="font-medium">{product.name}</TableCell>
@@ -2027,7 +2027,7 @@ export default function POSSystem() {
             setCurrentSale(null);
           }
         }}>
-          <DialogContent className="max-w-2xl w-full mx-4 bg-white border border-gray-200 shadow-lg">
+          <DialogContent className="max-w-2xl w-full mx-4 bg-background border border-border shadow-lg">
             <DialogHeader className="text-center pb-4">
               <DialogTitle className="text-lg font-bold">
                 {currentSale.type === 'Order' ? 'Order Receipt' : 'Point of Sale Receipt'}
@@ -2037,34 +2037,34 @@ export default function POSSystem() {
               </div>
             </DialogHeader>
             
-            <div className="bg-white rounded-lg p-4 sm:p-6 space-y-4 sm:space-y-6 border border-gray-200">
+            <div className="bg-background rounded-lg p-4 sm:p-6 space-y-4 sm:space-y-6 border border-border">
               {/* Header */}
               <div className="text-center space-y-2 border-b pb-4">
-                <div className="text-2xl font-bold text-gray-800">MS-COMPUTERS</div>
-                <div className="text-xs text-gray-500">Your Trusted Technology Partner</div>
-                <div className="text-xs text-gray-400">www.ms-computers.com</div>
-                <div className="text-sm font-mono text-blue-600 mt-2">Receipt: {currentSale.receiptNumber}</div>
+                <div className="text-2xl font-bold text-foreground">MS-COMPUTERS</div>
+                <div className="text-xs text-muted-foreground">Your Trusted Technology Partner</div>
+                <div className="text-xs text-muted-foreground/70">www.ms-computers.com</div>
+                <div className="text-sm font-mono text-primary mt-2">Receipt: {currentSale.receiptNumber}</div>
               </div>
               
               {/* Transaction Details */}
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center py-1">
-                  <span className="text-gray-600 font-medium">Date:</span>
+                  <span className="text-muted-foreground font-medium">Date:</span>
                   <span className="font-mono">{new Date(currentSale.createdAt).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center py-1">
-                  <span className="text-gray-600 font-medium">Cashier:</span>
+                  <span className="text-muted-foreground font-medium">Cashier:</span>
                   <span>{currentSale.cashier?.name || 'Unknown'}</span>
                 </div>
                 {currentSale.customerName && (
                   <div className="flex justify-between items-center py-1">
-                    <span className="text-gray-600 font-medium">Customer:</span>
+                    <span className="text-muted-foreground font-medium">Customer:</span>
                     <span>{currentSale.customerName}</span>
                   </div>
                 )}
                 {currentSale.type === 'Order' && currentSale.status && (
                   <div className="flex justify-between items-center py-1">
-                    <span className="text-gray-600 font-medium">Status:</span>
+                    <span className="text-muted-foreground font-medium">Status:</span>
                     <Badge variant={currentSale.status === 'Completed' ? 'default' : 'secondary'}>
                       {currentSale.status}
                     </Badge>
@@ -2074,15 +2074,15 @@ export default function POSSystem() {
               
               {/* Items */}
               <div className="space-y-2">
-                <div className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Items</div>
-                <div className="border rounded-lg bg-white divide-y">
+                <div className="text-sm font-semibold text-foreground uppercase tracking-wide">Items</div>
+                <div className="border rounded-lg bg-background divide-y">
                   {currentSale.items.map((item, index) => (
                     <div key={index} className="flex justify-between items-center p-3">
                       <div className="flex-1">
-                        <div className="font-medium text-black">{item.name}</div>
-                        <div className="text-xs text-black">{item.quantity}{item.unit ? ` ${item.unit}` : ''} × {formatPriceKSHS(item.price)}</div>
+                        <div className="font-medium text-foreground">{item.name}</div>
+                        <div className="text-xs text-muted-foreground">{item.quantity}{item.unit ? ` ${item.unit}` : ''} × {formatPriceKSHS(item.price)}</div>
                       </div>
-                      <div className="font-mono font-semibold text-black">
+                      <div className="font-mono font-semibold text-foreground">
                         {formatPriceKSHS(item.price * item.quantity)}
                       </div>
                     </div>
@@ -2093,12 +2093,12 @@ export default function POSSystem() {
               {/* Summary */}
               <div className="space-y-2 border-t pt-4">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">Subtotal:</span>
+                  <span className="text-muted-foreground">Subtotal:</span>
                   <span className="font-mono">{formatPriceKSHS(currentSale.subtotal)}</span>
                 </div>
                 {currentSale.tax > 0 && (
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">Tax:</span>
+                    <span className="text-muted-foreground">Tax:</span>
                     <span className="font-mono">{formatPriceKSHS(currentSale.tax)}</span>
                   </div>
                 )}
@@ -2109,13 +2109,13 @@ export default function POSSystem() {
                   </div>
                 )}
                 <div className="flex justify-between pt-2 border-t">
-                  <span className="text-lg font-bold text-black">Total:</span>
-                  <span className="text-lg font-bold font-mono text-black">
+                  <span className="text-lg font-bold text-foreground">Total:</span>
+                  <span className="text-lg font-bold font-mono text-foreground">
                     {formatPriceKSHS(currentSale.total)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm pt-1">
-                  <span className="text-black">Payment ({currentSale.paymentMethod}):</span>
+                  <span className="text-foreground">Payment ({currentSale.paymentMethod}):</span>
                   <span className="font-mono">{formatPriceKSHS(currentSale.paymentAmount)}</span>
                 </div>
                 {currentSale.change > 0 && (
@@ -2128,8 +2128,8 @@ export default function POSSystem() {
               
               {/* Footer */}
               <div className="text-center space-y-2 border-t pt-4">
-                <div className="text-sm font-medium text-black">Thank you for shopping with us!</div>
-                <div className="text-xs text-black">Please come again</div>
+                <div className="text-sm font-medium text-foreground">Thank you for shopping with us!</div>
+                <div className="text-xs text-foreground">Please come again</div>
                 {currentSale.type === 'Order' && (
                   <div className="text-xs text-orange-600 mt-2">
                     Order status updates will be sent to your contact
@@ -2170,7 +2170,7 @@ export default function POSSystem() {
               <DialogTitle>Confirm Sale Details</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-muted/30 p-4 rounded-lg border border-border">
                 <h4 className="font-semibold mb-3">Sale Summary</h4>
                 
                 {/* Items List */}
@@ -2284,7 +2284,7 @@ export default function POSSystem() {
                 <h3 className="font-medium">Product Images</h3>
                 {(selectedProductDetail.images && selectedProductDetail.images.length > 0) || (selectedProductDetail.image) ? (
                   <div className="space-y-2">
-                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                    <div className="aspect-square bg-muted rounded-lg overflow-hidden border border-border">
                       <img 
                         src={selectedProductDetail.images?.[0] || selectedProductDetail.image} 
                         alt={selectedProductDetail.name}
@@ -2294,7 +2294,7 @@ export default function POSSystem() {
                     {selectedProductDetail.images && selectedProductDetail.images.length > 1 && (
                       <div className="grid grid-cols-4 gap-2">
                         {selectedProductDetail.images.slice(1, 5).map((image: string, index: number) => (
-                          <div key={index} className="aspect-square bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-80">
+                          <div key={index} className="aspect-square bg-muted rounded overflow-hidden cursor-pointer hover:opacity-80 border border-border">
                             <img 
                               src={image} 
                               alt={`${selectedProductDetail.name} ${index + 2}`}
@@ -2306,7 +2306,7 @@ export default function POSSystem() {
                     )}
                   </div>
                 ) : (
-                  <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+                  <div className="aspect-square bg-muted rounded-lg flex items-center justify-center text-muted-foreground border border-border">
                     No Image Available
                   </div>
                 )}
@@ -2318,23 +2318,23 @@ export default function POSSystem() {
                   <h3 className="font-medium mb-2">Product Information</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Category:</span>
+                      <span className="text-muted-foreground">Category:</span>
                       <span>{selectedProductDetail.category || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Brand:</span>
+                      <span className="text-muted-foreground">Brand:</span>
                       <span>{selectedProductDetail.brand || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Condition:</span>
+                      <span className="text-muted-foreground">Condition:</span>
                       <span className="capitalize">{selectedProductDetail.condition || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Price:</span>
+                      <span className="text-muted-foreground">Price:</span>
                       <span className="font-medium">{formatPriceKSHS(selectedProductDetail.price)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Current Stock:</span>
+                      <span className="text-muted-foreground">Current Stock:</span>
                       <span className={`font-medium ${selectedProductDetail.stock <= 10 ? 'text-orange-600' : ''}`}>
                         {selectedProductDetail.stock || 0}{selectedProductDetail.unit ? ` ${selectedProductDetail.unit}` : ''}
                       </span>
@@ -2346,7 +2346,7 @@ export default function POSSystem() {
                 {selectedProductDetail.description && (
                   <div>
                     <h3 className="font-medium mb-2">Description</h3>
-                    <p className="text-sm text-gray-600">{selectedProductDetail.description}</p>
+                    <p className="text-sm text-muted-foreground">{selectedProductDetail.description}</p>
                   </div>
                 )}
 
@@ -2357,7 +2357,7 @@ export default function POSSystem() {
                     <div className="space-y-1 text-sm">
                       {Object.entries(selectedProductDetail.specifications).map(([key, value]) => (
                         <div key={key} className="flex justify-between">
-                          <span className="text-gray-600 capitalize">{key}:</span>
+                          <span className="text-muted-foreground capitalize">{key}:</span>
                           <span>{String(value)}</span>
                         </div>
                       ))}
@@ -2371,31 +2371,31 @@ export default function POSSystem() {
                   <div className="space-y-1 text-sm">
                     {selectedProductDetail.size && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Size:</span>
+                        <span className="text-muted-foreground">Size:</span>
                         <span>{selectedProductDetail.size}</span>
                       </div>
                     )}
                     {selectedProductDetail.color && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Color:</span>
+                        <span className="text-muted-foreground">Color:</span>
                         <span>{selectedProductDetail.color}</span>
                       </div>
                     )}
                     {selectedProductDetail.material && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Material:</span>
+                        <span className="text-muted-foreground">Material:</span>
                         <span>{selectedProductDetail.material}</span>
                       </div>
                     )}
                     {selectedProductDetail.year && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Year:</span>
+                        <span className="text-muted-foreground">Year:</span>
                         <span>{selectedProductDetail.year}</span>
                       </div>
                     )}
                     {selectedProductDetail.location && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Location:</span>
+                        <span className="text-muted-foreground">Location:</span>
                         <span>{selectedProductDetail.location}</span>
                       </div>
                     )}
@@ -2461,12 +2461,12 @@ export default function POSSystem() {
             </DialogHeader>
             
             <div className="space-y-4">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 Showing all sales that include this product
               </div>
-              
+
               {productSalesHistory.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   No sales found for this product
                 </div>
               ) : (
@@ -2487,9 +2487,9 @@ export default function POSSystem() {
                     {productSalesHistory.map((sale) => {
                       const productItem = sale.items.find(item => item.productId === selectedProductDetail?._id);
                       return (
-                        <TableRow 
+                        <TableRow
                           key={sale._id}
-                          className="cursor-pointer hover:bg-gray-50"
+                          className="cursor-pointer hover:bg-muted/30"
                           onClick={() => {
                             setCurrentSale(sale);
                             setCameFromProductSalesHistory(true);
@@ -2514,18 +2514,17 @@ export default function POSSystem() {
                   </TableBody>
                 </Table>
               )}
-              
-              {/* Summary Statistics */}
+
               {productSalesHistory.length > 0 && (
                 <div className="border-t pt-4">
                   <h4 className="font-medium mb-2">Summary</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-600">Total Sales:</span>
+                      <span className="text-muted-foreground">Total Sales:</span>
                       <div className="font-medium">{productSalesHistory.length}</div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Total Quantity Sold:</span>
+                      <span className="text-muted-foreground">Total Quantity Sold:</span>
                       <div className="font-medium">
                         {productSalesHistory.reduce((sum, sale) => {
                           const item = sale.items.find(item => item.productId === selectedProductDetail?._id);
@@ -2534,7 +2533,7 @@ export default function POSSystem() {
                       </div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Total Revenue:</span>
+                      <span className="text-muted-foreground">Total Revenue:</span>
                       <div className="font-medium">
                         {formatPriceKSHS(
                           productSalesHistory.reduce((sum, sale) => {
@@ -2545,7 +2544,7 @@ export default function POSSystem() {
                       </div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Average Price:</span>
+                      <span className="text-muted-foreground">Average Price:</span>
                       <div className="font-medium">
                         {formatPriceKSHS(
                           productSalesHistory.reduce((sum, sale) => {

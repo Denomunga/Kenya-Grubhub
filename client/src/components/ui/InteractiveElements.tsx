@@ -89,7 +89,7 @@ export function AnimatedInput({
         placeholder={placeholder}
         className={`
           w-full px-4 py-3 border-2 rounded-xl transition-all duration-300
-          ${focused ? 'border-primary' : 'border-gray-300'}
+          ${focused ? 'border-primary' : 'border-border'}
           ${error ? 'border-red-500' : ''}
           ${hasValue || focused ? 'pt-6 pb-2' : 'pt-3 pb-3'}
         `}
@@ -102,7 +102,7 @@ export function AnimatedInput({
         className={`
           absolute left-4 transition-all duration-300 pointer-events-none
           ${hasValue || focused ? 'text-xs top-2' : 'text-base top-3.5'}
-          ${focused ? 'text-primary' : 'text-gray-500'}
+          ${focused ? 'text-primary' : 'text-muted-foreground'}
           ${error ? 'text-red-500' : ''}
         `}
         animate={{
@@ -162,7 +162,7 @@ export function InteractiveGallery({ images, className }: InteractiveGalleryProp
   return (
     <div className={`relative ${className}`}>
       {/* Main Image */}
-      <div className="relative overflow-hidden rounded-xl bg-gray-100">
+      <div className="relative overflow-hidden rounded-xl bg-muted">
         <motion.img
           src={images[currentIndex]}
           alt={`Gallery image ${currentIndex + 1}`}
@@ -175,7 +175,7 @@ export function InteractiveGallery({ images, className }: InteractiveGalleryProp
         {/* Zoom Controls */}
         <div className="absolute top-4 right-4 flex flex-col gap-2">
           <motion.button
-            className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
+            className="p-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg border border-border"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={zoomIn}
@@ -183,7 +183,7 @@ export function InteractiveGallery({ images, className }: InteractiveGalleryProp
             <ZoomIn className="w-4 h-4" />
           </motion.button>
           <motion.button
-            className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
+            className="p-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg border border-border"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={zoomOut}
@@ -191,7 +191,7 @@ export function InteractiveGallery({ images, className }: InteractiveGalleryProp
             <ZoomOut className="w-4 h-4" />
           </motion.button>
           <motion.button
-            className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
+            className="p-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg border border-border"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={resetZoom}
@@ -204,7 +204,7 @@ export function InteractiveGallery({ images, className }: InteractiveGalleryProp
         {images.length > 1 && (
           <>
             <motion.button
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg border border-border"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={prevImage}
@@ -212,7 +212,7 @@ export function InteractiveGallery({ images, className }: InteractiveGalleryProp
               <ChevronLeft className="w-5 h-5" />
             </motion.button>
             <motion.button
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg border border-border"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={nextImage}
@@ -248,7 +248,7 @@ export function InteractiveGallery({ images, className }: InteractiveGalleryProp
 
       {/* Image Counter */}
       {images.length > 1 && (
-        <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
+        <div className="absolute bottom-4 left-4 bg-background/80 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium border border-border">
           {currentIndex + 1} / {images.length}
         </div>
       )}
@@ -313,7 +313,7 @@ export function SmoothCarousel({ items, className, autoPlay = false, interval = 
       {items.length > 1 && (
         <>
           <motion.button
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
+            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg border border-border"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={prevSlide}
@@ -321,7 +321,7 @@ export function SmoothCarousel({ items, className, autoPlay = false, interval = 
             <ChevronLeft className="w-5 h-5" />
           </motion.button>
           <motion.button
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg border border-border"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={nextSlide}
@@ -338,7 +338,7 @@ export function SmoothCarousel({ items, className, autoPlay = false, interval = 
             <motion.button
               key={index}
               className={`w-2 h-2 rounded-full ${
-                index === currentIndex ? 'bg-white' : 'bg-white/50'
+                index === currentIndex ? 'bg-background' : 'bg-background/50'
               }`}
               whileHover={{ scale: 1.2 }}
               whileTap={{ scale: 0.8 }}
@@ -392,7 +392,7 @@ export function InteractiveProductCard({
 
   return (
     <motion.div
-      className={`relative bg-white rounded-xl shadow-lg overflow-hidden ${className}`}
+      className={`relative bg-card rounded-xl shadow-lg overflow-hidden border border-border ${className}`}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       whileHover={{ y: -5 }}
@@ -418,28 +418,28 @@ export function InteractiveProductCard({
               exit={{ opacity: 0, x: 20 }}
             >
               <motion.button
-                className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
+                className="p-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg border border-border"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={handleLike}
               >
-                <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+                <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
               </motion.button>
               <motion.button
-                className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
+                className="p-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg border border-border"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={handleShare}
               >
-                <Share2 className="w-4 h-4 text-gray-600" />
+                <Share2 className="w-4 h-4 text-muted-foreground" />
               </motion.button>
               <motion.button
-                className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
+                className="p-2 bg-background/80 backdrop-blur-sm rounded-full shadow-lg border border-border"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={handleView}
               >
-                <Eye className="w-4 h-4 text-gray-600" />
+                <Eye className="w-4 h-4 text-muted-foreground" />
               </motion.button>
             </motion.div>
           )}
@@ -448,9 +448,9 @@ export function InteractiveProductCard({
 
       {/* Product Info */}
       <div className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-1">{product.name}</h3>
+        <h3 className="font-semibold text-foreground mb-1">{product.name}</h3>
         {product.description && (
-          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
+          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{product.description}</p>
         )}
         
         <div className="flex items-center justify-between">
@@ -467,7 +467,7 @@ export function InteractiveProductCard({
                 <div
                   key={i}
                   className={`w-4 h-4 ${
-                    i < (product.rating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                    i < (product.rating || 0) ? 'text-yellow-400 fill-current' : 'text-muted-foreground/40'
                   }`}
                 >
                   ★
@@ -565,7 +565,7 @@ export function FloatingActionMenu({ items, className }: FloatingActionMenuProps
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <span className="bg-gray-800 text-white px-3 py-1 rounded-lg text-sm whitespace-nowrap">
+                <span className="bg-foreground text-background px-3 py-1 rounded-lg text-sm whitespace-nowrap">
                   {item.label}
                 </span>
                 <motion.button
