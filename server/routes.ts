@@ -1235,7 +1235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // JSON route for menu creation (with validation middleware)
   app.post("/api/menu", requireAuth, validateMenuItem, handleValidationErrors, async (req: Request, res: Response) => {
     try {
-      if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
+      if (!req.user || (req.user.role !== "admin" )) {
         return res.status(403).json({ message: "Admin/staff access required" });
       }
 
@@ -1325,7 +1325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Multipart route for menu creation with file uploads
   app.post("/api/menu/upload", requireAuth, uploadLimiter, upload.array('images', 5), async (req: Request, res: Response) => {
     try {
-      if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
+      if (!req.user || (req.user.role !== "admin" )) {
         return res.status(403).json({ message: "Admin/staff access required" });
       }
 
@@ -1457,7 +1457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/menu/:id", requireAuth, validateMenuItem, handleValidationErrors, async (req: Request, res: Response) => {
     try {
-      if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
+      if (!req.user || (req.user.role !== "admin" )) {
         return res.status(403).json({ message: "Admin/staff access required" });
       }
 
@@ -1566,7 +1566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add this after the PUT /api/menu/:id endpoint (around line 997)
 app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => {
   try {
-    if (!req.user || (req.user.role !== "admin" && req.user.role !== "staff")) {
+    if (!req.user || (req.user.role !== "admin" )) {
       return res.status(403).json({ message: "Admin/staff access required" });
     }
 

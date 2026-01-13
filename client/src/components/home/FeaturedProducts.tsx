@@ -271,7 +271,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
                           setLocation(`/menu?product=${item.id}`);
                         }}
                       >
-                        Add to Order
+                        View Details
                         <Plus className="w-4 h-4" />
                       </Button>
                     </motion.div>

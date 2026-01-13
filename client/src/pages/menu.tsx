@@ -790,7 +790,7 @@ export default function Menu() {
                         addToCart(item);
                       }}
                     >
-                      Add to Order
+                      Add to Cart
                       <ShoppingBag className="ml-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
                     </Button>
                   </div>
@@ -987,7 +987,7 @@ export default function Menu() {
 
       {/* Product Detail Sheet */}
       <Sheet open={productDetailOpen} onOpenChange={setProductDetailOpen}>
-        <SheetContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <SheetContent className="w-[95vw] sm:w-[92vw] md:w-[85vw] lg:w-280 xl:w-7xl sm:max-w-none max-h-[90vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="text-2xl font-bold">
               {selectedProductForDetail?.name}

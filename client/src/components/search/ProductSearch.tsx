@@ -243,7 +243,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
 
           {/* Main Search Bar */}
           <div className="relative group">
-            <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-purple-600 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity"></div>
+            <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-purple-600 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none"></div>
             <div className="relative flex gap-3">
               <div className="relative flex-1">
                 <Popover open={showSuggestions && suggestions.length > 0} onOpenChange={setShowSuggestions}>
