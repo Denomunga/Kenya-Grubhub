@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Table,
   TableBody,
@@ -25,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Users, ShoppingBag, Mail, TrendingUp, MapPin, Phone } from "lucide-react";
+import { BarChart3, Bell, Check, DollarSign, LayoutGrid, Mail, MapPin, MapPinned, Newspaper, Phone, Pin, PinOff, Plus, Search, Settings, ShoppingBag, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import NewsletterManager from "@/components/admin/NewsletterManager";
 import NewsManager from "@/components/admin/NewsManager";
@@ -34,6 +36,7 @@ import AnimatedCharts from "@/components/admin/AnimatedCharts";
 import OrderLocationView from "@/components/admin/OrderLocationView";
 import BusinessLocationManager from "@/components/admin/BusinessLocationManager";
 import POSSystem from "@/components/admin/POSSystem";
+import SocialLinksManager from "@/components/admin/SocialLinksManager";
 
 function playBeep() {
   try {
@@ -55,12 +58,134 @@ export default function Dashboard() {
   const { user, isAdmin, isStaff, allUsers, updateUserRole, refreshAllUsers } = useHybridAuth();
   const [, setLocation] = useLocation();
   const { 
-    orders, updateOrderStatus, serverHealth, kpis
+    orders, menu, updateOrderStatus, serverHealth, kpis
   } = useData();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = React.useState<string>("overview");
   const [opm, setOpm] = React.useState<number>(0); // orders per minute
   const orderTimestampsRef = React.useRef<number[]>([]);
   const [posTotalRevenue, setPosTotalRevenue] = React.useState<number>(0); // Add POS total revenue state
+  const [posTodayRevenue, setPosTodayRevenue] = React.useState<number>(0);
+  const [kpiRange, setKpiRange] = React.useState<"today" | "7d" | "30d">("today");
+  const [posRangeRevenue, setPosRangeRevenue] = React.useState<number>(0);
+  const [serverHealthUpdatedAt, setServerHealthUpdatedAt] = React.useState<number | null>(null);
+
+  const rangeDays = kpiRange === "today" ? 1 : kpiRange === "7d" ? 7 : 30;
+  const rangeStart = React.useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - (rangeDays - 1));
+    return start;
+  }, [rangeDays]);
+
+  const [commandOpen, setCommandOpen] = React.useState(false);
+  const [commandQuery, setCommandQuery] = React.useState("");
+
+  const [notificationsOpen, setNotificationsOpen] = React.useState(false);
+  const [notificationsSeenAt, setNotificationsSeenAt] = React.useState<number>(() => Date.now());
+
+  type PinnedAction = {
+    kind: "tab" | "action" | "order" | "product";
+    value: string;
+    label: string;
+    tab?: string;
+  };
+  const [pinnedActions, setPinnedActions] = React.useState<PinnedAction[]>([]);
+  const [pinLoading, setPinLoading] = React.useState(false);
+
+  const [orderDetailOpen, setOrderDetailOpen] = React.useState(false);
+  const [selectedOrder, setSelectedOrder] = React.useState<any | null>(null);
+  const [productDetailOpen, setProductDetailOpen] = React.useState(false);
+  const [selectedProduct, setSelectedProduct] = React.useState<any | null>(null);
+
+  type ActivityItem = { id: string; ts: number; label: string; meta?: string; tone?: "info" | "success" | "warning" };
+  const [activity, setActivity] = React.useState<ActivityItem[]>([]);
+
+  const unreadCount = React.useMemo(() => {
+    return activity.filter((a) => a.ts > notificationsSeenAt).length;
+  }, [activity, notificationsSeenAt]);
+
+  React.useEffect(() => {
+    const loadPins = async () => {
+      try {
+        const res = await apiFetch("/api/pos/settings");
+        if (!res.ok) return;
+        const data = await res.json();
+        const pins = Array.isArray(data?.pinnedActions) ? data.pinnedActions : [];
+        setPinnedActions(pins);
+      } catch {
+        setPinnedActions([]);
+      }
+    };
+
+    loadPins();
+  }, []);
+
+  const savePins = React.useCallback(async (nextPins: PinnedAction[]) => {
+    setPinLoading(true);
+    try {
+      const res = await apiFetch("/api/pos/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinnedActions: nextPins }),
+      });
+      if (!res.ok) throw new Error("Failed to save pinned actions");
+      setPinnedActions(nextPins);
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: e instanceof Error ? e.message : "Failed to save pinned actions",
+        variant: "destructive",
+      });
+    } finally {
+      setPinLoading(false);
+    }
+  }, [toast]);
+
+  const isPinned = React.useCallback((kind: PinnedAction["kind"], value: string) => {
+    return pinnedActions.some((p) => p.kind === kind && p.value === value);
+  }, [pinnedActions]);
+
+  const togglePin = React.useCallback(async (pin: PinnedAction) => {
+    const exists = pinnedActions.some((p) => p.kind === pin.kind && p.value === pin.value);
+    const next = exists
+      ? pinnedActions.filter((p) => !(p.kind === pin.kind && p.value === pin.value))
+      : [pin, ...pinnedActions].slice(0, 12);
+    await savePins(next);
+  }, [pinnedActions, savePins]);
+
+  const openPinned = React.useCallback((pin: PinnedAction) => {
+    if (pin.kind === "tab") {
+      if (pin.tab) setActiveTab(pin.tab);
+      return;
+    }
+    if (pin.kind === "order") {
+      const o = (orders || []).find((x: any) => String(x.id) === String(pin.value));
+      if (o) {
+        setSelectedOrder(o);
+        setOrderDetailOpen(true);
+        setActiveTab("orders");
+      }
+      return;
+    }
+    if (pin.kind === "product") {
+      const p = (menu || []).find((x: any) => String(x.id) === String(pin.value));
+      if (p) {
+        setSelectedProduct(p);
+        setProductDetailOpen(true);
+        setActiveTab("menu");
+      }
+      return;
+    }
+    if (pin.kind === "action") {
+      if (pin.value === "open_pos") setActiveTab("pos");
+      if (pin.value === "open_orders") setActiveTab("orders");
+      if (pin.value === "open_menu") setActiveTab("menu");
+      if (pin.value === "open_settings") setActiveTab("settings");
+      return;
+    }
+  }, [menu, orders]);
 
   React.useEffect(() => {
     if (!isAdmin && !isStaff) {
@@ -68,27 +193,176 @@ export default function Dashboard() {
     }
   }, [isAdmin, isStaff, setLocation]);
 
-  // Fetch POS sales for total revenue calculation
+  const isTodayLocal = React.useCallback((value: string) => {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    return d >= start && d < end;
+  }, []);
+
   React.useEffect(() => {
-    const fetchPOSTotalRevenue = async () => {
+    if (kpiRange === "today") {
+      setPosRangeRevenue(0);
+      return;
+    }
+
+    const loadPosRangeRevenue = async () => {
       try {
-        // Use the new total revenue endpoint for efficiency
-        const response = await apiFetch('/api/pos/sales/total');
-        if (response.ok) {
-          const data = await response.json();
-          setPosTotalRevenue(data.totalRevenue || 0);
-        } else {
-          console.error('POS total revenue fetch failed:', response.status, response.statusText);
-        }
-      } catch (error) {
-        console.error('Failed to fetch POS total revenue:', error);
+        const res = await apiFetch(`/api/pos/reports/trends?days=${rangeDays}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const daily = Array.isArray(data?.dailySales) ? data.dailySales : [];
+        const total = daily.reduce((sum: number, d: any) => sum + (d?.total || 0), 0);
+        setPosRangeRevenue(total || 0);
+      } catch {
+        setPosRangeRevenue(0);
       }
     };
 
-    fetchPOSTotalRevenue();
+    loadPosRangeRevenue();
+  }, [kpiRange, rangeDays]);
+
+  React.useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      const isK = key === "k";
+      if (!isK) return;
+      if (!(e.metaKey || e.ctrlKey)) return;
+      e.preventDefault();
+      setCommandOpen((v) => !v);
+    };
+    window.addEventListener("keydown", down);
+    return () => window.removeEventListener("keydown", down);
+  }, []);
+
+  React.useEffect(() => {
+    const add = (label: string, meta?: string, tone: ActivityItem["tone"] = "info") => {
+      setActivity((prev) => {
+        const next: ActivityItem[] = [{ id: `${Date.now()}-${Math.random()}`, ts: Date.now(), label, meta, tone }, ...prev];
+        return next.slice(0, 20);
+      });
+    };
+
+    const onOrderNew = (e: any) => {
+      const p = e.detail;
+      add(`New order #${p?.id}`, p?.total ? formatPriceKSHS(p.total) : undefined, "success");
+    };
+    const onOrderUpdate = (e: any) => {
+      const p = e.detail;
+      add(`Order #${p?.id} updated`, p?.status ? `Status: ${p.status}` : undefined, "info");
+    };
+    const onPosSale = (e: any) => {
+      const p = e.detail;
+      add("POS sale completed", p?.total ? formatPriceKSHS(p.total) : undefined, "success");
+    };
+    const onAuditReview = (e: any) => {
+      const p = e.detail;
+      add("Review audit", p?.action ? `Action: ${p.action}` : undefined, "warning");
+    };
+    const onAuditNews = (e: any) => {
+      const p = e.detail;
+      add("News audit", p?.action ? `Action: ${p.action}` : undefined, "info");
+    };
+    const onHealth = (_e: any) => {
+      setServerHealthUpdatedAt(Date.now());
+    };
+
+    window.addEventListener("orders:new", onOrderNew as any);
+    window.addEventListener("orders:update", onOrderUpdate as any);
+    window.addEventListener("pos:sale-completed", onPosSale as any);
+    window.addEventListener("audit:review", onAuditReview as any);
+    window.addEventListener("audit:news", onAuditNews as any);
+    window.addEventListener("server:health", onHealth as any);
+
+    return () => {
+      window.removeEventListener("orders:new", onOrderNew as any);
+      window.removeEventListener("orders:update", onOrderUpdate as any);
+      window.removeEventListener("pos:sale-completed", onPosSale as any);
+      window.removeEventListener("audit:review", onAuditReview as any);
+      window.removeEventListener("audit:news", onAuditNews as any);
+      window.removeEventListener("server:health", onHealth as any);
+    };
+  }, []);
+
+  const searchedOrders = React.useMemo(() => {
+    const q = commandQuery.trim().toLowerCase();
+    if (!q) return [];
+    const list = (orders || []).filter((o) => {
+      const inId = String(o.id || "").toLowerCase().includes(q);
+      const inUser = String(o.user || "").toLowerCase().includes(q);
+      const inEmail = String((o as any).userEmail || "").toLowerCase().includes(q);
+      return inId || inUser || inEmail;
+    });
+    return list.slice(0, 8);
+  }, [orders, commandQuery]);
+
+  const searchedProducts = React.useMemo(() => {
+    const q = commandQuery.trim().toLowerCase();
+    if (!q) return [];
+    const list = (menu || []).filter((p) => {
+      const inName = String(p.name || "").toLowerCase().includes(q);
+      const inBrand = String((p as any).brand || "").toLowerCase().includes(q);
+      const inCat = String(p.category || "").toLowerCase().includes(q);
+      return inName || inBrand || inCat;
+    });
+    return list.slice(0, 8);
+  }, [menu, commandQuery]);
+
+  const todayOrderRevenue = React.useMemo(() => {
+    return (orders || [])
+      .filter((o) => o.status !== "Cancelled" && isTodayLocal(o.date))
+      .reduce((sum, o) => sum + (o.total || 0), 0);
+  }, [orders, isTodayLocal]);
+
+  const orderRangeRevenue = React.useMemo(() => {
+    const startMs = rangeStart.getTime();
+    return (orders || [])
+      .filter((o) => o.status !== "Cancelled")
+      .filter((o) => {
+        const d = new Date(o.date);
+        if (isNaN(d.getTime())) return false;
+        return d.getTime() >= startMs;
+      })
+      .reduce((sum, o) => sum + (o.total || 0), 0);
+  }, [orders, rangeStart]);
+
+  const totalRangeRevenue = orderRangeRevenue + (kpiRange === "today" ? posTodayRevenue : posRangeRevenue);
+
+  // Fetch POS sales for total + today's revenue
+  React.useEffect(() => {
+    const fetchPOSRevenue = async () => {
+      try {
+        const [totalRes, summaryRes] = await Promise.all([
+          apiFetch('/api/pos/sales/total'),
+          apiFetch('/api/pos/sales/summary'),
+        ]);
+
+        if (totalRes.ok) {
+          const data = await totalRes.json();
+          setPosTotalRevenue(data.totalRevenue || 0);
+        } else {
+          console.error('POS total revenue fetch failed:', totalRes.status, totalRes.statusText);
+        }
+
+        if (summaryRes.ok) {
+          const data = await summaryRes.json();
+          setPosTodayRevenue(data?.today?.total || 0);
+        } else {
+          console.error('POS today revenue fetch failed:', summaryRes.status, summaryRes.statusText);
+        }
+      } catch (error) {
+        console.error('Failed to fetch POS revenue:', error);
+      }
+    };
+
+    fetchPOSRevenue();
     
-    // Refresh POS total revenue every 5 minutes to ensure current data
-    const interval = setInterval(fetchPOSTotalRevenue, 5 * 60 * 1000);
+    // Refresh POS revenue every 5 minutes to ensure current data
+    const interval = setInterval(fetchPOSRevenue, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
   }, []);
@@ -122,6 +396,7 @@ export default function Dashboard() {
       toast({ title: 'POS Sale Completed', description: `Sale for ${formatPriceKSHS(payload.total)}` });
       // Add the new sale amount to existing POS total revenue
       setPosTotalRevenue(prev => prev + payload.total);
+      setPosTodayRevenue(prev => prev + payload.total);
     };
     
     window.addEventListener('orders:new', handleNew);
@@ -169,43 +444,519 @@ export default function Dashboard() {
 
   return (
     <div className="container mx-auto px-4 py-8 particle-container">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-heading font-bold text-foreground mb-2">
-            Admin Dashboard
-          </h1>
-          <p className="text-muted-foreground text-lg">Welcome back, {user.name}</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <Badge variant="outline" className="text-lg px-4 py-2 border-primary/20 bg-primary/5 text-primary">
-            {user.role.toUpperCase()}
-          </Badge>
-          <div className="text-right">
-            <div className="text-sm text-muted-foreground">System Status</div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium text-green-600">Online</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
+        <CommandInput
+          placeholder="Search orders, products, or run an action…"
+          value={commandQuery}
+          onValueChange={setCommandQuery}
+        />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-9 gap-2 p-1 bg-muted/50 rounded-lg border overflow-x-auto">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Overview</TabsTrigger>
-          <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Analytics</TabsTrigger>
-          <TabsTrigger value="orders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Orders</TabsTrigger>
-          <TabsTrigger value="pos" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">POS</TabsTrigger>
-          <TabsTrigger value="menu" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Menu</TabsTrigger>
-          <TabsTrigger value="location" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Location</TabsTrigger>
-          <TabsTrigger value="news" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">News</TabsTrigger>
-          <TabsTrigger value="newsletter" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Newsletter</TabsTrigger>
-          {isAdmin && <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Users</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">Audit</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="user-audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">User Audit</TabsTrigger>}
-        </TabsList>
+          <CommandGroup heading="Navigation">
+            <CommandItem onSelect={() => { setActiveTab("orders"); setCommandOpen(false); }}>
+              <ShoppingBag className="h-4 w-4" />
+              Orders
+              <CommandShortcut>O</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={() => { setActiveTab("pos"); setCommandOpen(false); }}>
+              <DollarSign className="h-4 w-4" />
+              POS
+              <CommandShortcut>P</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={() => { setActiveTab("menu"); setCommandOpen(false); }}>
+              <Mail className="h-4 w-4" />
+              Menu
+              <CommandShortcut>M</CommandShortcut>
+            </CommandItem>
+            {(isAdmin || isStaff) && (
+              <CommandItem onSelect={() => { setActiveTab("news"); setCommandOpen(false); }}>
+                <Newspaper className="h-4 w-4" />
+                News
+                <CommandShortcut>N</CommandShortcut>
+              </CommandItem>
+            )}
+            <CommandItem onSelect={() => { setActiveTab("settings"); setCommandOpen(false); }}>
+              <Settings className="h-4 w-4" />
+              Settings
+              <CommandShortcut>S</CommandShortcut>
+            </CommandItem>
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          <CommandGroup heading="Pin shortcuts">
+            <CommandItem
+              onSelect={() => {
+                void togglePin({ kind: "action", value: "open_pos", label: "Open POS", tab: "pos" });
+              }}
+            >
+              {isPinned("action", "open_pos") ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+              {isPinned("action", "open_pos") ? "Unpin Open POS" : "Pin Open POS"}
+            </CommandItem>
+            <CommandItem
+              onSelect={() => {
+                void togglePin({ kind: "action", value: "open_orders", label: "Open Orders", tab: "orders" });
+              }}
+            >
+              {isPinned("action", "open_orders") ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+              {isPinned("action", "open_orders") ? "Unpin Open Orders" : "Pin Open Orders"}
+            </CommandItem>
+            <CommandItem
+              onSelect={() => {
+                void togglePin({ kind: "action", value: "open_menu", label: "Open Menu", tab: "menu" });
+              }}
+            >
+              {isPinned("action", "open_menu") ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+              {isPinned("action", "open_menu") ? "Unpin Open Menu" : "Pin Open Menu"}
+            </CommandItem>
+            {(isAdmin || isStaff) && (
+              <CommandItem
+                onSelect={() => {
+                  void togglePin({ kind: "action", value: "open_news", label: "Open News", tab: "news" });
+                }}
+              >
+                {isPinned("action", "open_news") ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                {isPinned("action", "open_news") ? "Unpin Open News" : "Pin Open News"}
+              </CommandItem>
+            )}
+            <CommandItem
+              onSelect={() => {
+                void togglePin({ kind: "action", value: "open_settings", label: "Open Settings", tab: "settings" });
+              }}
+            >
+              {isPinned("action", "open_settings") ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+              {isPinned("action", "open_settings") ? "Unpin Open Settings" : "Pin Open Settings"}
+            </CommandItem>
+          </CommandGroup>
+
+          {pinnedActions.length > 0 && (
+            <>
+              <CommandSeparator />
+              <CommandGroup heading="Pinned">
+                {pinnedActions.map((p) => (
+                  <CommandItem
+                    key={`${p.kind}:${p.value}`}
+                    onSelect={() => {
+                      setCommandOpen(false);
+                      openPinned(p);
+                    }}
+                  >
+                    <Pin className="h-4 w-4" />
+                    {p.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </>
+          )}
+
+          <CommandSeparator />
+
+          <CommandGroup heading="Quick actions">
+            {(isAdmin || isStaff) && (
+              <CommandItem onSelect={() => { setActiveTab("news"); setCommandOpen(false); toast({ title: "Tip", description: "Use News tab to create a post." }); }}>
+                <Plus className="h-4 w-4" />
+                Create News
+              </CommandItem>
+            )}
+            <CommandItem onSelect={() => { setActiveTab("pos"); setCommandOpen(false); }}>
+              <DollarSign className="h-4 w-4" />
+              Open POS
+            </CommandItem>
+            {isAdmin && (
+              <CommandItem onSelect={() => { setActiveTab("menu"); setCommandOpen(false); toast({ title: "Tip", description: "Use Menu tab to add products." }); }}>
+                <Plus className="h-4 w-4" />
+                Add product
+              </CommandItem>
+            )}
+            <CommandItem onSelect={() => { setActiveTab("orders"); setCommandOpen(false); }}>
+              <Search className="h-4 w-4" />
+              View today’s orders
+            </CommandItem>
+          </CommandGroup>
+
+          {(searchedOrders.length > 0 || searchedProducts.length > 0) && <CommandSeparator />}
+
+          {searchedOrders.length > 0 && (
+            <CommandGroup heading="Orders">
+              {searchedOrders.map((o) => (
+                <CommandItem
+                  key={o.id}
+                  onSelect={() => {
+                    setActiveTab("orders");
+                    setCommandOpen(false);
+                    setSelectedOrder(o);
+                    setOrderDetailOpen(true);
+                  }}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  #{o.id}
+                  <span className="ml-2 text-muted-foreground truncate">{o.user}</span>
+                  <span className="ml-auto font-mono text-muted-foreground">{formatPriceKSHS(o.total)}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {searchedProducts.length > 0 && (
+            <CommandGroup heading="Products">
+              {searchedProducts.map((p) => (
+                <CommandItem
+                  key={p.id}
+                  onSelect={() => {
+                    setActiveTab("menu");
+                    setCommandOpen(false);
+                    setSelectedProduct(p);
+                    setProductDetailOpen(true);
+                  }}
+                >
+                  <Mail className="h-4 w-4" />
+                  {p.name}
+                  <span className="ml-auto font-mono text-muted-foreground">{formatPriceKSHS(p.price)}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+        </CommandList>
+      </CommandDialog>
+
+      <Dialog open={orderDetailOpen} onOpenChange={(open) => { setOrderDetailOpen(open); if (!open) setSelectedOrder(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between gap-3">
+              <span>Order #{selectedOrder?.id}</span>
+              {selectedOrder?.id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  disabled={pinLoading}
+                  onClick={() => {
+                    void togglePin({
+                      kind: "order",
+                      value: String(selectedOrder.id),
+                      label: `Order #${selectedOrder.id}`,
+                      tab: "orders",
+                    });
+                  }}
+                >
+                  {isPinned("order", String(selectedOrder.id)) ? <PinOff className="h-4 w-4 mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
+                  {isPinned("order", String(selectedOrder.id)) ? "Unpin" : "Pin"}
+                </Button>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedOrder ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="text-sm"><span className="text-muted-foreground">Customer:</span> {selectedOrder.user}</div>
+                <div className="text-sm"><span className="text-muted-foreground">Status:</span> {selectedOrder.status}</div>
+                <div className="text-sm"><span className="text-muted-foreground">Total:</span> {formatPriceKSHS(selectedOrder.total)}</div>
+                <div className="text-sm"><span className="text-muted-foreground">Date:</span> {new Date(selectedOrder.date).toLocaleString()}</div>
+              </div>
+
+              {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="px-4 py-2 border-b bg-muted/30 text-sm font-medium">Items</div>
+                  <div className="divide-y">
+                    {selectedOrder.items.slice(0, 12).map((it: any, idx: number) => (
+                      <div key={idx} className="px-4 py-2 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{it?.item?.name || it?.name || "Item"}</div>
+                          <div className="text-xs text-muted-foreground">Qty: {it?.quantity ?? "—"}</div>
+                        </div>
+                        <div className="text-sm font-mono text-muted-foreground">{it?.item?.price ? formatPriceKSHS(it.item.price) : ""}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">No order selected.</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={productDetailOpen} onOpenChange={(open) => { setProductDetailOpen(open); if (!open) setSelectedProduct(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between gap-3">
+              <span>{selectedProduct?.name || "Product"}</span>
+              {selectedProduct?.id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  disabled={pinLoading}
+                  onClick={() => {
+                    void togglePin({
+                      kind: "product",
+                      value: String(selectedProduct.id),
+                      label: selectedProduct.name || `Product ${selectedProduct.id}`,
+                      tab: "menu",
+                    });
+                  }}
+                >
+                  {isPinned("product", String(selectedProduct.id)) ? <PinOff className="h-4 w-4 mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
+                  {isPinned("product", String(selectedProduct.id)) ? "Unpin" : "Pin"}
+                </Button>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedProduct ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="text-sm"><span className="text-muted-foreground">Category:</span> {selectedProduct.category || "—"}</div>
+                <div className="text-sm"><span className="text-muted-foreground">Price:</span> {formatPriceKSHS(selectedProduct.price)}</div>
+                <div className="text-sm"><span className="text-muted-foreground">Stock:</span> {selectedProduct.stock ?? "—"}</div>
+                <div className="text-sm"><span className="text-muted-foreground">Status:</span> {selectedProduct.available ? "Available" : "Unavailable"}</div>
+              </div>
+              {selectedProduct.description && (
+                <div className="text-sm text-muted-foreground leading-relaxed">{selectedProduct.description}</div>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">No product selected.</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Card className="mb-6 border shadow-sm overflow-hidden">
+        <div className="bg-linear-to-r from-primary/10 via-background to-secondary/10">
+          <CardContent className="py-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h1 className="text-4xl font-heading font-bold text-foreground mb-2">Admin Dashboard</h1>
+                <p className="text-muted-foreground text-lg">Welcome back, {user.name}</p>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">
+                    {user.role.toUpperCase()}
+                  </Badge>
+                  <Badge variant="secondary" className="gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    Online
+                  </Badge>
+                  <Badge variant="outline" className="gap-2">
+                    <ShoppingBag className="h-3.5 w-3.5" />
+                    Today Orders: {(orders || []).filter((o) => o.status !== "Cancelled" && isTodayLocal(o.date)).length}
+                  </Badge>
+                  <Badge variant="outline" className="gap-2">
+                    <DollarSign className="h-3.5 w-3.5" />
+                    Today: {formatPriceKSHS(todayOrderRevenue + posTodayRevenue)}
+                  </Badge>
+                  <Badge variant="outline" className="gap-2">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    Active: {kpis?.activeOrders ?? orders.filter(o => o.status !== 'Delivered').length}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3 lg:justify-end">
+                <Button
+                  variant="outline"
+                  className="h-11 px-4"
+                  onClick={() => setCommandOpen(true)}
+                  aria-label="Open command palette"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                  <span className="ml-2 text-xs text-muted-foreground">Ctrl/⌘ K</span>
+                </Button>
+
+                <Popover
+                  open={notificationsOpen}
+                  onOpenChange={(open) => {
+                    setNotificationsOpen(open);
+                    if (open) setNotificationsSeenAt(Date.now());
+                  }}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="h-11 px-4 relative"
+                      aria-label="Notifications"
+                    >
+                      <Bell className="h-4 w-4" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-96 p-0">
+                    <div className="p-4 border-b flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold">Notifications</div>
+                        <div className="text-xs text-muted-foreground">Recent activity and audits</div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => setNotificationsSeenAt(Date.now())}
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Mark read
+                      </Button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto p-4 space-y-3">
+                      {activity.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">No notifications yet.</div>
+                      ) : (
+                        activity.slice(0, 15).map((a) => (
+                          <div key={a.id} className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium">{a.label}</div>
+                              {a.meta && <div className="text-xs text-muted-foreground">{a.meta}</div>}
+                            </div>
+                            <div className="text-xs text-muted-foreground shrink-0">{new Date(a.ts).toLocaleTimeString()}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {pinnedActions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {pinnedActions
+                      .filter((p) => p.kind === "tab" || p.kind === "action")
+                      .slice(0, 3)
+                      .map((p) => (
+                        <Button
+                          key={`${p.kind}:${p.value}`}
+                          variant="outline"
+                          className="h-11 px-4"
+                          onClick={() => openPinned(p)}
+                          aria-label={p.label}
+                        >
+                          <Pin className="h-4 w-4 mr-2" />
+                          {p.label}
+                        </Button>
+                      ))}
+                  </div>
+                )}
+
+                <Button className="h-11 px-5" onClick={() => setActiveTab("pos")}>
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Open POS
+                </Button>
+                <Button variant="outline" className="h-11 px-5" onClick={() => setActiveTab("orders")}>
+                  <ShoppingBag className="h-4 w-4 mr-2" />
+                  Orders
+                </Button>
+                <Button variant="outline" className="h-11 px-5" onClick={() => setActiveTab("menu")}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Menu
+                </Button>
+                <Button variant="outline" className="h-11 px-5" onClick={() => setActiveTab("settings")}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </div>
+      </Card>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <div className="sticky top-16 z-20 -mx-4 px-4 py-3 bg-background/80 backdrop-blur-xl border-b supports-backdrop-filter:bg-background/60">
+          <TabsList className="w-full flex flex-wrap gap-2 p-1 bg-muted/50 rounded-xl border">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+              <span className="inline-flex items-center gap-2">
+                <LayoutGrid className="h-4 w-4" />
+                Overview
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+              <span className="inline-flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Analytics
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+              <span className="inline-flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4" />
+                Orders
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="pos" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+              <span className="inline-flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                POS
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="menu" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+              <span className="inline-flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                Menu
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="location" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+              <span className="inline-flex items-center gap-2">
+                <MapPinned className="h-4 w-4" />
+                Location
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="news" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+              <span className="inline-flex items-center gap-2">
+                <Newspaper className="h-4 w-4" />
+                News
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="newsletter" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+              <span className="inline-flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                Newsletter
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+              <span className="inline-flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Settings
+              </span>
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+                <span className="inline-flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Users
+                </span>
+              </TabsTrigger>
+            )}
+            {isAdmin && <TabsTrigger value="audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">Audit</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="user-audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">User Audit</TabsTrigger>}
+          </TabsList>
+        </div>
 
         <TabsContent value="overview">
+          <div className="flex flex-col gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="text-sm text-muted-foreground">KPIs</div>
+              <div className="flex gap-2">
+                <Button variant={kpiRange === "today" ? "default" : "outline"} className="h-9 px-4" onClick={() => setKpiRange("today")}>Today</Button>
+                <Button variant={kpiRange === "7d" ? "default" : "outline"} className="h-9 px-4" onClick={() => setKpiRange("7d")}>7d</Button>
+                <Button variant={kpiRange === "30d" ? "default" : "outline"} className="h-9 px-4" onClick={() => setKpiRange("30d")}>30d</Button>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="gap-2">
+                Orders: {formatPriceKSHS(orderRangeRevenue)}
+              </Badge>
+              <Badge variant="outline" className="gap-2">
+                POS: {formatPriceKSHS(kpiRange === "today" ? posTodayRevenue : posRangeRevenue)}
+              </Badge>
+              <Badge variant="secondary" className="gap-2">
+                Total: {formatPriceKSHS(totalRangeRevenue)}
+              </Badge>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="border shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -226,10 +977,23 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="border shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Today's Revenue</CardTitle>
+                <DollarSign className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatPriceKSHS(todayOrderRevenue + posTodayRevenue)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Resets daily at midnight</p>
+              </CardContent>
+            </Card>
             <Card className="border shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Server Health</CardTitle>
-                <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
+                <div className={`w-3 h-3 rounded-full ${serverHealth && serverHealthUpdatedAt && Date.now() - serverHealthUpdatedAt < 60_000 ? 'bg-green-500' : 'bg-orange-500'}`}></div>
               </CardHeader>
               <CardContent>
                 {serverHealth ? (
@@ -237,6 +1001,9 @@ export default function Dashboard() {
                     <div className="text-sm">Memory: {(serverHealth.memory.rss / (1024*1024)).toFixed(1)} MB</div>
                     <div className="text-sm">Load: {serverHealth.load[0].toFixed(2)}</div>
                     <div className="text-sm">Uptime: {Math.floor(serverHealth.uptime/60)} mins</div>
+                    <div className="text-xs text-muted-foreground mt-2">
+                      Last update: {serverHealthUpdatedAt ? new Date(serverHealthUpdatedAt).toLocaleTimeString() : '—'}
+                    </div>
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground">No data</div>
@@ -272,10 +1039,83 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            <Card className="border shadow-sm lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-base">Recent Activity</CardTitle>
+                <CardDescription>Live feed from orders, POS, and audits</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {activity.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No activity yet.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {activity.map((a) => (
+                      <div key={a.id} className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium">{a.label}</div>
+                          {a.meta && <div className="text-xs text-muted-foreground">{a.meta}</div>}
+                        </div>
+                        <div className="text-xs text-muted-foreground shrink-0">{new Date(a.ts).toLocaleTimeString()}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Revenue Sparkline</CardTitle>
+                <CardDescription>{kpiRange === "today" ? "Today" : `Last ${rangeDays} days`}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const startMs = rangeStart.getTime();
+                  const buckets: Record<string, number> = {};
+                  for (let i = 0; i < rangeDays; i++) {
+                    const d = new Date(rangeStart);
+                    d.setDate(d.getDate() + i);
+                    const key = d.toISOString().slice(0, 10);
+                    buckets[key] = 0;
+                  }
+                  (orders || []).forEach((o) => {
+                    if (o.status === "Cancelled") return;
+                    const d = new Date(o.date);
+                    if (isNaN(d.getTime())) return;
+                    if (d.getTime() < startMs) return;
+                    const key = d.toISOString().slice(0, 10);
+                    if (!(key in buckets)) return;
+                    buckets[key] += o.total || 0;
+                  });
+                  const points = Object.values(buckets);
+                  const max = Math.max(1, ...points);
+                  return (
+                    <div className="h-16 flex items-end gap-1">
+                      {points.map((v, idx) => (
+                        <div
+                          key={idx}
+                          className="flex-1 rounded-sm bg-primary/30"
+                          style={{ height: `${Math.max(2, Math.round((v / max) * 64))}px` }}
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="analytics">
           <AnimatedCharts posTotalRevenue={posTotalRevenue} />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <div className="space-y-6">
+            <SocialLinksManager />
+          </div>
         </TabsContent>
 
         <TabsContent value="orders">

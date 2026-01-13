@@ -4,7 +4,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { DataProvider } from "@/lib/data";
 import { ChatProvider } from "@/lib/chatApi";
-import { ChristmasProvider } from "@/lib/christmas";
 import { Layout } from "@/components/layout";
 import NotFound from "@/pages/not-found";
 import { Suspense, lazy } from "react";
@@ -14,6 +13,7 @@ import { CSRFTokenManager } from "@/lib/csrf";
 import { Auth0Provider } from "@auth0/auth0-react";
 import { HybridAuthProvider } from "@/lib/hybrid-auth";
 import { auth0Config } from "@/lib/auth0-config";
+import { ThemeProvider } from "next-themes";
 
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -141,16 +141,16 @@ function App() {
             scope: auth0Config.scope
           }}
         >
-          <HybridAuthProvider>
-            <ChristmasProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <HybridAuthProvider>
               <ChatProvider>
                 <DataProvider>
                   <Router />
                   <Toaster />
                 </DataProvider>
               </ChatProvider>
-            </ChristmasProvider>
-          </HybridAuthProvider>
+            </HybridAuthProvider>
+          </ThemeProvider>
         </Auth0Provider>
       </DndProvider>
     </QueryClientProvider>

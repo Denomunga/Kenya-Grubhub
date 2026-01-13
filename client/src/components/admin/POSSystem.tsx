@@ -1145,9 +1145,13 @@ export default function POSSystem() {
         </div>
 
         <Tabs value={posMode} onValueChange={(v) => setPosMode(v as 'sell' | 'management')}>
-          <TabsList>
-            <TabsTrigger value="sell">Sell</TabsTrigger>
-            <TabsTrigger value="management">Management</TabsTrigger>
+          <TabsList className="p-1 bg-muted/50 rounded-xl border">
+            <TabsTrigger value="sell" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Sell
+            </TabsTrigger>
+            <TabsTrigger value="management" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Management
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -1157,12 +1161,12 @@ export default function POSSystem() {
             {sessionWarning ? 'Session expiring' : 'Session active'}
           </Badge>
           {posMode === 'sell' && (
-            <Button variant="outline" onClick={handleNewSale}>
+            <Button variant="outline" className="h-11 px-5" aria-label="Start a new sale" onClick={handleNewSale}>
               <RotateCcw className="h-4 w-4 mr-2" />
               New Sale
             </Button>
           )}
-          <Button variant="outline" onClick={() => { void logout(); }}>
+          <Button variant="outline" className="h-11 px-5" aria-label="Logout from the POS system" onClick={() => { void logout(); }}>
             <LogOut className="h-4 w-4 mr-2" />
             Logout
           </Button>
@@ -1205,7 +1209,7 @@ export default function POSSystem() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => searchProducts(searchQuery)}>
+                    <Button variant="outline" aria-label="Search" onClick={() => searchProducts(searchQuery)}>
                       <Search className="h-4 w-4" />
                     </Button>
                   </div>
@@ -1252,7 +1256,7 @@ export default function POSSystem() {
                             <div className="text-sm text-muted-foreground">{formatPriceKSHS(product.price)}</div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <Button size="sm" variant="outline" onClick={() => toggleFavorite(product.id)}>
+                            <Button size="sm" variant="outline" aria-label={`Toggle favorite for ${product.name}`} onClick={() => toggleFavorite(product.id)}>
                               <Heart className={`h-3 w-3 ${favorites.includes(product.id) ? 'fill-red-500 text-red-500' : ''}`} />
                             </Button>
                             <Button
@@ -1283,7 +1287,7 @@ export default function POSSystem() {
                   <div>
                     <Label htmlFor="category">Category</Label>
                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11">
                         <SelectValue placeholder="All categories" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1299,7 +1303,7 @@ export default function POSSystem() {
                   <div>
                     <Label htmlFor="product">Product</Label>
                     <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11">
                         <SelectValue placeholder="Select a product" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1339,10 +1343,11 @@ export default function POSSystem() {
                         const v = parseFloat(e.target.value);
                         setQuantity(normalizeToStep(isNaN(v) ? step : v, step) || step);
                       }}
+                      className="h-11 text-base"
                     />
                   </div>
                 </div>
-                <Button onClick={addToCart} className="w-full">
+                <Button onClick={addToCart} className="w-full h-11 text-base font-semibold">
                   <Plus className="h-4 w-4 mr-2" />
                   Add to Cart
                 </Button>
@@ -1377,15 +1382,33 @@ export default function POSSystem() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <Button size="sm" variant="outline" onClick={() => updateQuantity(item.productId, item.quantity - (item.quantityStep || 1))}>
-                                <Minus className="h-3 w-3" />
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-10 w-10"
+                                aria-label={`Decrease quantity for ${item.name}`}
+                                onClick={() => updateQuantity(item.productId, item.quantity - (item.quantityStep || 1))}
+                              >
+                                <Minus className="h-4 w-4" />
                               </Button>
-                              <span className="w-8 text-center">{item.quantity}</span>
-                              <Button size="sm" variant="outline" onClick={() => updateQuantity(item.productId, item.quantity + (item.quantityStep || 1))}>
-                                <Plus className="h-3 w-3" />
+                              <span className="w-10 text-center font-medium tabular-nums">{item.quantity}</span>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-10 w-10"
+                                aria-label={`Increase quantity for ${item.name}`}
+                                onClick={() => updateQuantity(item.productId, item.quantity + (item.quantityStep || 1))}
+                              >
+                                <Plus className="h-4 w-4" />
                               </Button>
-                              <Button size="sm" variant="destructive" onClick={() => removeFromCart(item.productId)}>
-                                <Trash2 className="h-3 w-3" />
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                className="h-10 w-10"
+                                aria-label={`Remove ${item.name} from cart`}
+                                onClick={() => removeFromCart(item.productId)}
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
@@ -1464,7 +1487,7 @@ export default function POSSystem() {
                   <div>
                     <Label htmlFor="paymentMethod">Payment Method</Label>
                     <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12 text-base">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1486,6 +1509,7 @@ export default function POSSystem() {
                       value={paymentAmount}
                       onChange={(e) => setPaymentAmount(e.target.value)}
                       placeholder="Enter payment amount"
+                      className="h-12 text-base"
                     />
                   </div>
                 </div>
@@ -1493,11 +1517,11 @@ export default function POSSystem() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="customerName">Customer Name (Optional)</Label>
-                    <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+                    <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="h-11" />
                   </div>
                   <div>
                     <Label htmlFor="customerPhone">Customer Phone (Optional)</Label>
-                    <Input id="customerPhone" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+                    <Input id="customerPhone" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="h-11" />
                   </div>
                 </div>
 
@@ -1510,10 +1534,10 @@ export default function POSSystem() {
                 <Button
                   onClick={processSale}
                   disabled={cart.length === 0 || isProcessing || !paymentAmount}
-                  className="w-full"
+                  className="w-full h-12 text-base font-semibold"
                   size="lg"
                 >
-                  <CreditCard className="h-4 w-4 mr-2" />
+                  <CreditCard className="h-5 w-5 mr-2" />
                   {isProcessing ? 'Processing...' : 'Complete Sale'}
                 </Button>
               </CardContent>
@@ -1547,11 +1571,11 @@ export default function POSSystem() {
                 }
               }}
             >
-              <TabsList>
-                <TabsTrigger value="receipts">Receipts</TabsTrigger>
-                <TabsTrigger value="sales">Sales</TabsTrigger>
-                <TabsTrigger value="stock">Stock</TabsTrigger>
-                <TabsTrigger value="reports">Reports</TabsTrigger>
+              <TabsList className="p-1 bg-muted/50 rounded-xl border">
+                <TabsTrigger value="receipts" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Receipts</TabsTrigger>
+                <TabsTrigger value="sales" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Sales</TabsTrigger>
+                <TabsTrigger value="stock" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Stock</TabsTrigger>
+                <TabsTrigger value="reports" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Reports</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -2217,7 +2241,8 @@ export default function POSSystem() {
                   <Button 
                     onClick={confirmSale}
                     disabled={isProcessing}
-                    className="bg-green-600 hover:bg-green-700"
+                    size="lg"
+                    className="bg-green-600 hover:bg-green-700 h-12 px-6 text-base font-semibold"
                   >
                     {isProcessing ? 'Processing...' : 'Yes, Confirm Sale'}
                   </Button>
@@ -2228,6 +2253,8 @@ export default function POSSystem() {
                       setPendingSale(null);
                     }}
                     disabled={isProcessing}
+                    size="lg"
+                    className="h-12 px-6 text-base"
                   >
                     No, Cancel
                   </Button>

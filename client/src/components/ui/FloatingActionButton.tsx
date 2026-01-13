@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
-import { ShoppingBag, MessageCircle, User, Plus, X, Sparkles } from 'lucide-react';
+import { ShoppingBag, MessageCircle, User, Plus, X } from 'lucide-react';
 import { useHybridAuth } from '@/lib/hybrid-auth';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
-import { useChristmas } from '@/lib/christmas';
 
 interface FABProps {
   actions?: Array<{
@@ -16,7 +15,6 @@ interface FABProps {
 
 const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
   const { isAuthenticated } = useHybridAuth();
-  const { isChristmasMode } = useChristmas();
   const { hasUnread, unreadCount, markAsRead } = useUnreadMessages();
   const [, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
@@ -112,11 +110,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
       {/* Main FAB - SIZE & POSITION CONTROLS */}
       <div id="fab-main" className="relative">
         <button
-          className={`w-12 h-12 rounded-full bg-linear-to-r ${
-            isChristmasMode 
-              ? 'from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800' 
-              : 'from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800'
-          } text-white shadow-3xl hover:shadow-4xl border-2 border-white/30 backdrop-blur-xl transition-all duration-300 relative overflow-hidden group hover:scale-105 active:scale-95 flex items-center justify-center`}
+          className="w-12 h-12 rounded-full bg-linear-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 text-white shadow-3xl hover:shadow-4xl border-2 border-white/30 backdrop-blur-xl transition-all duration-300 relative overflow-hidden group hover:scale-105 active:scale-95 flex items-center justify-center"
           onClick={() => {
             setIsOpen(!isOpen);
           }}
@@ -129,21 +123,13 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
             {isOpen ? (
               <X className="h-6 w-6" />
             ) : (
-              isChristmasMode ? (
-                <Sparkles className="h-6 w-6" />
-              ) : (
-                <Plus className="h-6 w-6" />
-              )
+              <Plus className="h-6 w-6" />
             )}
           </div>
         </button>
         
         {/* Enhanced main button glow */}
-        <div className={`absolute -inset-2 rounded-2xl bg-linear-to-r ${
-          isChristmasMode 
-            ? 'from-red-500 to-red-700' 
-            : 'from-blue-500 to-blue-700'
-        } opacity-30 blur-2xl animate-pulse pointer-events-none`} />
+        <div className="absolute -inset-2 rounded-2xl bg-linear-to-r from-blue-500 to-blue-700 opacity-30 blur-2xl animate-pulse pointer-events-none" />
       </div>
     </div>
   );

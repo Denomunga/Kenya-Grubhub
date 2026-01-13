@@ -19,6 +19,7 @@ import { NewsAudit } from "./models/NewsAudit";
 import { ReviewAudit } from "./models/ReviewAudit";
 import { UserAudit } from "./models/UserAudit";
 import { ChatMessage } from "./models/ChatMessage";
+import { SiteSettings } from "./models/SiteSettings";
 import session from "express-session";
 import MongoStore from "connect-mongo";
 import { 
@@ -2867,6 +2868,57 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     } catch (error) {
       console.error('Get Google Maps API key error:', error);
       res.status(500).json({ message: 'Failed to get Google Maps API key' });
+    }
+  });
+
+  app.get('/api/site-settings/social-links', async (_req: Request, res: Response) => {
+    try {
+      const settings = await SiteSettings.findOne({});
+      res.json({
+        socialLinks: settings?.socialLinks || {
+          instagram: "",
+          facebook: "",
+          x: "",
+        }
+      });
+    } catch (error) {
+      console.error('Get social links error:', error);
+      res.status(500).json({ message: 'Failed to fetch social links' });
+    }
+  });
+
+  app.patch('/api/site-settings/social-links', requireAuth, async (req: Request, res: Response) => {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'staff')) {
+      return res.status(403).json({ message: 'Admin or staff access required' });
+    }
+
+    try {
+      const { instagram, facebook, x } = (req.body || {}) as { instagram?: string; facebook?: string; x?: string };
+
+      const normalizeUrl = (value: unknown) => {
+        if (typeof value !== 'string') return '';
+        const v = value.trim();
+        if (!v) return '';
+        if (!/^https?:\/\//i.test(v)) return '';
+        return v;
+      };
+
+      const socialLinks = {
+        instagram: normalizeUrl(instagram),
+        facebook: normalizeUrl(facebook),
+        x: normalizeUrl(x),
+      };
+
+      const settings = await SiteSettings.findOneAndUpdate(
+        {},
+        { socialLinks },
+        { new: true, upsert: true }
+      );
+
+      res.json({ socialLinks: settings.socialLinks });
+    } catch (error) {
+      console.error('Update social links error:', error);
+      res.status(500).json({ message: 'Failed to update social links' });
     }
   });
 

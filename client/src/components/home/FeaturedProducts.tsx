@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Star } from "lucide-react";
+import { Eye, GitCompare, Heart, Plus, Star } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
@@ -115,6 +115,8 @@ const LoadingSkeleton = () => (
 
 const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
   const [, setLocation] = useLocation();
+  const [wishlist, setWishlist] = useState<Set<string>>(() => new Set());
+  const [compare, setCompare] = useState<Set<string>>(() => new Set());
 
   return (
     <section className="py-16 relative overflow-hidden">
@@ -172,7 +174,65 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
                     images={item.images || (item.image ? [item.image] : [])}
                     productName={item.name}
                   />
-                  <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                  {/* Quick actions */}
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="secondary"
+                      className="h-9 w-9 rounded-full bg-white/90 text-foreground hover:bg-white shadow-lg focus-ring"
+                      aria-label={`Quick view ${item.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocation(`/menu?product=${item.id}`);
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="secondary"
+                        className={`h-9 w-9 rounded-full bg-white/90 hover:bg-white shadow-lg focus-ring ${wishlist.has(item.id) ? "text-red-600" : "text-foreground"}`}
+                        aria-label={wishlist.has(item.id) ? `Remove ${item.name} from wishlist` : `Add ${item.name} to wishlist`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setWishlist((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(item.id)) next.delete(item.id);
+                            else next.add(item.id);
+                            return next;
+                          });
+                        }}
+                      >
+                        <Heart className={`h-4 w-4 ${wishlist.has(item.id) ? "fill-current" : ""}`} />
+                      </Button>
+
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="secondary"
+                        className={`h-9 w-9 rounded-full bg-white/90 hover:bg-white shadow-lg focus-ring ${compare.has(item.id) ? "text-primary" : "text-foreground"}`}
+                        aria-label={compare.has(item.id) ? `Remove ${item.name} from compare` : `Add ${item.name} to compare`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCompare((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(item.id)) next.delete(item.id);
+                            else next.add(item.id);
+                            return next;
+                          });
+                        }}
+                      >
+                        <GitCompare className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
                   {item.isPopular && (
                     <motion.div 
                       className="absolute top-4 right-4"
@@ -190,7 +250,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="text-xl font-bold font-serif text-foreground group-hover:text-primary transition-colors duration-300">{item.name}</h3>
-                    <span className="text-lg font-bold text-blue-600">{formatPriceKSHS(item.price)}</span>
+                    <span className="text-lg font-bold text-primary tabular-nums">{formatPriceKSHS(item.price)}</span>
                   </div>
                   <p className="text-muted-foreground text-sm mb-4 line-clamp-2 leading-relaxed">{item.description}</p>
                   <div className="flex justify-between items-center">

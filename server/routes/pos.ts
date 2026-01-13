@@ -375,7 +375,7 @@ router.get("/settings", requireAuth, async (req, res) => {
   try {
     let settings = await POSSettings.findOne({ userId: req.user._id });
     if (!settings) {
-      settings = new POSSettings({ userId: req.user._id, favorites: [], recentSales: [] });
+      settings = new POSSettings({ userId: req.user._id, favorites: [], pinnedActions: [], recentSales: [] });
       await settings.save();
     }
     res.json(settings);
@@ -388,10 +388,15 @@ router.get("/settings", requireAuth, async (req, res) => {
 // Update POS settings
 router.patch("/settings", requireAuth, async (req, res) => {
   try {
-    const { favorites, recentSales } = req.body;
+    const { favorites, recentSales, pinnedActions } = req.body;
+
     const settings = await POSSettings.findOneAndUpdate(
       { userId: req.user._id },
-      { favorites, recentSales },
+      {
+        ...(favorites !== undefined ? { favorites } : {}),
+        ...(recentSales !== undefined ? { recentSales } : {}),
+        ...(pinnedActions !== undefined ? { pinnedActions } : {}),
+      },
       { new: true, upsert: true }
     );
     res.json(settings);

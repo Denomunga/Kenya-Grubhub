@@ -72,6 +72,7 @@ export default function ProductImageViewer({
             size="icon"
             className="absolute top-4 right-4 z-10 bg-white/10 hover:bg-white/20 text-white border-0"
             onClick={onClose}
+            aria-label="Close"
           >
             <X className="h-6 w-6" />
           </Button>
@@ -94,6 +95,7 @@ export default function ProductImageViewer({
                 size="icon"
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white border-0"
                 onClick={goToPrevious}
+                aria-label="Previous image"
               >
                 <ChevronLeft className="h-6 w-6" />
               </Button>
@@ -102,6 +104,7 @@ export default function ProductImageViewer({
                 size="icon"
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white border-0"
                 onClick={goToNext}
+                aria-label="Next image"
               >
                 <ChevronRight className="h-6 w-6" />
               </Button>
@@ -116,6 +119,7 @@ export default function ProductImageViewer({
                 size="sm"
                 className="bg-white/10 hover:bg-white/20 text-white border-0"
                 onClick={toggleSlideshow}
+                aria-label={isPlaying ? "Pause slideshow" : "Play slideshow"}
               >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                 {isPlaying ? 'Pause' : 'Play'} Slideshow
@@ -203,7 +207,7 @@ export function ProductImage({
       <img
         src={images[currentImageIndex]}
         alt={productName}
-        className="w-full h-full object-cover transition-opacity duration-500"
+        className={`w-full h-full object-cover transition-transform duration-500 transform-gpu ${isHovered ? 'scale-110' : 'scale-100'}`}
       />
       
       {/* Multiple Images Indicator */}

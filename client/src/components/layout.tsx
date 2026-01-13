@@ -1,14 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useHybridAuth } from "@/lib/hybrid-auth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-import { useChristmas } from "@/lib/christmas";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 import { Button } from "@/components/ui/button";
 import { 
   Menu, X, Laptop, MapPin, 
-  MessageSquare, LayoutDashboard, Gift
+  MessageSquare, LayoutDashboard, Moon, Sun
 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
+import { useTheme } from "next-themes";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,18 +19,156 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import FloatingActionButton from "@/components/ui/FloatingActionButton";
-import { ChristmasToggle } from "@/components/admin/ChristmasToggle";
 import { ScrollProgressIndicator } from "@/hooks/useSmoothScroll";
-import { GlassCard, MagneticButton } from "@/components/ui/ProfessionalEffects";
-import "@/styles/design-system.css";
+import { MagneticButton } from "@/components/ui/ProfessionalEffects";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout, isAuthenticated, isAdmin, isStaff } = useHybridAuth();
-  const { isChristmasMode } = useChristmas();
+  const { theme, setTheme } = useTheme();
   const { hasUnread, unreadCount, markAsRead } = useUnreadMessages();
   useOrderNotifications();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [newsletterStatus, setNewsletterStatus] = useState<"idle" | "success" | "error">("idle");
+  const [newsletterMessage, setNewsletterMessage] = useState("");
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+
+  const [socialLinks, setSocialLinks] = useState<{ instagram: string; facebook: string; x: string } | null>(null);
+
+  const mobilePanelRef = useRef<HTMLDivElement>(null);
+  const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const prevActive = document.activeElement as HTMLElement | null;
+
+    setTimeout(() => {
+      mobileCloseButtonRef.current?.focus();
+    }, 0);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileMenuOpen(false);
+        return;
+      }
+
+      if (e.key !== "Tab") return;
+      const panel = mobilePanelRef.current;
+      if (!panel) return;
+
+      const focusableSelector = 'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])';
+      const nodes = Array.from(panel.querySelectorAll(focusableSelector)) as HTMLElement[];
+      if (!nodes.length) return;
+
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+      prevActive?.focus();
+    };
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    const loadSocialLinks = async () => {
+      try {
+        const res = await apiFetch("/api/site-settings/social-links");
+        const data = await res.json();
+        setSocialLinks({
+          instagram: data?.socialLinks?.instagram || "",
+          facebook: data?.socialLinks?.facebook || "",
+          x: data?.socialLinks?.x || "",
+        });
+      } catch {
+        setSocialLinks({ instagram: "", facebook: "", x: "" });
+      }
+    };
+
+    loadSocialLinks();
+  }, []);
+
+  const breadcrumbs = useMemo(() => {
+    const path = (location || "/").split("?")[0];
+    const parts = path.split("/").filter(Boolean);
+
+    const labelMap: Record<string, string> = {
+      menu: "Products",
+      chat: "Discount Chat",
+      profile: "Profile",
+      dashboard: "Dashboard",
+      login: "Login",
+      news: "News",
+      auth: "Auth",
+    };
+
+    const crumbs = [{ href: "/", label: "Home" }];
+    let acc = "";
+    for (const p of parts) {
+      acc += `/${p}`;
+      crumbs.push({ href: acc, label: labelMap[p] || p });
+    }
+    return crumbs;
+  }, [location]);
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = newsletterEmail.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setNewsletterStatus("error");
+      setNewsletterMessage("Please enter a valid email address.");
+      return;
+    }
+
+    setNewsletterLoading(true);
+    setNewsletterStatus("idle");
+    setNewsletterMessage("");
+
+    try {
+      const res = await apiFetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          preferences: {
+            specialOffers: true,
+            newProducts: true,
+            events: true,
+            news: true,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        setNewsletterStatus("success");
+        setNewsletterMessage(data?.message || "Subscribed successfully.");
+        setNewsletterEmail("");
+      } else {
+        setNewsletterStatus("error");
+        setNewsletterMessage(data?.message || "Subscription failed.");
+      }
+    } catch {
+      setNewsletterStatus("error");
+      setNewsletterMessage("An error occurred. Please try again.");
+    } finally {
+      setNewsletterLoading(false);
+    }
+  };
 
   const NavLink = ({ href, children, isDiscountButton = false }: { href: string; children: React.ReactNode; onClick?: () => void; isDiscountButton?: boolean }) => {
     const isActive = location === href;
@@ -40,12 +179,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             isDiscountButton
               ? 'bg-blue-600! text-white! border-0 shadow-lg hover:shadow-xl hover:bg-blue-700!'
               : isActive 
-                ? isChristmasMode 
-                  ? 'bg-red-100 text-red-800 shadow-xl border-red-300 hover:bg-red-200' 
-                  : 'bg-blue-100 text-blue-800 shadow-xl border-blue-300 hover:bg-blue-200'
-                : isChristmasMode
-                  ? "bg-white text-red-700 hover:bg-red-50 border-2 border-red-600 hover:border-red-700"
-                  : "bg-white text-blue-700 hover:bg-blue-50 border-2 border-blue-600 hover:border-blue-700"
+                ? 'bg-blue-100 text-blue-800 shadow-xl border-blue-300 hover:bg-blue-200'
+                : "bg-white text-blue-700 hover:bg-blue-50 border-2 border-blue-600 hover:border-blue-700"
           }`}
           whileHover={{ scale: 1.02, x: 5 }}
           whileTap={{ scale: 0.98 }}
@@ -53,11 +188,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {children}
           {isActive && (
             <motion.div 
-              className={`absolute bottom-0 left-0 right-0 h-1 mx-auto ${
-                isChristmasMode 
-                  ? "bg-red-600" 
-                  : "bg-blue-600"
-              }`}
+              className="absolute bottom-0 left-0 right-0 h-1 mx-auto bg-blue-600"
               layoutId="activeTab"
               initial={false}
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
@@ -72,39 +203,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // const GlobalSnowEffect = () => null;
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans relative bg-white text-black`}>
-      {/* Global Christmas Snow Effect - Very Subtle */}
-      {isChristmasMode && (
-        <div className="fixed inset-0 pointer-events-none overflow-hidden z-40">
-          {[...Array(15)].map((_, i) => (
-            <motion.div
-              key={`global-snow-${i}`}
-              className="absolute w-0.5 h-0.5 bg-white rounded-full opacity-30"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `-5px`,
-              }}
-              animate={{
-                y: ["0vh", "100vh"],
-                opacity: [0, 0.3, 0.1, 0],
-              }}
-              transition={{
-                duration: Math.random() * 8 + 15,
-                repeat: Infinity,
-                delay: Math.random() * 15,
-                ease: "linear",
-              }}
-            />
-          ))}
-        </div>
-      )}
-      
+    <div className="min-h-screen flex flex-col font-sans relative bg-background text-foreground">
       {/* Scroll Progress Indicator */}
       <ScrollProgressIndicator />
       
       {/* Navbar */}
       <motion.header 
-        className="sticky top-0 z-50 w-full border-b glass shadow-lg"
+        className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/60 shadow-sm"
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -117,57 +222,39 @@ export function Layout({ children }: { children: React.ReactNode }) {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <div className={`p-1.5 rounded-xl shadow-xl group-hover:shadow-2xl transition-shadow duration-300 ${
-                isChristmasMode 
-                  ? 'bg-blue-600' 
-                  : 'bg-blue-600'
-              }`}>
+              <div className="p-1.5 rounded-xl shadow-xl group-hover:shadow-2xl transition-shadow duration-300 bg-blue-600">
                 <motion.div 
                   className="text-white"
                   animate={{ rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
                 >
-                  {isChristmasMode ? (
-                    <Gift className="h-6 w-6" />
-                  ) : (
-                    <Laptop className="h-6 w-6" />
-                  )}
+                  <Laptop className="h-6 w-6" />
                 </motion.div>
               </div>
-              <span className={`font-heading text-2xl font-bold tracking-tight flex items-center gap-2 ${
-                isChristmasMode 
-                  ? 'text-gradient-christmas' 
-                  : 'text-gradient-primary'
-              }`}>
-                {isChristmasMode && (
-                  <div className="flex items-center gap-1">
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, delay: 0 }}
-                      className="text-lg"
-                    >
-                      🎄
-                    </motion.div>
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
-                      className="text-xl"
-                    >
-                      🎄
-                    </motion.div>
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-                      className="text-lg"
-                    >
-                      🎄
-                    </motion.div>
-                  </div>
-                )}
+              <span className="font-heading text-2xl font-bold tracking-tight flex items-center gap-2 text-gradient">
                 MS COMPUTERS & REPAIRS
               </span>
             </motion.div>
           </Link>
+
+          {/* Breadcrumbs */}
+          <nav aria-label="Breadcrumb" className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
+            {breadcrumbs.map((c, idx) => {
+              const isLast = idx === breadcrumbs.length - 1;
+              return (
+                <React.Fragment key={c.href}>
+                  {idx > 0 && <span className="opacity-50">/</span>}
+                  {isLast ? (
+                    <span className="text-foreground font-medium">{c.label}</span>
+                  ) : (
+                    <Link href={c.href}>
+                      <span className="cursor-pointer hover:text-foreground transition-colors">{c.label}</span>
+                    </Link>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </nav>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-6">
@@ -195,9 +282,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Link href="/dashboard">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <div className={`cursor-pointer text-sm font-bold transition-all duration-300 relative px-4 py-2 rounded-xl card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow gap-2 flex items-center ${
-                    isChristmasMode 
-                      ? 'bg-red-100 text-red-800 shadow-xl border-red-300 hover:bg-red-200' 
-                      : 'bg-blue-100 text-blue-800 shadow-xl border-blue-300 hover:bg-blue-200'
+                    'bg-blue-100 text-blue-800 shadow-xl border-blue-300 hover:bg-blue-200'
                   }`}>
                     <LayoutDashboard className="h-4 w-4" />
                     Dashboard
@@ -209,6 +294,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* User Actions */}
           <div className="hidden md:flex items-center gap-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full hover:bg-primary/10"
+              aria-label="Toggle theme"
+              onClick={() => {
+                setTheme(theme === "dark" ? "light" : "dark");
+              }}
+            >
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -253,6 +350,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <motion.button 
             className="md:hidden p-2 rounded-lg hover:bg-primary/10 transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-nav"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
@@ -299,7 +399,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
             
             {/* Sidebar */}
             <motion.div
-              className="md:hidden fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 overflow-hidden border-l border-gray-200"
+              id="mobile-nav"
+              ref={mobilePanelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Mobile navigation"
+              className="md:hidden fixed top-0 right-0 h-full w-80 bg-background shadow-2xl z-50 overflow-hidden border-l border-border"
               initial={{ x: "100%", opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
@@ -317,20 +422,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
 
               {/* Header with Glass Effect */}
-              <div className="relative p-6 border-b border-gray-200 bg-white">
+              <div className="relative p-6 border-b border-border bg-background">
                 <div className="flex items-center justify-between">
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.2, type: "spring", stiffness: 500 }}
                   >
-                    <h2 className="text-2xl font-bold text-blue-600">
+                    <h2 className="text-2xl font-bold text-primary">
                       Navigation
                     </h2>
                     <p className="text-xs text-muted-foreground mt-1">Explore MS-COMPUTERS</p>
                   </motion.div>
                   <motion.button
-                    className="p-3 rounded-full bg-blue-100 hover:bg-blue-200 transition-all duration-300 border border-blue-200 shadow-lg hover:shadow-xl"
+                    ref={mobileCloseButtonRef}
+                    className="p-3 rounded-full bg-primary/10 hover:bg-primary/15 transition-all duration-300 border border-border shadow-lg hover:shadow-xl"
                     onClick={() => setMobileMenuOpen(false)}
                     whileHover={{ scale: 1.1, rotate: 90 }}
                     whileTap={{ scale: 0.9 }}
@@ -505,39 +611,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Footer */}
-      <footer className={`py-16 relative overflow-hidden ${
-        isChristmasMode 
-          ? 'bg-blue-600 text-white' 
-          : 'bg-blue-600 text-white'
-      }`}>
+      <footer className="py-16 relative overflow-hidden bg-primary text-primary-foreground">
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="absolute top-0 left-0 w-full h-full shimmer opacity-20"></div>
-        {isChristmasMode && (
-          <GlassCard className="absolute inset-0 bg-white/5">
-            <div className="absolute inset-0">
-              {[...Array(30)].map((_, i) => (
-                <motion.div
-                  key={`footer-snow-${i}`}
-                  className="absolute w-1 h-1 bg-white rounded-full opacity-40"
-                  style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                  }}
-                  animate={{
-                    y: [0, -10, 0],
-                    opacity: [0.4, 0.8, 0.4],
-                  }}
-                  transition={{
-                    duration: Math.random() * 2 + 2,
-                    repeat: Infinity,
-                    delay: Math.random() * 2,
-                    ease: "easeInOut",
-                  }}
-                />
-              ))}
-            </div>
-          </GlassCard>
-        )}
         <div className="container mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -545,30 +621,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
             transition={{ duration: 0.5, delay: 0.1 }}
           >
             <div className="flex items-center gap-2 mb-4">
-              <div className={`p-1 rounded-md shadow-lg ${
-                isChristmasMode 
-                  ? 'bg-white' 
-                  : 'bg-white'
-              }`}>
-                {isChristmasMode ? (
-                  <Gift className="h-5 w-5 text-red-600" />
-                ) : (
-                  <Laptop className="h-5 w-5 text-primary" />
-                )}
+              <div className="p-1 rounded-md shadow-lg bg-white">
+                <Laptop className="h-5 w-5 text-primary" />
               </div>
               <span className="font-heading text-xl font-bold">MS-COMPUTERS</span>
-              {isChristmasMode && <span className="text-2xl">🎄</span>}
             </div>
-            <p className={`${
-              isChristmasMode 
-                ? 'text-white/80' 
-                : 'text-primary-foreground/80'
-            } text-sm leading-relaxed`}>
-              {isChristmasMode ? (
-                <>Experience the magic of Christmas fashion! 🎅 Discover festive styles and elegant designs that bring joy and style to your holiday season. Perfect for spreading cheer and looking your best! 🎁</>
-              ) : (
-                <>Experience our curated collection featuring XUK Laptops, XUS Laptops, Computers Accessories, Computer Repairs and Stationeries, with modern elegance, and a touch of sophistication.</>
-              )}
+            <p className="text-primary-foreground/80 text-sm leading-relaxed">
+              <>Experience our curated collection featuring XUK Laptops, XUS Laptops, Computers Accessories, Computer Repairs and Stationeries, with modern elegance, and a touch of sophistication.</>
             </p>
           </motion.div>
           
@@ -578,14 +637,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <h3 className="font-bold mb-4 text-lg">Quick Links</h3>
-            <ul className={`space-y-2 text-sm ${
-              isChristmasMode 
-                ? 'text-white/80 hover:text-white' 
-                : 'text-primary-foreground/80 hover:text-white'
-            } transition-colors duration-300`}>
-              <li><Link href="/" className={`${isChristmasMode ? 'hover:text-white' : 'hover:text-white'} transition-colors duration-300`}>Home</Link></li>
-              <li><Link href="/menu" className={`${isChristmasMode ? 'hover:text-white' : 'hover:text-white'} transition-colors duration-300`}>Products</Link></li>
-              <li><Link href="/chat" className={`${isChristmasMode ? 'hover:text-white' : 'hover:text-white'} transition-colors duration-300`}>Reservations</Link></li>
+            <ul className="space-y-2 text-sm text-primary-foreground/80 hover:text-white transition-colors duration-300">
+              <li><Link href="/" className="hover:text-white transition-colors duration-300">Home</Link></li>
+              <li><Link href="/menu" className="hover:text-white transition-colors duration-300">Products</Link></li>
+              <li><Link href="/chat" className="hover:text-white transition-colors duration-300">Reservations</Link></li>
             </ul>
           </motion.div>
 
@@ -595,11 +650,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             transition={{ duration: 0.5, delay: 0.3 }}
           >
             <h3 className="font-bold mb-4 text-lg">Contact</h3>
-            <ul className={`space-y-2 text-sm ${
-              isChristmasMode 
-                ? 'text-white/80' 
-                : 'text-primary-foreground/80'
-            }`}>
+            <ul className="space-y-2 text-sm text-primary-foreground/80">
               <li className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Mathingu Road Wangirika  Hse Room No.G10, Ruiru Town </li>
               <li className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> +254 724 399 231</li>
             </ul>
@@ -611,40 +662,105 @@ export function Layout({ children }: { children: React.ReactNode }) {
             transition={{ duration: 0.5, delay: 0.4 }}
           >
             <h3 className="font-bold mb-4 text-lg">Opening Hours</h3>
-            <ul className={`space-y-2 text-sm ${
-              isChristmasMode 
-                ? 'text-white/80' 
-                : 'text-primary-foreground/80'
-            }`}>
-              <li>{isChristmasMode ? '🎅 Mon - Fri: 9:00 AM - 8:00 PM (Holiday Hours)' : 'Mon - Fri: 11:00 AM - 10:00 PM'}</li>
-              <li>{isChristmasMode ? '🎄 Sat - Sun: 10:00 AM - 9:00 PM (Holiday Hours)' : 'Sat - Sun: 10:00 AM - 11:00 PM'}</li>
+            <ul className="space-y-2 text-sm text-primary-foreground/80">
+              <li>Mon - Fri: 11:00 AM - 10:00 PM</li>
+              <li>Sat - Sun: 10:00 AM - 11:00 PM</li>
             </ul>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          >
+            <h3 className="font-bold mb-4 text-lg">Newsletter</h3>
+            <p className="text-sm text-primary-foreground/80 leading-relaxed mb-4">
+              Get product updates, offers and new arrivals.
+            </p>
+            <form onSubmit={handleNewsletterSubmit} className="space-y-3">
+              <input
+                type="email"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                placeholder="you@example.com"
+                aria-label="Email address"
+                className="w-full h-11 px-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/40"
+              />
+              <Button
+                type="submit"
+                disabled={newsletterLoading}
+                className="w-full h-11 bg-white text-primary hover:bg-white/90 font-semibold rounded-xl"
+              >
+                {newsletterLoading ? "Subscribing..." : "Subscribe"}
+              </Button>
+              {newsletterStatus !== "idle" && (
+                <div
+                  className={`text-xs rounded-xl px-4 py-3 border ${
+                    newsletterStatus === "success"
+                      ? "bg-green-500/15 border-green-300/30 text-green-50"
+                      : "bg-red-500/15 border-red-300/30 text-red-50"
+                  }`}
+                >
+                  {newsletterMessage}
+                </div>
+              )}
+            </form>
+
+            <div className="mt-6">
+              <h4 className="font-semibold text-sm mb-3">Follow</h4>
+              <div className="flex items-center gap-3 text-sm">
+                {!!socialLinks?.instagram && (
+                  <a
+                    href={socialLinks.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition-colors"
+                    aria-label="Instagram"
+                  >
+                    Instagram
+                  </a>
+                )}
+                {!!socialLinks?.facebook && (
+                  <a
+                    href={socialLinks.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition-colors"
+                    aria-label="Facebook"
+                  >
+                    Facebook
+                  </a>
+                )}
+                {!!socialLinks?.x && (
+                  <a
+                    href={socialLinks.x}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition-colors"
+                    aria-label="X"
+                  >
+                    X
+                  </a>
+                )}
+              </div>
+            </div>
           </motion.div>
         </div>
         <div className={`container mx-auto px-4 mt-8 pt-8 border-t text-center text-sm relative z-10 ${
-          isChristmasMode 
-            ? 'border-white/20 text-white/60' 
-            : 'border-primary-foreground/20 text-primary-foreground/60'
+          'border-primary-foreground/20 text-primary-foreground/60'
         }`}>
           <motion.p 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.5 }}
           >
-            {isChristmasMode ? (
-              <>© 2024 MS-COMPUTERS. All rights reserved. 🎄 Wishing you a Merry Christmas and Happy New Year! 🎅</>
-            ) : (
-              <>© 2024 MS-COMPUTERS. All rights reserved.</>
-            )}
+            <>© 2024 MS-COMPUTERS. All rights reserved.</>
           </motion.p>
         </div>
       </footer>
 
       {/* Floating Action Button */}
       <FloatingActionButton />
-      
-      {/* Admin Christmas Toggle */}
-      <ChristmasToggle />
     </div>
   );
 }
