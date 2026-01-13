@@ -312,7 +312,7 @@ export default function Home() {
           <ProductSearch 
             products={menu}
             onFilteredProducts={setSearchedProducts}
-            className="mb-8"
+            className="mb-8 mt-6 lg:mt-10 max-w-4xl mx-auto"
           />
           
           <CategoryFilter 
@@ -401,12 +401,12 @@ export default function Home() {
                   whileHover={{ y: -8 }}
                   className="pointer-events-auto"
                 >
-                  <Card className="h-full p-8 bg-white/80 backdrop-blur-sm border border-primary/10 shadow-xl hover:shadow-2xl transition-all duration-500 rounded-2xl">
+                  <Card className="h-full p-8 bg-background/70 backdrop-blur-sm border border-border shadow-xl hover:shadow-2xl transition-all duration-500 rounded-2xl">
                     <div className="flex items-center mb-6">
                       {[...Array(5)].map((_, i) => (
                         <motion.svg
                           key={i}
-                          className={`w-5 h-5 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                          className={`w-5 h-5 ${i < review.rating ? 'text-yellow-400' : 'text-muted-foreground/40'}`}
                           fill="currentColor"
                           viewBox="0 0 20 20"
                           initial={{ scale: 0, rotate: -180 }}
@@ -468,7 +468,7 @@ export default function Home() {
               </motion.div>
               
               <motion.div 
-                className="bg-white/60 backdrop-blur-md rounded-2xl p-8 shadow-xl border border-primary/10 max-w-2xl mx-auto"
+                className="bg-background/60 backdrop-blur-md rounded-2xl p-8 shadow-xl border border-border max-w-2xl mx-auto"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.4 }}
@@ -526,12 +526,12 @@ export default function Home() {
       
       {/* News & Events */}
       <motion.section 
-        className="py-20 bg-blue-50 relative overflow-hidden"
+        className="py-20 bg-muted/20 relative overflow-hidden"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
       >
-        <div className="absolute inset-0 bg-linear-to-br from-blue-100 to-white"></div>
+        <div className="absolute inset-0 bg-linear-to-br from-background via-muted/30 to-background"></div>
         <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             className="text-center mb-16"
@@ -540,7 +540,7 @@ export default function Home() {
             transition={{ duration: 0.5 }}
           >
             <motion.h2 
-              className="text-4xl md:text-5xl font-heading font-bold mb-4 text-blue-600"
+              className="text-4xl md:text-5xl font-heading font-bold mb-4 text-foreground"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -575,7 +575,7 @@ export default function Home() {
                     className="h-full"
                   >
                   <Card 
-                    className="h-full flex flex-col overflow-hidden card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-2 cursor-pointer"
+                    className="h-full flex flex-col overflow-hidden bg-background/70 border border-border card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-2 cursor-pointer"
                     onClick={() => openNewsModal(item.id)}
                   >
                     {item.image && (
@@ -590,17 +590,17 @@ export default function Home() {
                       </div>
                     )}
                     <CardContent className="p-6 flex-1 flex flex-col">
-                      <div className="flex items-center gap-2 text-sm text-blue-600 font-medium mb-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium mb-4">
                         <Clock className="h-4 w-4" />
                         <span>{item.date ? new Date(item.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No date'}</span>
                         {typeof item.views === 'number' && (
-                          <span className="flex items-center gap-1 text-slate-600">
+                          <span className="flex items-center gap-1 text-muted-foreground">
                             <Eye className="h-4 w-4" />
                             <span>{item.views.toLocaleString()}</span>
                           </span>
                         )}
                       </div>
-                      <h3 className="text-xl font-bold mb-4 font-heading line-clamp-2 group-hover:text-blue-600 transition-colors duration-300">{item.title}</h3>
+                      <h3 className="text-xl font-bold mb-4 font-heading line-clamp-2 group-hover:text-primary transition-colors duration-300">{item.title}</h3>
                       <p className="text-muted-foreground mb-6 line-clamp-3 flex-1 leading-relaxed">{item.content}</p>
                       <div className="flex justify-between items-center mt-auto pt-4 border-t border-border">
                         <motion.div
@@ -609,7 +609,7 @@ export default function Home() {
                         >
                           <Button 
                             variant="link" 
-                            className="p-0 h-auto text-blue-600 hover:text-blue-700 font-medium"
+                            className="p-0 h-auto text-primary hover:text-primary/80 font-medium"
                             onClick={(e) => {
                               e.stopPropagation();
                               openNewsModal(item.id);

@@ -475,74 +475,74 @@ const NewsManager: React.FC = () => {
       {/* Edit Modal */}
       {isEditModalOpen && editingItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white border border-gray-200 shadow-xl">
-            <CardHeader className="bg-gray-50 border-b border-gray-200">
-              <CardTitle className="text-gray-900">Edit News Article</CardTitle>
-              <CardDescription className="text-gray-600">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-background border border-border shadow-xl">
+            <CardHeader className="bg-muted/30 border-b border-border">
+              <CardTitle className="text-foreground">Edit News Article</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Update the news article details
               </CardDescription>
             </CardHeader>
-            <CardContent className="bg-white">
+            <CardContent className="bg-background">
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-title" className="text-gray-700 font-medium">Article Title *</Label>
+                    <Label htmlFor="edit-title" className="text-foreground font-medium">Article Title *</Label>
                     <Input
                       id="edit-title"
                       placeholder="Enter article title"
                       value={editingItem.title}
                       onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
-                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="border-border focus:border-primary focus:ring-primary"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-author" className="text-gray-700 font-medium">Author *</Label>
+                    <Label htmlFor="edit-author" className="text-foreground font-medium">Author *</Label>
                     <Input
                       id="edit-author"
                       placeholder="Author name"
                       value={editingItem.author}
                       onChange={(e) => setEditingItem({ ...editingItem, author: e.target.value })}
-                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="border-border focus:border-primary focus:ring-primary"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-date" className="text-gray-700 font-medium">Publication Date *</Label>
+                  <Label htmlFor="edit-date" className="text-foreground font-medium">Publication Date *</Label>
                   <Input
                     id="edit-date"
                     type="date"
                     value={editingItem.date}
                     onChange={(e) => setEditingItem({ ...editingItem, date: e.target.value })}
-                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    className="border-border focus:border-primary focus:ring-primary"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-image-upload" className="text-gray-700 font-medium">Update Featured Image (optional)</Label>
+                  <Label htmlFor="edit-image-upload" className="text-foreground font-medium">Update Featured Image (optional)</Label>
                   <Input
                     id="edit-image-upload"
                     type="file"
                     accept="image/*"
                     onChange={handleEditImageChange}
-                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    className="border-border focus:border-primary focus:ring-primary"
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Upload a new image to replace the current one
                   </p>
                   
                   {/* Existing Image Preview */}
                   {editingItem.image && (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-700">Current Image:</p>
+                      <p className="text-sm font-medium text-foreground">Current Image:</p>
                       <div className="relative group">
                         <img
                           src={editingItem.image}
                           alt="Current news article image"
-                          className="w-full h-48 object-cover rounded border border-gray-300"
+                          className="w-full h-48 object-cover rounded border border-border"
                         />
                       </div>
                     </div>
@@ -551,12 +551,12 @@ const NewsManager: React.FC = () => {
                   {/* New Image Preview */}
                   {editingImageFiles.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-700">New Image:</p>
+                      <p className="text-sm font-medium text-foreground">New Image:</p>
                       <div className="relative group">
                         <img
                           src={URL.createObjectURL(editingImageFiles[0])}
                           alt="New news article preview"
-                          className="w-full h-48 object-cover rounded border border-gray-300"
+                          className="w-full h-48 object-cover rounded border border-border"
                         />
                         <button
                           type="button"
@@ -574,13 +574,13 @@ const NewsManager: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-content" className="text-gray-700 font-medium">Content *</Label>
+                  <Label htmlFor="edit-content" className="text-foreground font-medium">Content *</Label>
                   <Textarea
                     id="edit-content"
                     placeholder="Write your news article content here..."
                     value={editingItem.content}
                     onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })}
-                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 min-h-[200px]"
+                    className="border-border focus:border-primary focus:ring-primary min-h-[200px]"
                     required
                   />
                 </div>
@@ -608,7 +608,7 @@ const NewsManager: React.FC = () => {
                       setEditingImageFiles([]);
                     }}
                     disabled={isLoading}
-                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                    className="border-border text-foreground hover:bg-muted"
                   >
                     Cancel
                   </Button>

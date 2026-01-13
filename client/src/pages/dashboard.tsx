@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Bell, Check, DollarSign, LayoutGrid, Mail, MapPin, MapPinned, Newspaper, Phone, Pin, PinOff, Plus, Search, Settings, ShoppingBag, Users, TrendingUp } from "lucide-react";
+import { BarChart3, Bell, Check, DollarSign, LayoutGrid, Mail, MapPin, MapPinned, MoreHorizontal, Newspaper, Phone, Pin, PinOff, Plus, Search, Settings, ShoppingBag, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import NewsletterManager from "@/components/admin/NewsletterManager";
 import NewsManager from "@/components/admin/NewsManager";
@@ -866,71 +867,92 @@ export default function Dashboard() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="sticky top-16 z-20 -mx-4 px-4 py-3 bg-background/80 backdrop-blur-xl border-b supports-backdrop-filter:bg-background/60">
-          <TabsList className="w-full flex flex-wrap gap-2 p-1 bg-muted/50 rounded-xl border">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+          <TabsList className="w-full flex flex-nowrap gap-2 p-1 bg-muted/50 rounded-xl border overflow-x-auto overscroll-x-contain snap-x snap-mandatory">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <LayoutGrid className="h-4 w-4" />
                 Overview
               </span>
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 Analytics
               </span>
             </TabsTrigger>
-            <TabsTrigger value="orders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+            <TabsTrigger value="orders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4" />
                 Orders
               </span>
             </TabsTrigger>
-            <TabsTrigger value="pos" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+            <TabsTrigger value="pos" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
                 POS
               </span>
             </TabsTrigger>
-            <TabsTrigger value="menu" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+            <TabsTrigger value="menu" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <Mail className="h-4 w-4" />
                 Menu
               </span>
             </TabsTrigger>
-            <TabsTrigger value="location" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+            <TabsTrigger value="location" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <MapPinned className="h-4 w-4" />
                 Location
               </span>
             </TabsTrigger>
-            <TabsTrigger value="news" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+            <TabsTrigger value="news" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <Newspaper className="h-4 w-4" />
                 News
               </span>
             </TabsTrigger>
-            <TabsTrigger value="newsletter" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+            <TabsTrigger value="newsletter" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <Mail className="h-4 w-4" />
                 Newsletter
               </span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+            <TabsTrigger value="settings" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 Settings
               </span>
             </TabsTrigger>
+
             {isAdmin && (
-              <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="sm:hidden inline-flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm border bg-background/70 hover:bg-background transition-colors snap-start shrink-0"
+                    aria-label="More admin tabs"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                    More
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setActiveTab("users")}>Users</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setActiveTab("audit")}>Audit</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setActiveTab("user-audit")}>User Audit</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {isAdmin && (
+              <TabsTrigger value="users" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
                 <span className="inline-flex items-center gap-2">
                   <Users className="h-4 w-4" />
                   Users
                 </span>
               </TabsTrigger>
             )}
-            {isAdmin && <TabsTrigger value="audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">Audit</TabsTrigger>}
-            {isAdmin && <TabsTrigger value="user-audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-4 py-2 rounded-lg">User Audit</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="audit" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">Audit</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="user-audit" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">User Audit</TabsTrigger>}
           </TabsList>
         </div>
 

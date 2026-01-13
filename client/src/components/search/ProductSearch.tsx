@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
-import { Search, Filter, X, ChevronDown, ChevronUp, Sparkles, DollarSign, MapPin, Package, Star, Loader2 } from 'lucide-react';
+import { Search, Filter, X, ChevronDown, ChevronUp, Sparkles, DollarSign, MapPin, Package, Loader2 } from 'lucide-react';
 import { MenuItem } from '@/lib/data';
 import { useDebounce } from '@/hooks/use-debounce';
 
@@ -227,15 +227,15 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
   }, [filters]);
 
   return (
-    <Card className={`${className} border-0 shadow-xl bg-linear-to-br from-white/90 to-blue-50/90 backdrop-blur-lg`}>
-      <CardContent className="p-8">
-        <div className="space-y-6">
+    <Card className={`${className} border-0 shadow-xl bg-linear-to-br from-background/90 to-muted/40 backdrop-blur-lg`}>
+      <CardContent className="p-5 sm:p-6 lg:p-6">
+        <div className="space-y-5">
           {/* Header with icon */}
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-linear-to-r from-blue-500 to-purple-600 text-white mb-3">
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-linear-to-r from-blue-500 to-purple-600 text-white mb-2">
               <Sparkles className="h-4 w-4" />
             </div>
-            <h2 className="text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h2 className="text-xl sm:text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Discover Products
             </h2>
             <p className="text-muted-foreground text-sm">Find exactly what you're looking for</p>
@@ -251,14 +251,25 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                     <div className="relative">
                       <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-4 w-4" />
                       <Input
-                        placeholder="Search for products, brands, or tags..."
+                        type="text"
+                        placeholder="Search products..."
                         value={filters.query}
                         onChange={(e) => {
                           updateFilter('query', e.target.value);
                           setShowSuggestions(true);
                         }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            setShowSuggestions(false);
+                          }
+                        }}
+                        onBlur={() => {
+                          // Delay hiding suggestions to allow click
+                          setTimeout(() => setShowSuggestions(false), 200);
+                        }}
                         onFocus={() => setShowSuggestions(true)}
-                        className="pl-12 h-10 text-base border-0 shadow-lg bg-white/80 backdrop-blur focus:ring-4 focus:ring-blue-500/20 transition-all"
+                        className="pl-12 h-10 text-base border border-border/60 shadow-lg bg-background/70 backdrop-blur focus:ring-4 focus:ring-primary/20 transition-all"
                         aria-label="Search products"
                       />
                       {isLoading && <Loader2 className="absolute right-12 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-blue-500" />}
@@ -267,7 +278,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                           variant="ghost"
                           size="sm"
                           onClick={() => updateFilter('query', '')}
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-gray-100"
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted"
                           aria-label="Clear search"
                         >
                           <X className="h-4 w-4" />
@@ -280,13 +291,16 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                       {suggestions.map((suggestion, index) => (
                         <button
                           key={index}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                          className="w-full text-left px-4 py-2 hover:bg-muted focus:bg-muted focus:outline-none"
                           onClick={() => {
                             updateFilter('query', suggestion);
                             setShowSuggestions(false);
                           }}
                         >
-                          {suggestion}
+                          <div className="flex items-center gap-2">
+                            <Search className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{suggestion}</span>
+                          </div>
                         </button>
                       ))}
                     </div>
@@ -294,27 +308,23 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                 </Popover>
               </div>
               <Button
+                variant="outline"
                 onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
                 className={`h-10 px-4 shadow-lg transition-all ${
                   isAdvancedOpen 
                     ? 'bg-linear-to-r from-blue-500 to-purple-600 text-white' 
-                    : 'bg-white/80 backdrop-blur hover:bg-white text-gray-700'
+                    : 'bg-background/70 backdrop-blur hover:bg-background text-foreground'
                 }`}
               >
                 <Filter className="h-5 w-5 mr-2" />
-                Filters
-                {activeFiltersCount > 0 && (
-                  <Badge className="ml-2 bg-linear-to-r from-orange-400 to-pink-500 text-white border-0">
-                    {activeFiltersCount}
-                  </Badge>
-                )}
+                Advanced
                 {isAdvancedOpen ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
               </Button>
               {activeFiltersCount > 0 && (
                 <Button
                   variant="outline"
                   onClick={clearFilters}
-                  className="h-10 px-4 shadow-lg bg-white/80 backdrop-blur hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+                  className="h-10 px-4 shadow-lg bg-background/70 backdrop-blur hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Clear
@@ -326,9 +336,9 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
           {/* Sort and Filters Row */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">Sort by:</span>
+              <span className="text-sm font-medium text-foreground">Sort by:</span>
               <Select value={filters.sortBy} onValueChange={(value) => updateFilter('sortBy', value)}>
-                <SelectTrigger className="w-40 h-8 bg-white/80 backdrop-blur border-gray-200">
+                <SelectTrigger className="w-40 h-8 bg-background/70 backdrop-blur border-border focus:border-primary focus:ring-2 focus:ring-primary/20">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -344,16 +354,16 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
           {/* Advanced Filters */}
           <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
             <CollapsibleContent className="space-y-6">
-              <div className="bg-white/60 backdrop-blur rounded-xl p-6 border border-white/20">
+              <div className="bg-background/60 backdrop-blur rounded-xl p-6 border border-border/60">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {/* Category Filter */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold focus:border-blue-500 flex items-center gap-2">
+                    <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Package className="h-4 w-4 text-blue-500" />
                       Category
                     </label>
                     <Select value={filters.category} onValueChange={(value) => updateFilter('category', value)}>
-                      <SelectTrigger className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" aria-label="Select category">
+                      <SelectTrigger className="h-10 bg-background/70 backdrop-blur border-border focus:border-primary focus:ring-2 focus:ring-primary/20" aria-label="Select category">
                         <SelectValue placeholder="All categories" />
                       </SelectTrigger>
                       <SelectContent>
@@ -368,9 +378,9 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
 
                   {/* Price Range */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold focus:border-blue-500 flex items-center gap-2">
+                    <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <DollarSign className="h-4 w-4 text-green-500" />
-                      Price Range (KSH)
+                      Price Range
                     </label>
                     <div className="px-3">
                       <Slider
@@ -382,7 +392,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                         className="w-full"
                         aria-label="Price range slider"
                       />
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
                         <span>KSH {filters.priceRange.min.toLocaleString()}</span>
                         <span>KSH {filters.priceRange.max.toLocaleString()}</span>
                       </div>
@@ -391,12 +401,12 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
 
                   {/* Condition Filter */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold focus:border-blue-500 flex items-center gap-2">
-                      <Star className="h-4 w-4 text-purple-500" />
+                    <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-purple-500" />
                       Condition
                     </label>
                     <Select value={filters.condition} onValueChange={(value) => updateFilter('condition', value)}>
-                      <SelectTrigger className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20">
+                      <SelectTrigger className="h-10 bg-background/70 backdrop-blur border-border focus:border-primary focus:ring-2 focus:ring-primary/20">
                         <SelectValue placeholder="All conditions" />
                       </SelectTrigger>
                       <SelectContent>
@@ -411,9 +421,9 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                   {/* Brand Filter */}
                   {allBrands.length > 0 && (
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Brand</label>
+                      <label className="text-sm font-semibold text-foreground">Brand</label>
                       <Select value={filters.brand} onValueChange={(value) => updateFilter('brand', value)}>
-                        <SelectTrigger className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                        <SelectTrigger className="h-10 bg-background/70 backdrop-blur border-border focus:border-primary focus:ring-2 focus:ring-primary/20">
                           <SelectValue placeholder="All brands" />
                         </SelectTrigger>
                         <SelectContent>
@@ -429,12 +439,12 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                   {/* Location Filter */}
                   {allLocations.length > 0 && (
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-red-500" />
                         Location
                       </label>
                       <Select value={filters.location} onValueChange={(value) => updateFilter('location', value)}>
-                        <SelectTrigger className="h-10 bg-white/80 backdrop-blur border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20">
+                        <SelectTrigger className="h-10 bg-background/70 backdrop-blur border-border focus:border-primary focus:ring-2 focus:ring-primary/20">
                           <SelectValue placeholder="All locations" />
                         </SelectTrigger>
                         <SelectContent>
@@ -448,7 +458,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                   )}
 
                   {/* In Stock Filter */}
-                  <div className="flex items-center space-x-3 bg-white/60 backdrop-blur rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center space-x-3 bg-background/60 backdrop-blur rounded-lg p-4 border border-border">
                     <input
                       type="checkbox"
                       id="inStock"
@@ -465,7 +475,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                 {/* Tags Filter */}
                 {allTags.length > 0 && (
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700">Popular Tags</label>
+                    <label className="text-sm font-semibold text-foreground">Popular Tags</label>
                     <div className="flex flex-wrap gap-2">
                       {allTags.map(tag => (
                         <Badge
@@ -474,7 +484,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                           className={`cursor-pointer transition-all ${
                             filters.tags.includes(tag)
                               ? 'bg-linear-to-r from-blue-500 to-purple-600 text-white border-0 hover:shadow-lg'
-                              : 'bg-white/80 backdrop-blur border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                              : 'bg-background/70 backdrop-blur border-border hover:border-primary/40 hover:bg-muted'
                           }`}
                           onClick={() => toggleTag(tag)}
                         >
@@ -489,24 +499,24 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
           </Collapsible>
 
           {/* Results Summary */}
-          <div className="flex items-center justify-between p-4 bg-linear-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
+          <div className="flex items-center justify-between p-4 bg-linear-to-r from-muted/40 to-muted/20 rounded-lg border border-border">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-              <span className="text-xs font-medium text-gray-700">
+              <span className="text-xs font-medium text-foreground">
                 {isLoading ? (
                   'Searching...'
                 ) : (
                   <>
                     <span className="text-base font-bold text-blue-600">{filteredProducts.length}</span>
-                    <span className="text-gray-500"> of </span>
+                    <span className="text-muted-foreground"> of </span>
                     <span className="text-base font-bold text-purple-600">{products.length}</span>
-                    <span className="text-gray-500"> products found</span>
+                    <span className="text-muted-foreground"> products found</span>
                   </>
                 )}
               </span>
             </div>
             {filteredProducts.length === 0 && !isLoading && (
-              <div className="text-xs text-gray-500 italic">
+              <div className="text-xs text-muted-foreground italic">
                 Try adjusting your filters or search terms
               </div>
             )}

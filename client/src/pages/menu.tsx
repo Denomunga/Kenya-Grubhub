@@ -375,7 +375,7 @@ export default function Menu() {
           </div>
 
           {/* Search Component */}
-          <div className="mt-6">
+          <div className="mt-6 max-w-5xl mx-auto">
             <ProductSearch 
               products={menu}
               onFilteredProducts={setSearchedProducts}

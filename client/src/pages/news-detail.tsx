@@ -108,16 +108,16 @@ export default function NewsDetail() {
   }, [id]);
 
   if (loading) return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12">
         <div className="animate-pulse">
-          <div className="h-64 bg-slate-200 rounded-2xl mb-8"></div>
-          <div className="h-8 bg-slate-200 rounded w-3/4 mb-4"></div>
-          <div className="h-4 bg-slate-200 rounded w-1/2 mb-8"></div>
+          <div className="h-64 bg-muted rounded-2xl mb-8"></div>
+          <div className="h-8 bg-muted rounded w-3/4 mb-4"></div>
+          <div className="h-4 bg-muted rounded w-1/2 mb-8"></div>
           <div className="space-y-4">
-            <div className="h-4 bg-slate-200 rounded"></div>
-            <div className="h-4 bg-slate-200 rounded"></div>
-            <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+            <div className="h-4 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-5/6"></div>
           </div>
         </div>
       </div>
@@ -125,22 +125,22 @@ export default function NewsDetail() {
   );
   
   if (error) return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+    <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center">
         <div className="text-6xl mb-4">📰</div>
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Article Not Found</h1>
-        <p className="text-slate-600 mb-6">{error}</p>
+        <h1 className="text-2xl font-bold text-foreground mb-2">Article Not Found</h1>
+        <p className="text-muted-foreground mb-6">{error}</p>
         <Button onClick={() => setLocation('/')}>Back to Home</Button>
       </div>
     </div>
   );
   
   if (!news) return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+    <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center">
         <div className="text-6xl mb-4">📰</div>
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Article Not Found</h1>
-        <p className="text-slate-600 mb-6">The article you're looking for doesn't exist.</p>
+        <h1 className="text-2xl font-bold text-foreground mb-2">Article Not Found</h1>
+        <p className="text-muted-foreground mb-6">The article you're looking for doesn't exist.</p>
         <Button onClick={() => setLocation('/')}>Back to Home</Button>
       </div>
     </div>
@@ -149,9 +149,9 @@ export default function NewsDetail() {
   const readingTime = calculateReadingTime(news.content || '');
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-background">
       {/* Reading Progress Bar */}
-      <div className="fixed top-0 left-0 w-full h-1 bg-slate-200 z-50">
+      <div className="fixed top-0 left-0 w-full h-1 bg-muted z-50">
         <div 
           className="h-full bg-linear-to-r from-blue-600 to-purple-600 transition-all duration-300"
           style={{ width: `${readingProgress}%` }}

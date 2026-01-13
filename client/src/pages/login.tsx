@@ -111,14 +111,14 @@ export default function Login() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-linear-to-br from-slate-50 to-slate-100">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background">
         <motion.div
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
           className="w-full max-w-md"
         >
-          <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm">
+          <Card className="border shadow-2xl bg-background/70 backdrop-blur-sm">
             <CardHeader className="text-center space-y-4 pb-8">
               <div className="lg:hidden flex items-center justify-center gap-3 mb-4">
                 <div className="bg-blue-600 p-3 rounded-full">
@@ -127,14 +127,14 @@ export default function Login() {
                 <h1 className="text-2xl font-bold font-serif">MS-COMPUTERS</h1>
               </div>
               
-              <CardTitle className="text-3xl font-serif font-bold text-gray-900">
+              <CardTitle className="text-3xl font-serif font-bold text-foreground">
                 Welcome Back
               </CardTitle>
-              <CardDescription className="text-gray-600 text-lg">
+              <CardDescription className="text-muted-foreground text-lg">
                 Sign in to your MS-COMPUTERS account
               </CardDescription>
               
-              <div className="flex items-center justify-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-full border border-green-200">
+              <div className="flex items-center justify-center gap-2 text-sm text-green-600 bg-green-500/10 px-3 py-2 rounded-full border border-green-500/20">
                 <Shield className="h-4 w-4" />
                 <span>Secure Auth0 Login</span>
               </div>
@@ -146,7 +146,7 @@ export default function Login() {
                 <Button
                   onClick={() => handleSocialLogin('google')}
                   variant="outline"
-                  className="w-full h-12 border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-300 group"
+                  className="w-full h-12 border-border hover:border-primary/40 hover:bg-muted transition-all duration-300 group"
                   disabled={authState === 'loading'}
                 >
                   <svg className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
@@ -161,7 +161,7 @@ export default function Login() {
                 <Button
                   onClick={() => handleSocialLogin('github')}
                   variant="outline"
-                  className="w-full h-12 border-gray-300 hover:border-gray-700 hover:bg-gray-50 transition-all duration-300 group"
+                  className="w-full h-12 border-border hover:border-primary/40 hover:bg-muted transition-all duration-300 group"
                   disabled={authState === 'loading'}
                 >
                   <svg className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
@@ -174,10 +174,10 @@ export default function Login() {
               {/* Divider */}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
+                  <div className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">Or continue with email</span>
+                  <span className="px-4 bg-background text-muted-foreground">Or continue with email</span>
                 </div>
               </div>
 

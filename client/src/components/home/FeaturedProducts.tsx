@@ -120,7 +120,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
 
   return (
     <section className="py-16 relative overflow-hidden">
-      <div className="absolute inset-0 bg-linear-to-br from-blue-50 to-white"></div>
+      <div className="absolute inset-0 bg-linear-to-br from-background via-background to-muted/40"></div>
       <div className="container mx-auto px-4 relative z-10">
         <motion.div 
           className="text-center mb-16"
@@ -133,12 +133,12 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
             whileInView={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <Badge variant="outline" className="mb-4 text-blue-600 border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium shadow-sm">
+            <Badge variant="outline" className="mb-4 text-primary border-border bg-background/60 px-4 py-2 text-sm font-medium shadow-sm">
               Our Specialties
             </Badge>
           </motion.div>
           <motion.h2 
-            className="text-4xl md:text-5xl font-bold font-serif mb-6 text-blue-600"
+            className="text-4xl md:text-5xl font-bold font-serif mb-6 text-foreground"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -182,7 +182,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
                       type="button"
                       size="icon"
                       variant="secondary"
-                      className="h-9 w-9 rounded-full bg-white/90 text-foreground hover:bg-white shadow-lg focus-ring"
+                      className="h-9 w-9 rounded-full bg-background/90 text-foreground hover:bg-background shadow-lg focus-ring"
                       aria-label={`Quick view ${item.name}`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -197,7 +197,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
                         type="button"
                         size="icon"
                         variant="secondary"
-                        className={`h-9 w-9 rounded-full bg-white/90 hover:bg-white shadow-lg focus-ring ${wishlist.has(item.id) ? "text-red-600" : "text-foreground"}`}
+                        className={`h-9 w-9 rounded-full bg-background/90 hover:bg-background shadow-lg focus-ring ${wishlist.has(item.id) ? "text-red-600" : "text-foreground"}`}
                         aria-label={wishlist.has(item.id) ? `Remove ${item.name} from wishlist` : `Add ${item.name} to wishlist`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -216,7 +216,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
                         type="button"
                         size="icon"
                         variant="secondary"
-                        className={`h-9 w-9 rounded-full bg-white/90 hover:bg-white shadow-lg focus-ring ${compare.has(item.id) ? "text-primary" : "text-foreground"}`}
+                        className={`h-9 w-9 rounded-full bg-background/90 hover:bg-background shadow-lg focus-ring ${compare.has(item.id) ? "text-primary" : "text-foreground"}`}
                         aria-label={compare.has(item.id) ? `Remove ${item.name} from compare` : `Add ${item.name} to compare`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -254,7 +254,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
                   </div>
                   <p className="text-muted-foreground text-sm mb-4 line-clamp-2 leading-relaxed">{item.description}</p>
                   <div className="flex justify-between items-center">
-                    <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-600 px-3 py-1">
+                    <Badge variant="outline" className="text-xs bg-muted/40 border-border text-foreground px-3 py-1">
                       {item.category || 'Main Course'}
                     </Badge>
                     <motion.div

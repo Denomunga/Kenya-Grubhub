@@ -72,14 +72,13 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
         return (
           <div
             key={action.label}
-            className="flex items-center gap-3 relative z-50 opacity-0 transform translate-y-4 scale-95 animate-fadeInUp"
+            className="flex items-center gap-3 relative z-50 transition-all duration-200 opacity-100 translate-y-0 scale-100"
             style={{
-              animationDelay: `${index * 50}ms`,
-              animationFillMode: 'forwards'
+              transitionDelay: `${index * 40}ms`
             }}
           >
             <span
-              className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 px-4 py-2 rounded-2xl text-sm font-semibold shadow-2xl whitespace-nowrap hover:shadow-3xl transition-all duration-300 hover:scale-105 cursor-pointer"
+              className="bg-background/95 backdrop-blur-xl border border-border/60 px-4 py-2 rounded-2xl text-sm font-semibold shadow-2xl whitespace-nowrap hover:shadow-3xl transition-all duration-300 hover:scale-105 cursor-pointer text-foreground"
               onClick={(e) => {
                 e.stopPropagation();
                 action.onClick();

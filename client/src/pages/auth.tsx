@@ -95,14 +95,14 @@ export default function AuthPage() {
       </div>
 
       {/* Right Side - Auth Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-linear-to-br from-slate-50 to-slate-100">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background">
         <motion.div
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
           className="w-full max-w-md"
         >
-          <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm">
+          <Card className="border shadow-2xl bg-background/70 backdrop-blur-sm">
             <CardHeader className="text-center space-y-4 pb-8">
               <div className="lg:hidden flex items-center justify-center gap-3 mb-4">
                 <div className="bg-blue-600 p-3 rounded-full">
@@ -111,14 +111,14 @@ export default function AuthPage() {
                 <h1 className="text-2xl font-bold font-serif">MS-COMPUTERS</h1>
               </div>
               
-              <CardTitle className="text-3xl font-serif font-bold text-gray-900">
+              <CardTitle className="text-3xl font-serif font-bold text-foreground">
                 Get Started
               </CardTitle>
-              <CardDescription className="text-gray-600 text-lg">
+              <CardDescription className="text-muted-foreground text-lg">
                 Join MS-COMPUTERS and experience authentic MS Solutions
               </CardDescription>
               
-              <div className="flex items-center justify-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-full border border-green-200">
+              <div className="flex items-center justify-center gap-2 text-sm text-green-600 bg-green-500/10 px-3 py-2 rounded-full border border-green-500/20">
                 <Shield className="h-4 w-4" />
                 <span>Secure Auth0 Authentication</span>
               </div>
@@ -138,13 +138,13 @@ export default function AuthPage() {
                 <Button 
                   variant="outline" 
                   onClick={handleLoginOnly}
-                  className="text-sm border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-300"
+                  className="text-sm border-border hover:border-primary/40 hover:bg-muted transition-all duration-300"
                 >
                   Already have an account? Login
                 </Button>
               </div>
               
-              <div className="text-center text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+              <div className="text-center text-xs text-muted-foreground bg-muted p-3 rounded-lg">
                 <p>Secure authentication powered by Auth0</p>
               </div>
             </CardContent>
