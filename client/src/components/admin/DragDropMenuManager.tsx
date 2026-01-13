@@ -624,313 +624,309 @@ const DragDropMenuManager: React.FC = () => {
           </div>
         ) : (
           menuItems.map((item, index) => (
-            <DraggableMenuItem
-              key={item.id}
-              item={item}
-              index={index}
-              moveItem={moveItem}
-              onDelete={handleDeleteItem}
-              onEdit={handleEditItem}
-            />
+            <React.Fragment key={item.id}>
+              <DraggableMenuItem
+                item={item}
+                index={index}
+                moveItem={moveItem}
+                onDelete={handleDeleteItem}
+                onEdit={handleEditItem}
+              />
+
+              {isEditModalOpen && editingItem?.id === item.id && (
+                <div className="mb-6">
+                  <Card className="gradient-mesh border-animated-gradient">
+                    <CardContent className="p-6">
+                      <h3 className="text-xl font-semibold mb-4 text-holographic">Edit Menu Item</h3>
+                      <div className="space-y-4">
+                        <Input
+                          placeholder="Item name"
+                          value={editingItem.name}
+                          onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                          className="liquid-transition"
+                        />
+                        <Select
+                          value={editingItem.category}
+                          onValueChange={(value: string) => 
+                            setEditingItem({ ...editingItem, category: value })
+                          }
+                        >
+                          <SelectTrigger className="liquid-transition">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CATEGORY_OPTIONS.map((c) => (
+                              <SelectItem key={c} value={c}>{c}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          placeholder="Subcategory (optional)"
+                          value={editingItem.subcategory || ''}
+                          onChange={(e) => setEditingItem({ ...editingItem, subcategory: e.target.value })}
+                          className="liquid-transition"
+                        />
+                        {showLaptopFieldsForEditingItem && (
+                          <>
+                            <Input
+                              placeholder="Brand (optional)"
+                              value={editingItem.brand || ''}
+                              onChange={(e) => setEditingItem({ ...editingItem, brand: e.target.value })}
+                              className="liquid-transition"
+                            />
+                            <Select
+                              value={editingItem.condition || ''}
+                              onValueChange={(value: "new" | "used" | "refurbished" | "") => 
+                                setEditingItem({ ...editingItem, condition: value || undefined })
+                              }
+                            >
+                              <SelectTrigger className="liquid-transition">
+                                <SelectValue placeholder="Condition (optional)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">No condition</SelectItem>
+                                <SelectItem value="new">New</SelectItem>
+                                <SelectItem value="used">Used</SelectItem>
+                                <SelectItem value="refurbished">Refurbished</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              placeholder="Size (optional)"
+                              value={editingItem.size || ''}
+                              onChange={(e) => setEditingItem({ ...editingItem, size: e.target.value })}
+                              className="liquid-transition"
+                            />
+                            <Input
+                              placeholder="Color (optional)"
+                              value={editingItem.color || ''}
+                              onChange={(e) => setEditingItem({ ...editingItem, color: e.target.value })}
+                              className="liquid-transition"
+                            />
+                            <Input
+                              type="number"
+                              placeholder="Year (optional)"
+                              value={editingItem.year || ''}
+                              onChange={(e) => setEditingItem({ ...editingItem, year: parseInt(e.target.value) || undefined })}
+                              className="liquid-transition"
+                            />
+                            <Input
+                              placeholder="Material (optional)"
+                              value={editingItem.material || ''}
+                              onChange={(e) => setEditingItem({ ...editingItem, material: e.target.value })}
+                              className="liquid-transition"
+                            />
+                            <Input
+                              placeholder="Location (optional)"
+                              value={editingItem.location || ''}
+                              onChange={(e) => setEditingItem({ ...editingItem, location: e.target.value })}
+                              className="liquid-transition"
+                            />
+                          </>
+                        )}
+                        <Input
+                          type="number"
+                          placeholder="Stock (optional)"
+                          value={editingItem.stock || ''}
+                          onChange={(e) => setEditingItem({ ...editingItem, stock: parseFloat(e.target.value) || undefined })}
+                          className="liquid-transition"
+                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <Select
+                            value={(editingItem as any).unit || 'pcs'}
+                            onValueChange={(value: string) => setEditingItem({ ...(editingItem as any), unit: value } as any)}
+                          >
+                            <SelectTrigger className="liquid-transition">
+                              <SelectValue placeholder="Unit (optional)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {UNIT_OPTIONS.map((u) => (
+                                <SelectItem key={u} value={u}>{u}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Quantity step (optional)"
+                            value={(editingItem as any).quantityStep ?? ''}
+                            onChange={(e) => setEditingItem({ ...(editingItem as any), quantityStep: e.target.value ? parseFloat(e.target.value) : undefined } as any)}
+                            className="liquid-transition"
+                          />
+                        </div>
+                        {showLaptopFieldsForEditingItem && (
+                          <Input
+                            type="number"
+                            placeholder="Weight (kg, optional)"
+                            value={editingItem.weight || ''}
+                            onChange={(e) => setEditingItem({ ...editingItem, weight: parseFloat(e.target.value) || undefined })}
+                            className="liquid-transition"
+                          />
+                        )}
+                        <Input
+                          placeholder="Tags (comma-separated, optional)"
+                          value={editingItem.tags?.join(', ') || ''}
+                          onChange={(e) => setEditingItem({ ...editingItem, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) })}
+                          className="liquid-transition"
+                        />
+                        {showLaptopFieldsForEditingItem && (
+                          <>
+                            <Input
+                              placeholder="Dimensions (JSON format, optional)"
+                              value={editingItem.dimensions ? JSON.stringify(editingItem.dimensions) : ''}
+                              onChange={(e) => {
+                                try {
+                                  const dimensions = e.target.value ? JSON.parse(e.target.value) : undefined;
+                                  setEditingItem({ ...editingItem, dimensions });
+                                } catch (error) {
+                                  // Invalid JSON, ignore
+                                }
+                              }}
+                              className="liquid-transition"
+                            />
+                            <Input
+                              placeholder="Specifications (JSON format, optional)"
+                              value={editingItem.specifications ? JSON.stringify(editingItem.specifications) : ''}
+                              onChange={(e) => {
+                                try {
+                                  const specifications = e.target.value ? JSON.parse(e.target.value) : undefined;
+                                  setEditingItem({ ...editingItem, specifications });
+                                } catch (error) {
+                                  // Invalid JSON, ignore
+                                }
+                              }}
+                              className="liquid-transition"
+                            />
+                          </>
+                        )}
+                        <Input
+                          placeholder="Description"
+                          value={editingItem.description}
+                          onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                          className="liquid-transition"
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Price (KSHS)"
+                          value={editingItem.price || ''}
+                          onChange={(e) => setEditingItem({ ...editingItem, price: parseInt(e.target.value) || 0 })}
+                          className="liquid-transition"
+                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="available"
+                            checked={editingItem.available}
+                            onChange={(e) => setEditingItem({ ...editingItem, available: e.target.checked })}
+                            className="rounded"
+                          />
+                          <label htmlFor="available" className="text-sm font-medium">
+                            Available for order
+                          </label>
+                        </div>
+
+                        {/* Image Management Section */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium text-foreground">Product Images</label>
+                            <span className="text-xs text-muted-foreground">
+                              {(editingItem.images?.length || 0) + editingImageFiles.length}/10 images
+                            </span>
+                          </div>
+                          
+                          {/* Existing Images */}
+                          {editingItem.images && editingItem.images.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-foreground">Current Images:</p>
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                {editingItem.images.map((image, index) => (
+                                  <div key={index} className="relative group">
+                                    <img
+                                      src={image}
+                                      alt={`Current ${index + 1}`}
+                                      className="w-full h-16 object-cover rounded border"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeExistingImage(index)}
+                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center">
+                                      {index + 1}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* New Images to Upload */}
+                          {editingImageFiles.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-foreground">New Images to Upload:</p>
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-32 overflow-y-auto">
+                                {editingImageFiles.map((file, index) => (
+                                  <div key={index} className="relative group">
+                                    <img
+                                      src={URL.createObjectURL(file)}
+                                      alt={`New ${index + 1}`}
+                                      className="w-full h-16 object-cover rounded border"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeEditingImage(index)}
+                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center">
+                                      {file.name.length > 10 ? `${file.name.slice(0, 10)}...` : file.name}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={handleEditImageChange}
+                              className="liquid-transition"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Add more images (up to 10 total). New images will be appended.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                          <Button onClick={handleUpdateItem} className="luminous-glow">
+                            Save Changes
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => {
+                              setIsEditModalOpen(false);
+                              setEditingItem(null);
+                              setEditingImageFiles([]);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </React.Fragment>
           ))
         )}
       </div>
-
-      {/* Edit Item Modal */}
-      {isEditModalOpen && editingItem && (
-        <Card className="gradient-mesh border-animated-gradient">
-          <CardContent className="p-6">
-            <h3 className="text-xl font-semibold mb-4 text-holographic">Edit Menu Item</h3>
-            <div className="space-y-4">
-              <Input
-                placeholder="Item name"
-                value={editingItem.name}
-                onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                className="liquid-transition"
-              />
-              <Select
-                value={editingItem.category}
-                onValueChange={(value: string) => 
-                  setEditingItem({ ...editingItem, category: value })
-                }
-              >
-                <SelectTrigger className="liquid-transition">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORY_OPTIONS.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Subcategory (optional)"
-                value={editingItem.subcategory || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, subcategory: e.target.value })}
-                className="liquid-transition"
-              />
-              {showLaptopFieldsForEditingItem && (
-                <>
-                  <Input
-                    placeholder="Brand (optional)"
-                    value={editingItem.brand || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, brand: e.target.value })}
-                    className="liquid-transition"
-                  />
-                  <Select
-                    value={editingItem.condition || ''}
-                    onValueChange={(value: "new" | "used" | "refurbished" | "") => 
-                      setEditingItem({ ...editingItem, condition: value || undefined })
-                    }
-                  >
-                    <SelectTrigger className="liquid-transition">
-                      <SelectValue placeholder="Condition (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No condition</SelectItem>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="used">Used</SelectItem>
-                      <SelectItem value="refurbished">Refurbished</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    placeholder="Size (optional)"
-                    value={editingItem.size || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, size: e.target.value })}
-                    className="liquid-transition"
-                  />
-                  <Input
-                    placeholder="Color (optional)"
-                    value={editingItem.color || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, color: e.target.value })}
-                    className="liquid-transition"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Year (optional)"
-                    value={editingItem.year || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, year: parseInt(e.target.value) || undefined })}
-                    className="liquid-transition"
-                  />
-                  <Input
-                    placeholder="Material (optional)"
-                    value={editingItem.material || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, material: e.target.value })}
-                    className="liquid-transition"
-                  />
-                  <Input
-                    placeholder="Location (optional)"
-                    value={editingItem.location || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, location: e.target.value })}
-                    className="liquid-transition"
-                  />
-                </>
-              )}
-              <Input
-                type="number"
-                placeholder="Stock (optional)"
-                value={editingItem.stock || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, stock: parseFloat(e.target.value) || undefined })}
-                className="liquid-transition"
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Select
-                  value={(editingItem as any).unit || 'pcs'}
-                  onValueChange={(value: string) => setEditingItem({ ...(editingItem as any), unit: value } as any)}
-                >
-                  <SelectTrigger className="liquid-transition">
-                    <SelectValue placeholder="Unit (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {UNIT_OPTIONS.map((u) => (
-                      <SelectItem key={u} value={u}>{u}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="Quantity step (optional)"
-                  value={(editingItem as any).quantityStep ?? ''}
-                  onChange={(e) => setEditingItem({ ...(editingItem as any), quantityStep: e.target.value ? parseFloat(e.target.value) : undefined } as any)}
-                  className="liquid-transition"
-                />
-              </div>
-              {showLaptopFieldsForEditingItem && (
-                <Input
-                  type="number"
-                  placeholder="Weight (kg, optional)"
-                  value={editingItem.weight || ''}
-                  onChange={(e) => setEditingItem({ ...editingItem, weight: parseFloat(e.target.value) || undefined })}
-                  className="liquid-transition"
-                />
-              )}
-              <Input
-                placeholder="Tags (comma-separated, optional)"
-                value={editingItem.tags?.join(', ') || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) })}
-                className="liquid-transition"
-              />
-              {showLaptopFieldsForEditingItem && (
-                <>
-                  <Input
-                    placeholder="Dimensions (JSON format, optional)"
-                    value={editingItem.dimensions ? JSON.stringify(editingItem.dimensions) : ''}
-                    onChange={(e) => {
-                      try {
-                        const dimensions = e.target.value ? JSON.parse(e.target.value) : undefined;
-                        setEditingItem({ ...editingItem, dimensions });
-                      } catch (error) {
-                        // Invalid JSON, ignore
-                      }
-                    }}
-                    className="liquid-transition"
-                  />
-                  <Input
-                    placeholder="Specifications (JSON format, optional)"
-                    value={editingItem.specifications ? JSON.stringify(editingItem.specifications) : ''}
-                    onChange={(e) => {
-                      try {
-                        const specifications = e.target.value ? JSON.parse(e.target.value) : undefined;
-                        setEditingItem({ ...editingItem, specifications });
-                      } catch (error) {
-                        // Invalid JSON, ignore
-                      }
-                    }}
-                    className="liquid-transition"
-                  />
-                </>
-              )}
-              <Input
-                placeholder="Description"
-                value={editingItem.description}
-                onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
-                className="liquid-transition"
-              />
-              <Input
-                type="number"
-                placeholder="Price (KSHS)"
-                value={editingItem.price || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, price: parseInt(e.target.value) || 0 })}
-                className="liquid-transition"
-              />
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="available"
-                  checked={editingItem.available}
-                  onChange={(e) => setEditingItem({ ...editingItem, available: e.target.checked })}
-                  className="rounded"
-                />
-                <label htmlFor="available" className="text-sm font-medium">
-                  Available for order
-                </label>
-              </div>
-
-              {/* Image Management Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-foreground">Product Images</label>
-                  <span className="text-xs text-muted-foreground">
-                    {(editingItem.images?.length || 0) + editingImageFiles.length}/10 images
-                  </span>
-                </div>
-                
-                {/* Existing Images */}
-                {editingItem.images && editingItem.images.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-foreground">Current Images:</p>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {editingItem.images.map((image, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={image}
-                            alt={`Current ${index + 1}`}
-                            className="w-full h-16 object-cover rounded border"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeExistingImage(index)}
-                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center">
-                            {index + 1}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* New Images to Upload */}
-                {editingImageFiles.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-foreground">New Images to Upload:</p>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-32 overflow-y-auto">
-                      {editingImageFiles.map((file, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt={`New ${index + 1}`}
-                            className="w-full h-16 object-cover rounded border"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeEditingImage(index)}
-                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 truncate">
-                            {file.name}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Upload New Images */}
-                <div className="space-y-2">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleEditImageChange}
-                    className="liquid-transition"
-                    disabled={(editingItem.images?.length || 0) + editingImageFiles.length >= 10}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Add more images (max 10 total). Click X to remove existing images.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleUpdateItem} 
-                  className="flex-1 luminous-glow"
-                >
-                  Update Item
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setEditingItem(null);
-                    setEditingImageFiles([]);
-                  }}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
