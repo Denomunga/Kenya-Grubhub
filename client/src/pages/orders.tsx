@@ -39,34 +39,34 @@ export default function OrdersPage() {
       case 'Cancelled':
         return <XCircle className="h-4 w-4 text-red-500" />;
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
+        return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-500/15 text-yellow-800 dark:text-yellow-200';
       case 'Preparing':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-500/15 text-blue-800 dark:text-blue-200';
       case 'Ready':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-500/15 text-green-800 dark:text-green-200';
       case 'Delivered':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-500/15 text-green-800 dark:text-green-200';
       case 'Cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-500/15 text-red-800 dark:text-red-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-foreground';
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Updates</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Order Updates</h1>
+            <p className="text-muted-foreground">
               {user?.role === 'user' 
                 ? 'Track your orders and stay updated on their status'
                 : 'View and manage all customer orders'
@@ -102,8 +102,8 @@ export default function OrdersPage() {
                     key={notification.id}
                     className={`p-4 rounded-lg border transition-colors ${
                       notification.read 
-                        ? 'bg-gray-50 border-gray-200' 
-                        : 'bg-blue-50 border-blue-200'
+                        ? 'bg-muted/30 border-border' 
+                        : 'bg-primary/10 border-primary/20'
                     }`}
                   >
                     <div className="flex items-start justify-between">
@@ -120,7 +120,7 @@ export default function OrdersPage() {
                         <p className="text-sm text-gray-600">
                           Order #{notification.orderId}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           {(() => {
                             const date = new Date(notification.timestamp);
                             const isValid = !isNaN(date.getTime());
@@ -150,11 +150,11 @@ export default function OrdersPage() {
           {userOrders.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
-                <ShoppingBag className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <ShoppingBag className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">
                   {user?.role === 'user' ? 'No orders yet' : 'No orders found'}
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   {user?.role === 'user' 
                     ? 'Start shopping to see your orders here'
                     : 'Orders will appear here when customers place them'
@@ -168,17 +168,17 @@ export default function OrdersPage() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 className="text-lg font-semibold text-foreground">
                         Order #{order.id}
                       </h3>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         {(() => {
                           const date = new Date(order.date);
                           const isValid = !isNaN(date.getTime());
                           return isValid ? date.toLocaleDateString() : 'Invalid date';
                         })()} • {order.user}
                         {user?.role !== 'user' && order.userPhone && (
-                          <span className="ml-2 text-blue-600">📞 {order.userPhone}</span>
+                          <span className="ml-2 text-primary">📞 {order.userPhone}</span>
                         )}
                       </p>
                     </div>
@@ -203,7 +203,7 @@ export default function OrdersPage() {
                           )}
                           <div>
                             <p className="font-medium">{item.item.name}</p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                               {item.item.category}
                             </p>
                           </div>
@@ -212,7 +212,7 @@ export default function OrdersPage() {
                           <p className="font-medium">
                             {formatPriceKSHS(item.item.price)}
                           </p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-muted-foreground">
                             Qty: {item.quantity}
                           </p>
                         </div>
@@ -223,13 +223,13 @@ export default function OrdersPage() {
                   <div className="mt-4 pt-4 border-t">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-600">Total Amount</p>
-                        <p className="text-2xl font-bold text-gray-900">
+                        <p className="text-sm text-muted-foreground">Total Amount</p>
+                        <p className="text-2xl font-bold text-foreground">
                           {formatPriceKSHS(order.total)}
                         </p>
                       </div>
                       {order.location && (
-                        <div className="text-right text-sm text-gray-600">
+                        <div className="text-right text-sm text-muted-foreground">
                           <p>📍 {order.location.address}</p>
                         </div>
                       )}

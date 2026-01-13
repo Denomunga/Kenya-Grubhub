@@ -306,48 +306,50 @@ export default function Home() {
         <HeroSection />
       </div>
       
-      <main className="container mx-auto px-4 py-16 relative z-10">
-        <div className="relative z-32">
-          {/* Search Component */}
-          <ProductSearch 
-            products={menu}
-            onFilteredProducts={setSearchedProducts}
-            className="mb-8 mt-6 lg:mt-10 max-w-4xl mx-auto"
-          />
+      <main className="relative z-10">
+        <div className="container mx-auto px-4 py-16">
+          <div className="relative z-32">
+            {/* Search Component */}
+            <ProductSearch 
+              products={menu}
+              onFilteredProducts={setSearchedProducts}
+              className="mb-8 mt-6 lg:mt-10 max-w-4xl mx-auto"
+            />
+            
+            <CategoryFilter 
+              activeCategory={activeCategory}
+              onCategoryChange={setActiveCategory}
+              categories={categories}
+            />
+          </div>
+        </div>
+
+        <FeaturedProducts 
+          items={featuredItems}
+          isLoading={isLoading}
+        />
+
+        <div className="container mx-auto px-4">
+          {/* View Full Menu Button - Integrated with Featured Dishes */}
+          <div className="text-center mt-12 mb-8 relative z-20">
+            <Button 
+              asChild 
+              variant="default" 
+              size="lg" 
+              className="group bg-blue-600 hover:bg-blue-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 px-10 py-4 text-lg font-semibold border-0 relative z-30 pointer-events-auto rounded-full hover:scale-105 active:scale-95"
+            >
+              <Link href="/menu">
+                View All Products
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-2" />
+              </Link>
+            </Button>
+          </div>
           
-          <CategoryFilter 
-            activeCategory={activeCategory}
-            onCategoryChange={setActiveCategory}
-            categories={categories}
-          />
-        </div>
-        
-        <div>
-          <FeaturedProducts 
-            items={featuredItems}
-            isLoading={isLoading}
-          />
-        </div>
-        
-        {/* View Full Menu Button - Integrated with Featured Dishes */}
-        <div className="text-center mt-12 mb-8 relative z-20">
-          <Button 
-            asChild 
-            variant="default" 
-            size="lg" 
-            className="group bg-blue-600 hover:bg-blue-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 px-10 py-4 text-lg font-semibold border-0 relative z-30 pointer-events-auto rounded-full hover:scale-105 active:scale-95"
-          >
-            <Link href="/menu">
-              View All Products
-              <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-2" />
-            </Link>
-          </Button>
-        </div>
-        
-        {/* Professional divider */}
-        <div className="relative py-16">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-full max-w-4xl h-px bg-linear-to-r from-transparent via-blue-200 to-transparent"></div>
+          {/* Professional divider */}
+          <div className="relative py-16">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-full max-w-4xl h-px bg-linear-to-r from-transparent via-blue-200 to-transparent"></div>
+            </div>
           </div>
         </div>
         

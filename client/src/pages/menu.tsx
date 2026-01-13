@@ -91,7 +91,7 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
           id="ratingOnly"
           checked={isRatingOnly}
           onChange={(e) => setIsRatingOnly(e.target.checked)}
-          className="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
+          className="h-4 w-4 text-primary rounded border-border focus:ring-primary"
         />
         <label htmlFor="ratingOnly" className="text-sm font-medium cursor-pointer">
           ⭐ Rating only (no comment required)
@@ -386,7 +386,7 @@ export default function Menu() {
             <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
               <TabsList className="bg-muted">
                 {categories.map(cat => (
-                  <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-white data-[state=active]:text-primary">
+                  <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary">
                     {cat}
                   </TabsTrigger>
                 ))}
@@ -605,7 +605,7 @@ export default function Menu() {
                       type="button"
                       size="icon"
                       variant="secondary"
-                      className="h-9 w-9 rounded-full bg-white/90 text-foreground hover:bg-white shadow-lg focus-ring"
+                      className="h-9 w-9 rounded-full bg-background/90 text-foreground hover:bg-background shadow-lg focus-ring"
                       aria-label={`Quick view ${item.name}`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -620,7 +620,7 @@ export default function Menu() {
                         type="button"
                         size="icon"
                         variant="secondary"
-                        className={`h-9 w-9 rounded-full bg-white/90 hover:bg-white shadow-lg focus-ring ${wishlist.has(item.id) ? "text-red-600" : "text-foreground"}`}
+                        className={`h-9 w-9 rounded-full bg-background/90 hover:bg-background shadow-lg focus-ring ${wishlist.has(item.id) ? "text-red-600" : "text-foreground"}`}
                         aria-label={wishlist.has(item.id) ? `Remove ${item.name} from wishlist` : `Add ${item.name} to wishlist`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -639,7 +639,7 @@ export default function Menu() {
                         type="button"
                         size="icon"
                         variant="secondary"
-                        className={`h-9 w-9 rounded-full bg-white/90 hover:bg-white shadow-lg focus-ring ${compare.has(item.id) ? "text-primary" : "text-foreground"}`}
+                        className={`h-9 w-9 rounded-full bg-background/90 hover:bg-background shadow-lg focus-ring ${compare.has(item.id) ? "text-primary" : "text-foreground"}`}
                         aria-label={compare.has(item.id) ? `Remove ${item.name} from compare` : `Add ${item.name} to compare`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -735,12 +735,12 @@ export default function Menu() {
                   {item.tags && item.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
                       {item.tags.slice(0, 3).map((tag, index) => (
-                        <span key={index} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                        <span key={index} className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full border border-border">
                           {tag}
                         </span>
                       ))}
                       {item.tags.length > 3 && (
-                        <span className="text-xs text-gray-500">+{item.tags.length - 3} more</span>
+                        <span className="text-xs text-muted-foreground">+{item.tags.length - 3} more</span>
                       )}
                     </div>
                   )}
@@ -758,13 +758,13 @@ export default function Menu() {
                             // Show only important specs with short values
                             if (String(value).length > 20) return null;
                             return (
-                              <span key={key} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200">
+                              <span key={key} className="text-xs bg-muted/30 text-foreground px-2 py-1 rounded border border-border">
                                 <span className="font-medium capitalize">{formattedKey}:</span> {String(value)}
                               </span>
                             );
                           })}
                         {Object.keys(item.specifications).length > 3 && (
-                          <span className="text-xs text-blue-600">+{Object.keys(item.specifications).length - 3} more specs</span>
+                          <span className="text-xs text-primary">+{Object.keys(item.specifications).length - 3} more specs</span>
                         )}
                       </div>
                     </div>
@@ -803,7 +803,7 @@ export default function Menu() {
                             {[...Array(5)].map((_, i) => (
                               <svg
                                 key={i}
-                                className={`w-3 h-3 ${i < Math.round(getReviewsForProduct(item.id).reduce((acc, r) => acc + r.rating, 0) / getReviewsForProduct(item.id).length) ? 'text-yellow-400' : 'text-gray-300'}`}
+                                className={`w-3 h-3 ${i < Math.round(getReviewsForProduct(item.id).reduce((acc, r) => acc + r.rating, 0) / getReviewsForProduct(item.id).length) ? 'text-yellow-400' : 'text-muted-foreground/40'}`}
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
@@ -999,7 +999,7 @@ export default function Menu() {
           
           {/* Rating and Action Buttons */}
           {selectedProductForDetail && (
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
               {/* Average Star Rating */}
               <div className="flex items-center gap-3">
                 {(() => {
@@ -1014,7 +1014,7 @@ export default function Menu() {
                           {[...Array(5)].map((_, i) => (
                             <svg
                               key={i}
-                              className={`w-5 h-5 ${i < Math.round(averageRating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                              className={`w-5 h-5 ${i < Math.round(averageRating) ? 'text-yellow-400' : 'text-muted-foreground/40'}`}
                               fill="currentColor"
                               viewBox="0 0 20 20"
                             >
@@ -1054,7 +1054,7 @@ export default function Menu() {
                 {/* Left Side - Image Gallery */}
                 <div className="space-y-4">
                   {/* Main Image */}
-                  <div className="relative overflow-hidden rounded-xl border bg-gray-50">
+                  <div className="relative overflow-hidden rounded-xl border border-border bg-muted/30">
                     {selectedProductForDetail.images && selectedProductForDetail.images.length > 0 ? (
                       <img
                         src={selectedProductForDetail.images[0]}
@@ -1082,8 +1082,8 @@ export default function Menu() {
                         }}
                       />
                     ) : (
-                      <div className="w-full h-96 bg-gray-200 flex items-center justify-center">
-                        <span className="text-gray-500">No image available</span>
+                      <div className="w-full h-96 bg-muted flex items-center justify-center">
+                        <span className="text-muted-foreground">No image available</span>
                       </div>
                     )}
                     {!selectedProductForDetail.available && (
@@ -1123,10 +1123,10 @@ export default function Menu() {
                 <div className="space-y-6">
                   {/* Product Header */}
                   <div>
-                    <h1 className="text-3xl font-bold text-blue-900 mb-2">
+                    <h1 className="text-3xl font-bold text-foreground mb-2">
                       {selectedProductForDetail.name}
                     </h1>
-                    <p className="text-black text-lg leading-relaxed">
+                    <p className="text-foreground/90 text-lg leading-relaxed">
                       {selectedProductForDetail.description}
                     </p>
                   </div>
@@ -1144,7 +1144,7 @@ export default function Menu() {
                             {[...Array(5)].map((_, i) => (
                               <svg
                                 key={i}
-                                className={`w-5 h-5 ${i < Math.round(averageRating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                                className={`w-5 h-5 ${i < Math.round(averageRating) ? 'text-yellow-400' : 'text-muted-foreground/40'}`}
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
@@ -1155,7 +1155,7 @@ export default function Menu() {
                           <span className="font-semibold text-lg">
                             {averageRating.toFixed(1)}
                           </span>
-                          <span className="text-gray-500">
+                          <span className="text-muted-foreground">
                             ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
                           </span>
                         </div>
@@ -1164,16 +1164,16 @@ export default function Menu() {
                   </div>
 
                   {/* Key Product Info Card */}
-                  <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+                  <div className="bg-muted/30 rounded-xl p-6 space-y-4 border border-border">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-600">Price</span>
+                      <span className="text-sm font-medium text-muted-foreground">Price</span>
                       <span className="text-2xl font-bold text-primary">
                         {formatPrice(selectedProductForDetail.price)}
                       </span>
                     </div>
                     
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-600">Stock</span>
+                      <span className="text-sm font-medium text-muted-foreground">Stock</span>
                       <span className={`font-medium ${
                         selectedProductForDetail.stock !== undefined 
                           ? (selectedProductForDetail.stock <= 5 ? 'text-orange-600' : 'text-green-600')
@@ -1188,25 +1188,25 @@ export default function Menu() {
 
                     {selectedProductForDetail.brand && (
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-600">Brand</span>
+                        <span className="text-sm font-medium text-muted-foreground">Brand</span>
                         <span className="font-medium">{selectedProductForDetail.brand}</span>
                       </div>
                     )}
 
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-600">Category</span>
-                      <Badge variant="outline" className="bg-white">
+                      <span className="text-sm font-medium text-muted-foreground">Category</span>
+                      <Badge variant="outline" className="bg-background">
                         {selectedProductForDetail.category}
                       </Badge>
                     </div>
 
                     {selectedProductForDetail.condition && (
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-600">Condition</span>
+                        <span className="text-sm font-medium text-muted-foreground">Condition</span>
                         <Badge className={`
-                          ${selectedProductForDetail.condition === 'new' ? 'bg-green-100 text-green-800 border-green-200' :
-                            selectedProductForDetail.condition === 'used' ? 'bg-orange-100 text-orange-800 border-orange-200' :
-                            'bg-blue-100 text-blue-800 border-blue-200'}
+                          ${selectedProductForDetail.condition === 'new' ? 'bg-green-500/15 text-green-800 dark:text-green-200 border border-green-500/20' :
+                            selectedProductForDetail.condition === 'used' ? 'bg-orange-500/15 text-orange-800 dark:text-orange-200 border border-orange-500/20' :
+                            'bg-blue-500/15 text-blue-800 dark:text-blue-200 border border-blue-500/20'}
                         `}>
                           {selectedProductForDetail.condition}
                         </Badge>

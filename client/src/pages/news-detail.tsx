@@ -226,11 +226,11 @@ export default function NewsDetail() {
           
           {/* Main Content */}
           <div className="lg:col-span-3">
-            <article className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
+            <article className="bg-background rounded-2xl shadow-xl p-8 md:p-12 border border-border">
               
               {/* Article Meta */}
-              <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
-                <div className="flex items-center gap-6 text-sm text-slate-600">
+              <div className="flex items-center justify-between mb-8 pb-6 border-b border-border">
+                <div className="flex items-center gap-6 text-sm text-muted-foreground">
                   <span className="flex items-center gap-2">
                     <User className="h-4 w-4" />
                     {news.author}
@@ -291,17 +291,17 @@ export default function NewsDetail() {
                     className="w-full h-64 md:h-96 object-cover transition-transform duration-500 group-hover:scale-105" 
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 rounded-xl flex items-center justify-center">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 p-3 rounded-full">
-                      <ZoomIn className="h-5 w-5 text-gray-800" />
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-background/90 p-3 rounded-full border border-border">
+                      <ZoomIn className="h-5 w-5 text-foreground" />
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Article Content with Typography */}
-              <div className="prose prose-lg max-w-none font-serif leading-relaxed">
+              <div className="prose prose-lg max-w-none font-serif leading-relaxed dark:prose-invert">
                 <div 
-                  className="text-slate-700 text-lg leading-relaxed space-y-6"
+                  className="text-foreground/90 text-lg leading-relaxed space-y-6"
                   dangerouslySetInnerHTML={{ 
                     __html: (news.content || '').replace(/\n/g, '<br />').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
                   }}
@@ -309,7 +309,7 @@ export default function NewsDetail() {
               </div>
 
               {/* Back Button */}
-              <div className="mt-12 pt-8 border-t border-slate-200">
+              <div className="mt-12 pt-8 border-t border-border">
                 <Button 
                   variant="outline" 
                   onClick={() => { try { if (window.history.length > 1) window.history.back(); else setLocation('/'); } catch (err) { setLocation('/'); } }}
@@ -326,7 +326,7 @@ export default function NewsDetail() {
           <div className="lg:col-span-1 space-y-8">
             
             {/* Author Bio */}
-            <Card className="bg-white shadow-lg">
+            <Card className="bg-background shadow-lg border border-border">
               <CardHeader>
                 <CardTitle className="text-lg">About the Author</CardTitle>
               </CardHeader>
@@ -337,38 +337,38 @@ export default function NewsDetail() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg">{news.author}</h3>
-                    <p className="text-sm text-slate-600">Content Writer</p>
+                    <p className="text-sm text-muted-foreground">Content Writer</p>
                   </div>
                 </div>
-                <p className="text-sm text-slate-600 leading-relaxed">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   Passionate about sharing stories and insights from the Kenyan culinary scene and beyond.
                 </p>
               </CardContent>
             </Card>
 
             {/* Reading Stats */}
-            <Card className="bg-white shadow-lg">
+            <Card className="bg-background shadow-lg border border-border">
               <CardHeader>
                 <CardTitle className="text-lg">Article Stats</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Reading Time</span>
+                  <span className="text-sm text-muted-foreground">Reading Time</span>
                   <span className="text-sm font-medium">{readingTime} minutes</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Views</span>
+                  <span className="text-sm text-muted-foreground">Views</span>
                   <span className="text-sm font-medium">{news.views?.toLocaleString() || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Published</span>
+                  <span className="text-sm text-muted-foreground">Published</span>
                   <span className="text-sm font-medium">{news.date}</span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Share Card */}
-            <Card className="bg-white shadow-lg">
+            <Card className="bg-background shadow-lg border border-border">
               <CardHeader>
                 <CardTitle className="text-lg">Share Article</CardTitle>
               </CardHeader>
