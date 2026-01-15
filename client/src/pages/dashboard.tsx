@@ -68,6 +68,7 @@ export default function Dashboard() {
   const [posTotalRevenue, setPosTotalRevenue] = React.useState<number>(0); // Add POS total revenue state
   const [posTodayRevenue, setPosTodayRevenue] = React.useState<number>(0);
   const [posDailyRevenue, setPosDailyRevenue] = React.useState<Record<string, number>>({});
+  const [posTodayCount, setPosTodayCount] = React.useState<number>(0);
   const [kpiRange, setKpiRange] = React.useState<"today" | "7d" | "30d">("today");
   const [posRangeRevenue, setPosRangeRevenue] = React.useState<number>(0);
   const [serverHealthUpdatedAt, setServerHealthUpdatedAt] = React.useState<number | null>(null);
@@ -384,6 +385,7 @@ export default function Dashboard() {
         if (summaryRes.ok) {
           const data = await summaryRes.json();
           setPosTodayRevenue(data?.today?.total || 0);
+          setPosTodayCount(data?.today?.count || 0);
         } else {
           console.error('POS today revenue fetch failed:', summaryRes.status, summaryRes.statusText);
         }
@@ -430,6 +432,7 @@ export default function Dashboard() {
       // Add the new sale amount to existing POS total revenue
       setPosTotalRevenue(prev => prev + payload.total);
       setPosTodayRevenue(prev => prev + payload.total);
+      setPosTodayCount(prev => prev + 1);
       try {
         const key = new Date().toISOString().slice(0, 10);
         setPosDailyRevenue(prev => ({ ...prev, [key]: (prev[key] || 0) + (payload.total || 0) }));
@@ -780,6 +783,10 @@ export default function Dashboard() {
                   <Badge variant="outline" className="gap-2">
                     <ShoppingBag className="h-3.5 w-3.5" />
                     Today Orders: {(orders || []).filter((o) => o.status !== "Cancelled" && isTodayLocal(o.date)).length}
+                  </Badge>
+                  <Badge variant="outline" className="gap-2">
+                    <DollarSign className="h-3.5 w-3.5" />
+                    Today POS: {posTodayCount}
                   </Badge>
                   <Badge variant="outline" className="gap-2">
                     <DollarSign className="h-3.5 w-3.5" />
