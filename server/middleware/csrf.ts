@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 
-// Simple CSRF token implementation (since csurf is deprecated)
+// Simple CSRF token implementation 
 export class CSRFProtection {
   public static tokens = new Map<string, { token: string; expires: number }>();
   public static readonly TOKEN_EXPIRY = 60 * 60 * 1000; // 1 hour

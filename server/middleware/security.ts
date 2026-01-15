@@ -209,8 +209,8 @@ export const validateReview = [
     .isInt({ min: 1, max: 5 })
     .withMessage('Rating must be between 1 and 5'),
   body('comment')
-    .isLength({ min: 5, max: 1000 })
-    .withMessage('Comment must be 5-1000 characters')
+    .isLength({ min: 5, max: 100 })
+    .withMessage('Comment must be 5-100 characters')
     .trim(),
 ];
 
