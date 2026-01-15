@@ -326,9 +326,10 @@ export default function Dashboard() {
     const loadPosOverviewAnalytics = async () => {
       try {
         const days2x = Math.min(180, Math.max(2, rangeDays * 2));
+        const categoryDays = Math.max(30, rangeDays);
         const [invRes, trendsRes, trends2xRes] = await Promise.all([
           apiFetch('/api/pos/reports/inventory'),
-          apiFetch(`/api/pos/reports/trends?days=${rangeDays}`),
+          apiFetch(`/api/pos/reports/trends?days=${categoryDays}`),
           apiFetch(`/api/pos/reports/trends?days=${days2x}`),
         ]);
 
