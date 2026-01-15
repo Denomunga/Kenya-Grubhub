@@ -27,7 +27,6 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
   const { orders, kpis } = useData();
   const [animatedValues, setAnimatedValues] = useState<{ [key: string]: number }>({});
   const [localPosRevenue, setLocalPosRevenue] = useState(0);
-  const [trendsData, setTrendsData] = useState<any>(null);
   const [posTrends, setPosTrends] = useState<any>(null);
 
   // Fetch POS total revenue (all-time) for accurate total calculation
@@ -44,18 +43,6 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
       }
     };
 
-    const fetchTrendsData = async () => {
-      try {
-        const response = await apiFetch('/api/pos/reports/trends-comparison');
-        if (response.ok) {
-          const data = await response.json();
-          setTrendsData(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch trends comparison:', error);
-      }
-    };
-
     const fetchPosDailyTrends = async () => {
       try {
         const response = await apiFetch('/api/pos/reports/trends?days=30');
@@ -69,7 +56,6 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
     };
 
     fetchPOSTotal();
-    fetchTrendsData();
     fetchPosDailyTrends();
   }, []);
 
@@ -88,18 +74,6 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
         }
       };
 
-      const fetchTrendsData = async () => {
-        try {
-          const response = await apiFetch('/api/pos/reports/trends-comparison');
-          if (response.ok) {
-            const data = await response.json();
-            setTrendsData(data);
-          }
-        } catch (error) {
-          console.error('Failed to fetch trends comparison:', error);
-        }
-      };
-
       const fetchPosDailyTrends = async () => {
         try {
           const response = await apiFetch('/api/pos/reports/trends?days=30');
@@ -113,55 +87,16 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
       };
 
       fetchPOSTotal();
-      fetchTrendsData();
       fetchPosDailyTrends();
     }, 2 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Animate counter values
-  useEffect(() => {
-    const orderRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-    const posRevenueToUse = posTotalRevenue || localPosRevenue;
-    const totalRevenue = (kpis?.totalRevenue && kpis.totalRevenue > 0)
-      ? kpis.totalRevenue
-      : (orderRevenue + posRevenueToUse);
-    
-    const targets = {
-      totalRevenue,
-      activeOrders: kpis?.activeOrders ?? orders.filter(o => o.status !== 'Delivered').length,
-      totalOrders: orders.length,
-      avgOrderValue: orders.length > 0 ? Math.round(orderRevenue / orders.length) : 0
-    };
-
-    const timers: number[] = [];
-
-    Object.entries(targets).forEach(([key, target]) => {
-      let current = animatedValues[key] || 0;
-      const safeTarget = Number.isFinite(target) ? target : 0;
-      const increment = safeTarget <= 0 ? 0 : safeTarget / 50;
-      const timer = window.setInterval(() => {
-        current += increment;
-        if (current >= target) {
-          current = target;
-          clearInterval(timer);
-        }
-        setAnimatedValues(prev => ({ ...prev, [key]: Math.floor(current) }));
-      }, 20);
-
-      timers.push(timer);
-    });
-
-    return () => {
-      timers.forEach((t) => {
-        try {
-          clearInterval(t);
-        } catch {
-          // ignore
-        }
-      });
-    };
-  }, [orders, kpis, posTotalRevenue, localPosRevenue]);
+  function calculatePercentage(current: number, previous: number) {
+    if (!Number.isFinite(current) || !Number.isFinite(previous)) return 0;
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return ((current - previous) / previous) * 100;
+  }
 
   const orderTrends: OrderTrend[] = useMemo(() => {
     const onlineBuckets: Record<string, { orders: number; revenue: number }> = {};
@@ -225,42 +160,109 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
     });
   }, [orders, posTrends]);
 
+  const periodMetrics = useMemo(() => {
+    // Trend array is constructed oldest -> newest
+    const last7 = orderTrends.slice(-7);
+    const prev7 = orderTrends.slice(-14, -7);
+
+    const sum = (rows: OrderTrend[]) => {
+      return rows.reduce(
+        (acc, r) => {
+          acc.revenue += r.revenueTotal;
+          acc.orders += r.ordersTotal;
+          return acc;
+        },
+        { revenue: 0, orders: 0 }
+      );
+    };
+
+    const current = sum(last7);
+    const previous = sum(prev7);
+    const avgOrderValueCurrent = current.orders > 0 ? current.revenue / current.orders : 0;
+    const avgOrderValuePrevious = previous.orders > 0 ? previous.revenue / previous.orders : 0;
+
+    return {
+      current,
+      previous,
+      deltas: {
+        revenue: calculatePercentage(current.revenue, previous.revenue),
+        orders: calculatePercentage(current.orders, previous.orders),
+        avgOrderValue: calculatePercentage(avgOrderValueCurrent, avgOrderValuePrevious),
+      },
+      avgOrderValueCurrent,
+    };
+  }, [orderTrends]);
+
+  // Animate KPI values (based on last 7 days totals) + live active orders
+  useEffect(() => {
+    const targets = {
+      revenue7d: periodMetrics.current.revenue,
+      orders7d: periodMetrics.current.orders,
+      avgOrderValue7d: periodMetrics.avgOrderValueCurrent,
+      activeOrders: kpis?.activeOrders ?? orders.filter(o => o.status !== 'Delivered').length,
+    };
+
+    const timers: number[] = [];
+
+    Object.entries(targets).forEach(([key, target]) => {
+      let current = animatedValues[key] || 0;
+      const safeTarget = Number.isFinite(target) ? target : 0;
+      const increment = safeTarget <= 0 ? 0 : safeTarget / 50;
+      const timer = window.setInterval(() => {
+        current += increment;
+        if (current >= safeTarget) {
+          current = safeTarget;
+          clearInterval(timer);
+        }
+        setAnimatedValues(prev => ({ ...prev, [key]: Math.floor(current) }));
+      }, 20);
+
+      timers.push(timer);
+    });
+
+    return () => {
+      timers.forEach((t) => {
+        try {
+          clearInterval(t);
+        } catch {
+          // ignore
+        }
+      });
+    };
+  }, [orders, kpis, periodMetrics, posTotalRevenue, localPosRevenue]);
+
   const hasTrendData = useMemo(() => {
     return orderTrends.some((d) => d.ordersTotal > 0 || d.revenueTotal > 0);
   }, [orderTrends]);
 
   const kpiItems = useMemo(() => {
-    const revenueDelta = Number(trendsData?.percentages?.revenue || 0);
-    const ordersDelta = Number(trendsData?.percentages?.orders || 0);
-    const aovDelta = Number(trendsData?.percentages?.avgOrderValue || 0);
-
     return [
       {
-        key: 'totalRevenue',
-        label: 'Total revenue',
-        value: formatPriceKSHS(animatedValues.totalRevenue || 0),
-        delta: revenueDelta,
+        key: 'revenue7d',
+        label: 'Revenue (7d)',
+        value: formatPriceKSHS(animatedValues.revenue7d || 0),
+        delta: periodMetrics.deltas.revenue,
       },
       {
         key: 'activeOrders',
         label: 'Active orders',
         value: (animatedValues.activeOrders || 0).toLocaleString(),
-        delta: ordersDelta,
+        delta: periodMetrics.deltas.orders,
       },
       {
-        key: 'totalOrders',
-        label: 'Total orders',
-        value: (animatedValues.totalOrders || 0).toLocaleString(),
-        delta: ordersDelta,
+        key: 'orders7d',
+        label: 'Orders (7d)',
+        value: (animatedValues.orders7d || 0).toLocaleString(),
+        delta: periodMetrics.deltas.orders,
       },
       {
-        key: 'avgOrderValue',
-        label: 'Avg order value',
-        value: formatPriceKSHS(animatedValues.avgOrderValue || 0),
-        delta: aovDelta,
+        key: 'avgOrderValue7d',
+        label: 'Avg order value (7d)',
+        value: formatPriceKSHS(animatedValues.avgOrderValue7d || 0),
+        delta: periodMetrics.deltas.avgOrderValue,
       },
     ];
-  }, [animatedValues, trendsData]);
+  }, [animatedValues, periodMetrics]);
 
   return (
     <div className="space-y-6">
