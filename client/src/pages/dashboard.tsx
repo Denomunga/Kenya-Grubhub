@@ -84,6 +84,10 @@ export default function Dashboard() {
   const [drillPosSales, setDrillPosSales] = React.useState<any[]>([]);
   const [drillPosSummary, setDrillPosSummary] = React.useState<any | null>(null);
 
+  const [saleDetailOpen, setSaleDetailOpen] = React.useState(false);
+  const [selectedSaleId, setSelectedSaleId] = React.useState<string>("");
+  const [selectedSale, setSelectedSale] = React.useState<any | null>(null);
+
   const rangeDays = React.useMemo(() => {
     if (kpiRange === "today") return 1;
     if (kpiRange === "7d") return 7;
@@ -204,6 +208,26 @@ export default function Dashboard() {
 
     load();
   }, [drillOpen, drillDateKey]);
+
+  React.useEffect(() => {
+    if (!saleDetailOpen || !selectedSaleId) return;
+
+    const load = async () => {
+      try {
+        const res = await apiFetch(`/api/pos/sales/${encodeURIComponent(selectedSaleId)}`);
+        if (!res.ok) {
+          setSelectedSale(null);
+          return;
+        }
+        const data = await res.json();
+        setSelectedSale(data);
+      } catch {
+        setSelectedSale(null);
+      }
+    };
+
+    load();
+  }, [saleDetailOpen, selectedSaleId]);
 
   const isPinned = React.useCallback((kind: PinnedAction["kind"], value: string) => {
     return pinnedActions.some((p) => p.kind === kind && p.value === value);
@@ -920,8 +944,10 @@ export default function Dashboard() {
                           key={s?._id || s?.id || Math.random()}
                           className="w-full text-left rounded-md border px-3 py-2 hover:bg-muted/30"
                           onClick={() => {
-                            setActiveTab("pos");
-                            setDrillOpen(false);
+                            const id = String(s?._id || "");
+                            if (!id) return;
+                            setSelectedSaleId(id);
+                            setSaleDetailOpen(true);
                           }}
                         >
                           <div className="flex items-center justify-between gap-3">
@@ -937,6 +963,69 @@ export default function Dashboard() {
               </Card>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={saleDetailOpen}
+        onOpenChange={(open) => {
+          setSaleDetailOpen(open);
+          if (!open) {
+            setSelectedSaleId("");
+            setSelectedSale(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedSaleId ? `Sale ${selectedSaleId.slice(-6)}` : "Sale"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {!selectedSale ? (
+            <div className="text-sm text-muted-foreground">Loading sale…</div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="text-sm"><span className="text-muted-foreground">Total:</span> {formatPriceKSHS(selectedSale.total || 0)}</div>
+                <div className="text-sm"><span className="text-muted-foreground">Status:</span> {selectedSale.status || "—"}</div>
+                <div className="text-sm"><span className="text-muted-foreground">Payment:</span> {selectedSale.paymentMethod || "—"}</div>
+                <div className="text-sm"><span className="text-muted-foreground">Created:</span> {selectedSale.createdAt ? new Date(selectedSale.createdAt).toLocaleString() : "—"}</div>
+              </div>
+
+              {Array.isArray(selectedSale.items) && selectedSale.items.length > 0 ? (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="px-4 py-2 border-b bg-muted/30 text-sm font-medium">Items</div>
+                  <div className="divide-y">
+                    {selectedSale.items.slice(0, 20).map((it: any, idx: number) => (
+                      <div key={idx} className="px-4 py-2 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{it?.name || "Item"}</div>
+                          <div className="text-xs text-muted-foreground">Qty: {it?.quantity ?? "—"}</div>
+                        </div>
+                        <div className="text-sm font-mono text-muted-foreground">{typeof it?.price === 'number' ? formatPriceKSHS(it.price) : ""}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">No items.</div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setActiveTab("pos");
+                    setSaleDetailOpen(false);
+                  }}
+                >
+                  Open POS
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

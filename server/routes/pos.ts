@@ -680,7 +680,6 @@ router.get("/reports/customers", requireAuth, async (req, res) => {
   }
 });
 
-// Trend analysis
 router.get("/reports/trends", requireAuth, async (req, res) => {
   try {
     if (req.user?.role !== "admin" && req.user?.role !== "staff") {
@@ -709,9 +708,21 @@ router.get("/reports/trends", requireAuth, async (req, res) => {
         { $match: { status: 'Completed', createdAt: { $gte: startDate } } },
         { $unwind: '$items' },
         {
+          $addFields: {
+            productObjectId: {
+              $convert: {
+                input: '$items.productId',
+                to: 'objectId',
+                onError: null,
+                onNull: null,
+              }
+            }
+          }
+        },
+        {
           $lookup: {
             from: 'products',
-            localField: 'items.productId',
+            localField: 'productObjectId',
             foreignField: '_id',
             as: 'product'
           }
