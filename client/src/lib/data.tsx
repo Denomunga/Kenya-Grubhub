@@ -665,6 +665,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         } : o));
         try { window.dispatchEvent(new CustomEvent('orders:update', { detail: payload })); } catch (e) { }
       });
+
+      socket.on('pos:sale-completed', (payload: any) => {
+        try { window.dispatchEvent(new CustomEvent('pos:sale-completed', { detail: payload })); } catch (e) { }
+      });
       socket.on('chat:message', (payload: any) => {
         // ✅ Add message based on user role and thread ownership
         const shouldAddMessage = user && (

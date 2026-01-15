@@ -67,6 +67,7 @@ export default function Dashboard() {
   const orderTimestampsRef = React.useRef<number[]>([]);
   const [posTotalRevenue, setPosTotalRevenue] = React.useState<number>(0); // Add POS total revenue state
   const [posTodayRevenue, setPosTodayRevenue] = React.useState<number>(0);
+  const [posDailyRevenue, setPosDailyRevenue] = React.useState<Record<string, number>>({});
   const [kpiRange, setKpiRange] = React.useState<"today" | "7d" | "30d">("today");
   const [posRangeRevenue, setPosRangeRevenue] = React.useState<number>(0);
   const [serverHealthUpdatedAt, setServerHealthUpdatedAt] = React.useState<number | null>(null);
@@ -228,6 +229,31 @@ export default function Dashboard() {
   }, [kpiRange, rangeDays]);
 
   React.useEffect(() => {
+    const loadPosDailyRevenue = async () => {
+      try {
+        const res = await apiFetch(`/api/pos/reports/trends?days=${rangeDays}`);
+        if (!res.ok) {
+          setPosDailyRevenue({});
+          return;
+        }
+        const data = await res.json();
+        const daily = Array.isArray(data?.dailySales) ? data.dailySales : [];
+        const next: Record<string, number> = {};
+        daily.forEach((d: any) => {
+          const key = String(d?._id || "").slice(0, 10);
+          if (!key) return;
+          next[key] = (next[key] || 0) + (Number(d?.total) || 0);
+        });
+        setPosDailyRevenue(next);
+      } catch {
+        setPosDailyRevenue({});
+      }
+    };
+
+    loadPosDailyRevenue();
+  }, [rangeDays]);
+
+  React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       const isK = key === "k";
@@ -268,6 +294,10 @@ export default function Dashboard() {
       const p = e.detail;
       add("News audit", p?.action ? `Action: ${p.action}` : undefined, "info");
     };
+    const onAuditUser = (e: any) => {
+      const p = e.detail;
+      add("User audit", p?.action ? `Action: ${p.action}` : undefined, "info");
+    };
     const onHealth = (_e: any) => {
       setServerHealthUpdatedAt(Date.now());
     };
@@ -277,6 +307,7 @@ export default function Dashboard() {
     window.addEventListener("pos:sale-completed", onPosSale as any);
     window.addEventListener("audit:review", onAuditReview as any);
     window.addEventListener("audit:news", onAuditNews as any);
+    window.addEventListener("audit:user", onAuditUser as any);
     window.addEventListener("server:health", onHealth as any);
 
     return () => {
@@ -285,6 +316,7 @@ export default function Dashboard() {
       window.removeEventListener("pos:sale-completed", onPosSale as any);
       window.removeEventListener("audit:review", onAuditReview as any);
       window.removeEventListener("audit:news", onAuditNews as any);
+      window.removeEventListener("audit:user", onAuditUser as any);
       window.removeEventListener("server:health", onHealth as any);
     };
   }, []);
@@ -398,6 +430,10 @@ export default function Dashboard() {
       // Add the new sale amount to existing POS total revenue
       setPosTotalRevenue(prev => prev + payload.total);
       setPosTodayRevenue(prev => prev + payload.total);
+      try {
+        const key = new Date().toISOString().slice(0, 10);
+        setPosDailyRevenue(prev => ({ ...prev, [key]: (prev[key] || 0) + (payload.total || 0) }));
+      } catch (err) {}
     };
     
     window.addEventListener('orders:new', handleNew);
@@ -1111,6 +1147,17 @@ export default function Dashboard() {
                     if (!(key in buckets)) return;
                     buckets[key] += o.total || 0;
                   });
+
+                  Object.keys(buckets).forEach((key) => {
+                    buckets[key] += posDailyRevenue[key] || 0;
+                  });
+
+                  if (kpiRange === "today") {
+                    const todayKey = rangeStart.toISOString().slice(0, 10);
+                    if (todayKey in buckets) {
+                      buckets[todayKey] = todayOrderRevenue + posTodayRevenue;
+                    }
+                  }
                   const points = Object.values(buckets);
                   const max = Math.max(1, ...points);
                   return (

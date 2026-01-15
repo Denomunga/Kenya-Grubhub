@@ -196,6 +196,16 @@ router.post("/sales", requireAuth, apiLimiter, async (req, res) => {
       // Emit socket event for real-time updates
       const reqApp = req.app as any;
       reqApp.locals.io?.emit('kpi:update', { totalRevenue, activeOrders, ordersPerMinute: opm });
+
+      if (sale.status === 'Completed') {
+        reqApp.locals.io?.emit('pos:sale-completed', {
+          id: sale._id,
+          total: sale.total,
+          createdAt: sale.createdAt,
+          paymentMethod: sale.paymentMethod,
+          cashier: (sale as any).cashier,
+        });
+      }
     } catch (err) {
       console.error('Error emitting KPI update after POS sale:', err);
     }
@@ -255,6 +265,8 @@ router.patch("/sales/:id([0-9a-fA-F]{24})", requireAuth, async (req, res) => {
       return res.status(404).json({ message: "Sale not found" });
     }
 
+    const previousStatus = sale.status;
+
     // If refunding, restore inventory
     if (status === 'Refunded' && sale.status === 'Completed') {
       for (const item of sale.items) {
@@ -281,12 +293,27 @@ router.patch("/sales/:id([0-9a-fA-F]{24})", requireAuth, async (req, res) => {
       action: `status_changed_to_${status.toLowerCase()}`,
       user: req.user._id,
       timestamp: new Date(),
-      details: { previousStatus: sale.status, newStatus: status, notes }
+      details: { previousStatus, newStatus: status, notes }
     });
     
     await sale.save();
 
     await sale.populate('cashier', 'name username');
+
+    try {
+      const reqApp = req.app as any;
+      if (previousStatus !== 'Completed' && sale.status === 'Completed') {
+        reqApp.locals.io?.emit('pos:sale-completed', {
+          id: sale._id,
+          total: sale.total,
+          createdAt: sale.createdAt,
+          paymentMethod: sale.paymentMethod,
+          cashier: (sale as any).cashier,
+        });
+      }
+    } catch (err) {
+      console.error('Error emitting pos:sale-completed after status update:', err);
+    }
 
     res.json(sale);
   } catch (error) {
