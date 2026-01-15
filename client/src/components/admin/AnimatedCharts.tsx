@@ -29,6 +29,13 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
   const [localPosRevenue, setLocalPosRevenue] = useState(0);
   const [posTrends, setPosTrends] = useState<any>(null);
 
+  const toLocalDateKey = (value: Date) => {
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   // Fetch POS total revenue (all-time) for accurate total calculation
   useEffect(() => {
     const fetchPOSTotal = async () => {
@@ -108,7 +115,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
     for (let i = 0; i < 30; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      const key = d.toISOString().slice(0, 10);
+      const key = toLocalDateKey(d);
       onlineBuckets[key] = { orders: 0, revenue: 0 };
     }
 
@@ -117,7 +124,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
       const d = new Date(o?.date);
       if (isNaN(d.getTime())) return;
       d.setHours(0, 0, 0, 0);
-      const key = d.toISOString().slice(0, 10);
+      const key = toLocalDateKey(d);
       if (!onlineBuckets[key]) return;
       onlineBuckets[key].orders += 1;
       onlineBuckets[key].revenue += o?.total || 0;
@@ -127,7 +134,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
     for (let i = 0; i < 30; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      const key = d.toISOString().slice(0, 10);
+      const key = toLocalDateKey(d);
       posBuckets[key] = { orders: 0, revenue: 0 };
     }
 
@@ -140,7 +147,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
     });
 
     return Object.entries(onlineBuckets).map(([iso, v]) => {
-      const d = new Date(iso);
+      const d = new Date(`${iso}T00:00:00`);
       const day = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const pos = posBuckets[iso] || { orders: 0, revenue: 0 };
       const ordersOnline = v.orders;

@@ -290,6 +290,13 @@ export default function Dashboard() {
     return d >= start && d < end;
   }, []);
 
+  const toLocalDateKey = React.useCallback((value: Date) => {
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, "0");
+    const d = String(value.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, []);
+
   React.useEffect(() => {
     const loadPosDailyRevenue = async () => {
       try {
@@ -1472,7 +1479,7 @@ export default function Dashboard() {
                   for (let i = 0; i < rangeDays; i++) {
                     const d = new Date(rangeStart);
                     d.setDate(d.getDate() + i);
-                    const key = d.toISOString().slice(0, 10);
+                    const key = toLocalDateKey(d);
                     buckets[key] = 0;
                   }
                   (orders || []).forEach((o) => {
@@ -1481,7 +1488,7 @@ export default function Dashboard() {
                     if (isNaN(d.getTime())) return;
                     if (d.getTime() < startMs) return;
                     if (d.getTime() > endMs) return;
-                    const key = d.toISOString().slice(0, 10);
+                    const key = toLocalDateKey(d);
                     if (!(key in buckets)) return;
                     buckets[key] += o.total || 0;
                   });
@@ -1491,7 +1498,7 @@ export default function Dashboard() {
                   });
 
                   if (kpiRange === "today") {
-                    const todayKey = rangeStart.toISOString().slice(0, 10);
+                    const todayKey = toLocalDateKey(rangeStart);
                     if (todayKey in buckets) {
                       buckets[todayKey] = todayOrderRevenue + posTodayRevenue;
                     }

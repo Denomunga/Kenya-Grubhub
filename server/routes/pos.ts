@@ -523,16 +523,17 @@ router.get("/reports/daily", requireAuth, async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const date = req.query.date ? new Date(req.query.date as string) : new Date();
-    // Use date string for filtering to avoid timezone issues
-    const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const timezone = 'Africa/Nairobi';
+    const dateString = typeof req.query.date === 'string' && req.query.date
+      ? String(req.query.date).slice(0, 10)
+      : new Date().toLocaleDateString('en-CA', { timeZone: timezone });
 
     const [sales, refunds, summary] = await Promise.all([
       Sale.find({
         status: 'Completed',
         $expr: {
           $eq: [
-            { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone } },
             dateString
           ]
         }
@@ -541,7 +542,7 @@ router.get("/reports/daily", requireAuth, async (req, res) => {
         status: 'Refunded',
         $expr: {
           $eq: [
-            { $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' } },
+            { $dateToString: { format: '%Y-%m-%d', date: '$updatedAt', timezone } },
             dateString
           ]
         }
@@ -552,7 +553,7 @@ router.get("/reports/daily", requireAuth, async (req, res) => {
             status: 'Completed',
             $expr: {
               $eq: [
-                { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone } },
                 dateString
               ]
             }
@@ -670,8 +671,10 @@ router.get("/reports/trends", requireAuth, async (req, res) => {
     }
 
     const days = parseInt(req.query.days as string) || 30;
+    const timezone = 'Africa/Nairobi';
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+    startDate.setDate(startDate.getDate() - Math.max(0, days - 1));
 
     const [dailySales, categoryTrends, paymentTrends] = await Promise.all([
       Sale.aggregate([
@@ -679,7 +682,7 @@ router.get("/reports/trends", requireAuth, async (req, res) => {
         {
           $group: {
             _id: {
-              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+              $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone }
             },
             total: { $sum: '$total' },
             count: { $sum: 1 }
