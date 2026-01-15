@@ -38,6 +38,7 @@ import OrderLocationView from "@/components/admin/OrderLocationView";
 import BusinessLocationManager from "@/components/admin/BusinessLocationManager";
 import POSSystem from "@/components/admin/POSSystem";
 import SocialLinksManager from "@/components/admin/SocialLinksManager";
+import { Bar, BarChart, CartesianGrid, Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, Cell } from "recharts";
 
 function playBeep() {
   try {
@@ -69,18 +70,53 @@ export default function Dashboard() {
   const [posTodayRevenue, setPosTodayRevenue] = React.useState<number>(0);
   const [posDailyRevenue, setPosDailyRevenue] = React.useState<Record<string, number>>({});
   const [posTodayCount, setPosTodayCount] = React.useState<number>(0);
-  const [kpiRange, setKpiRange] = React.useState<"today" | "7d" | "30d">("today");
-  const [posRangeRevenue, setPosRangeRevenue] = React.useState<number>(0);
+  const [kpiRange, setKpiRange] = React.useState<"today" | "7d" | "30d" | "custom">("today");
+  const [customStart, setCustomStart] = React.useState<string>("");
+  const [customEnd, setCustomEnd] = React.useState<string>("");
   const [serverHealthUpdatedAt, setServerHealthUpdatedAt] = React.useState<number | null>(null);
 
-  const rangeDays = kpiRange === "today" ? 1 : kpiRange === "7d" ? 7 : 30;
+  const [posTopSelling, setPosTopSelling] = React.useState<any[]>([]);
+  const [posCategoryTrends, setPosCategoryTrends] = React.useState<any[]>([]);
+  const [posTrendsDaily2x, setPosTrendsDaily2x] = React.useState<Record<string, number>>({});
+
+  const [drillOpen, setDrillOpen] = React.useState(false);
+  const [drillDateKey, setDrillDateKey] = React.useState<string | null>(null);
+  const [drillPosSales, setDrillPosSales] = React.useState<any[]>([]);
+  const [drillPosSummary, setDrillPosSummary] = React.useState<any | null>(null);
+
+  const rangeDays = React.useMemo(() => {
+    if (kpiRange === "today") return 1;
+    if (kpiRange === "7d") return 7;
+    if (kpiRange === "30d") return 30;
+    const s = customStart ? new Date(`${customStart}T00:00:00`) : null;
+    const e = customEnd ? new Date(`${customEnd}T00:00:00`) : null;
+    if (!s || !e || isNaN(s.getTime()) || isNaN(e.getTime()) || e < s) return 7;
+    const diffDays = Math.floor((e.getTime() - s.getTime()) / 86_400_000) + 1;
+    return Math.min(90, Math.max(1, diffDays));
+  }, [kpiRange, customStart, customEnd]);
+
   const rangeStart = React.useMemo(() => {
+    if (kpiRange === "custom" && customStart) {
+      const d = new Date(`${customStart}T00:00:00`);
+      if (!isNaN(d.getTime())) return d;
+    }
     const now = new Date();
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
     start.setDate(start.getDate() - (rangeDays - 1));
     return start;
-  }, [rangeDays]);
+  }, [kpiRange, customStart, rangeDays]);
+
+  const rangeEnd = React.useMemo(() => {
+    if (kpiRange === "custom" && customEnd) {
+      const d = new Date(`${customEnd}T23:59:59`);
+      if (!isNaN(d.getTime())) return d;
+    }
+    const now = new Date();
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+    return end;
+  }, [kpiRange, customEnd]);
 
   const [commandOpen, setCommandOpen] = React.useState(false);
   const [commandQuery, setCommandQuery] = React.useState("");
@@ -146,6 +182,29 @@ export default function Dashboard() {
     }
   }, [toast]);
 
+  React.useEffect(() => {
+    if (!drillOpen || !drillDateKey) return;
+
+    const load = async () => {
+      try {
+        const res = await apiFetch(`/api/pos/reports/daily?date=${encodeURIComponent(drillDateKey)}`);
+        if (!res.ok) {
+          setDrillPosSales([]);
+          setDrillPosSummary(null);
+          return;
+        }
+        const data = await res.json();
+        setDrillPosSales(Array.isArray(data?.sales) ? data.sales : []);
+        setDrillPosSummary(data?.summary || null);
+      } catch {
+        setDrillPosSales([]);
+        setDrillPosSummary(null);
+      }
+    };
+
+    load();
+  }, [drillOpen, drillDateKey]);
+
   const isPinned = React.useCallback((kind: PinnedAction["kind"], value: string) => {
     return pinnedActions.some((p) => p.kind === kind && p.value === value);
   }, [pinnedActions]);
@@ -208,28 +267,6 @@ export default function Dashboard() {
   }, []);
 
   React.useEffect(() => {
-    if (kpiRange === "today") {
-      setPosRangeRevenue(0);
-      return;
-    }
-
-    const loadPosRangeRevenue = async () => {
-      try {
-        const res = await apiFetch(`/api/pos/reports/trends?days=${rangeDays}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const daily = Array.isArray(data?.dailySales) ? data.dailySales : [];
-        const total = daily.reduce((sum: number, d: any) => sum + (d?.total || 0), 0);
-        setPosRangeRevenue(total || 0);
-      } catch {
-        setPosRangeRevenue(0);
-      }
-    };
-
-    loadPosRangeRevenue();
-  }, [kpiRange, rangeDays]);
-
-  React.useEffect(() => {
     const loadPosDailyRevenue = async () => {
       try {
         const res = await apiFetch(`/api/pos/reports/trends?days=${rangeDays}`);
@@ -252,6 +289,56 @@ export default function Dashboard() {
     };
 
     loadPosDailyRevenue();
+  }, [rangeDays]);
+
+  React.useEffect(() => {
+    const loadPosOverviewAnalytics = async () => {
+      try {
+        const days2x = Math.min(180, Math.max(2, rangeDays * 2));
+        const [invRes, trendsRes, trends2xRes] = await Promise.all([
+          apiFetch('/api/pos/reports/inventory'),
+          apiFetch(`/api/pos/reports/trends?days=${rangeDays}`),
+          apiFetch(`/api/pos/reports/trends?days=${days2x}`),
+        ]);
+
+        if (invRes.ok) {
+          const inv = await invRes.json();
+          const topSelling = Array.isArray(inv?.topSelling) ? inv.topSelling : [];
+          setPosTopSelling(topSelling);
+        } else {
+          setPosTopSelling([]);
+        }
+
+        if (trendsRes.ok) {
+          const d = await trendsRes.json();
+          setPosCategoryTrends(Array.isArray(d?.categoryTrends) ? d.categoryTrends : []);
+        } else {
+          setPosCategoryTrends([]);
+        }
+
+        if (trends2xRes.ok) {
+          const d2 = await trends2xRes.json();
+          const daily = Array.isArray(d2?.dailySales) ? d2.dailySales : [];
+          const next: Record<string, number> = {};
+          daily.forEach((x: any) => {
+            const key = String(x?._id || '').slice(0, 10);
+            if (!key) return;
+            next[key] = (next[key] || 0) + (Number(x?.total) || 0);
+          });
+          setPosTrendsDaily2x(next);
+        } else {
+          setPosTrendsDaily2x({});
+        }
+      } catch {
+        setPosTopSelling([]);
+        setPosCategoryTrends([]);
+        setPosTrendsDaily2x({});
+      }
+    };
+
+    loadPosOverviewAnalytics();
+    const interval = setInterval(loadPosOverviewAnalytics, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [rangeDays]);
 
   React.useEffect(() => {
@@ -352,19 +439,65 @@ export default function Dashboard() {
       .reduce((sum, o) => sum + (o.total || 0), 0);
   }, [orders, isTodayLocal]);
 
-  const orderRangeRevenue = React.useMemo(() => {
+  const rangeOrderRevenue = React.useMemo(() => {
     const startMs = rangeStart.getTime();
+    const endMs = rangeEnd.getTime();
     return (orders || [])
       .filter((o) => o.status !== "Cancelled")
       .filter((o) => {
         const d = new Date(o.date);
         if (isNaN(d.getTime())) return false;
-        return d.getTime() >= startMs;
+        const ms = d.getTime();
+        return ms >= startMs && ms <= endMs;
       })
       .reduce((sum, o) => sum + (o.total || 0), 0);
-  }, [orders, rangeStart]);
+  }, [orders, rangeStart, rangeEnd]);
 
-  const totalRangeRevenue = orderRangeRevenue + (kpiRange === "today" ? posTodayRevenue : posRangeRevenue);
+  const rangePosRevenue = React.useMemo(() => {
+    const startKey = rangeStart.toISOString().slice(0, 10);
+    const endKey = rangeEnd.toISOString().slice(0, 10);
+    return Object.entries(posDailyRevenue)
+      .filter(([k]) => k >= startKey && k <= endKey)
+      .reduce((sum, [, v]) => sum + (Number(v) || 0), 0);
+  }, [posDailyRevenue, rangeStart, rangeEnd]);
+
+  const currentRangeRevenue = React.useMemo(() => {
+    if (kpiRange === "today") return todayOrderRevenue + posTodayRevenue;
+    return rangeOrderRevenue + rangePosRevenue;
+  }, [kpiRange, todayOrderRevenue, posTodayRevenue, rangeOrderRevenue, rangePosRevenue]);
+
+  const previousRangeRevenue = React.useMemo(() => {
+    const start = new Date(rangeStart);
+    const end = new Date(rangeEnd);
+    start.setDate(start.getDate() - rangeDays);
+    end.setDate(end.getDate() - rangeDays);
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+
+    const prevOrders = (orders || [])
+      .filter((o) => o.status !== "Cancelled")
+      .filter((o) => {
+        const d = new Date(o.date);
+        if (isNaN(d.getTime())) return false;
+        const ms = d.getTime();
+        return ms >= startMs && ms <= endMs;
+      })
+      .reduce((sum, o) => sum + (o.total || 0), 0);
+
+    const startKey = start.toISOString().slice(0, 10);
+    const endKey = end.toISOString().slice(0, 10);
+    const prevPos = Object.entries(posTrendsDaily2x)
+      .filter(([k]) => k >= startKey && k <= endKey)
+      .reduce((sum, [, v]) => sum + (Number(v) || 0), 0);
+
+    return prevOrders + prevPos;
+  }, [orders, rangeStart, rangeEnd, rangeDays, posTrendsDaily2x]);
+
+  const revenueDeltaPct = React.useMemo(() => {
+    if (!Number.isFinite(currentRangeRevenue) || !Number.isFinite(previousRangeRevenue)) return 0;
+    if (previousRangeRevenue === 0) return currentRangeRevenue > 0 ? 100 : 0;
+    return ((currentRangeRevenue - previousRangeRevenue) / previousRangeRevenue) * 100;
+  }, [currentRangeRevenue, previousRangeRevenue]);
 
   // Fetch POS sales for total + today's revenue
   React.useEffect(() => {
@@ -719,6 +852,94 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={drillOpen} onOpenChange={(open) => { setDrillOpen(open); if (!open) { setDrillDateKey(null); setDrillPosSales([]); setDrillPosSummary(null); } }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {drillDateKey ? `Details for ${drillDateKey}` : "Details"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Online orders</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    const list = (orders || []).filter((o) => {
+                      if (o.status === "Cancelled") return false;
+                      const d = new Date(o.date);
+                      if (isNaN(d.getTime())) return false;
+                      return d.toISOString().slice(0, 10) === drillDateKey;
+                    });
+                    if (list.length === 0) return <div className="text-sm text-muted-foreground">No online orders.</div>;
+                    return (
+                      <div className="space-y-2">
+                        {list.slice(0, 10).map((o) => (
+                          <button
+                            key={o.id}
+                            className="w-full text-left rounded-md border px-3 py-2 hover:bg-muted/30"
+                            onClick={() => {
+                              setSelectedOrder(o);
+                              setOrderDetailOpen(true);
+                            }}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="text-sm font-medium truncate">Order #{o.id}</div>
+                              <div className="text-sm font-mono text-muted-foreground">{formatPriceKSHS(o.total || 0)}</div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">{o.user}</div>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">POS sales</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {drillPosSummary ? (
+                    <div className="text-xs text-muted-foreground mb-3">
+                      Total: <span className="font-mono">{formatPriceKSHS(drillPosSummary?.totalSales || 0)}</span>
+                      <span className="ml-3">Count: <span className="font-mono">{drillPosSummary?.count || 0}</span></span>
+                    </div>
+                  ) : null}
+
+                  {drillPosSales.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No POS sales.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {drillPosSales.slice(0, 10).map((s: any) => (
+                        <button
+                          key={s?._id || s?.id || Math.random()}
+                          className="w-full text-left rounded-md border px-3 py-2 hover:bg-muted/30"
+                          onClick={() => {
+                            setActiveTab("pos");
+                            setDrillOpen(false);
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="text-sm font-medium truncate">Sale {String(s?._id || "").slice(-6)}</div>
+                            <div className="text-sm font-mono text-muted-foreground">{formatPriceKSHS(s?.total || 0)}</div>
+                          </div>
+                          <div className="text-xs text-muted-foreground">{new Date(s?.createdAt || Date.now()).toLocaleTimeString()}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={productDetailOpen} onOpenChange={(open) => { setProductDetailOpen(open); if (!open) setSelectedProduct(null); }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -791,6 +1012,13 @@ export default function Dashboard() {
                   <Badge variant="outline" className="gap-2">
                     <DollarSign className="h-3.5 w-3.5" />
                     Today: {formatPriceKSHS(todayOrderRevenue + posTodayRevenue)}
+                  </Badge>
+                  <Badge variant="outline" className="gap-2">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    Range: {formatPriceKSHS(currentRangeRevenue)}
+                    <span className={revenueDeltaPct >= 0 ? "text-green-600" : "text-red-600"}>
+                      ({revenueDeltaPct >= 0 ? "+" : ""}{revenueDeltaPct.toFixed(1)}%)
+                    </span>
                   </Badge>
                   <Badge variant="outline" className="gap-2">
                     <TrendingUp className="h-3.5 w-3.5" />
@@ -1000,26 +1228,38 @@ export default function Dashboard() {
         </div>
 
         <TabsContent value="overview">
-          <div className="flex flex-col gap-4 mb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="text-sm text-muted-foreground">KPIs</div>
-              <div className="flex gap-2">
-                <Button variant={kpiRange === "today" ? "default" : "outline"} className="h-9 px-4" onClick={() => setKpiRange("today")}>Today</Button>
-                <Button variant={kpiRange === "7d" ? "default" : "outline"} className="h-9 px-4" onClick={() => setKpiRange("7d")}>7d</Button>
-                <Button variant={kpiRange === "30d" ? "default" : "outline"} className="h-9 px-4" onClick={() => setKpiRange("30d")}>30d</Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Analytics range</div>
+              <div className="text-xs text-muted-foreground">
+                {kpiRange === "custom" && customStart && customEnd
+                  ? `${customStart} → ${customEnd}`
+                  : kpiRange === "today" ? "Today" : kpiRange === "7d" ? "Last 7 days" : "Last 30 days"}
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="gap-2">
-                Orders: {formatPriceKSHS(orderRangeRevenue)}
-              </Badge>
-              <Badge variant="outline" className="gap-2">
-                POS: {formatPriceKSHS(kpiRange === "today" ? posTodayRevenue : posRangeRevenue)}
-              </Badge>
-              <Badge variant="secondary" className="gap-2">
-                Total: {formatPriceKSHS(totalRangeRevenue)}
-              </Badge>
+            <div className="flex flex-wrap gap-2">
+              <Button variant={kpiRange === "today" ? "default" : "outline"} size="sm" onClick={() => setKpiRange("today")}>Today</Button>
+              <Button variant={kpiRange === "7d" ? "default" : "outline"} size="sm" onClick={() => setKpiRange("7d")}>7d</Button>
+              <Button variant={kpiRange === "30d" ? "default" : "outline"} size="sm" onClick={() => setKpiRange("30d")}>30d</Button>
+              <Button variant={kpiRange === "custom" ? "default" : "outline"} size="sm" onClick={() => setKpiRange("custom")}>Custom</Button>
+              {kpiRange === "custom" && (
+                <div className="flex flex-wrap gap-2">
+                  <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="h-9 w-[150px]" />
+                  <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="h-9 w-[150px]" />
+                </div>
+              )}
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+            <Badge variant="outline" className="gap-2">
+              Orders: {formatPriceKSHS(kpiRange === "today" ? todayOrderRevenue : rangeOrderRevenue)}
+            </Badge>
+            <Badge variant="outline" className="gap-2">
+              POS: {formatPriceKSHS(kpiRange === "today" ? posTodayRevenue : rangePosRevenue)}
+            </Badge>
+            <Badge variant="secondary" className="gap-2">
+              Total: {formatPriceKSHS(currentRangeRevenue)}
+            </Badge>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1138,6 +1378,7 @@ export default function Dashboard() {
               <CardContent>
                 {(() => {
                   const startMs = rangeStart.getTime();
+                  const endMs = rangeEnd.getTime();
                   const buckets: Record<string, number> = {};
                   for (let i = 0; i < rangeDays; i++) {
                     const d = new Date(rangeStart);
@@ -1150,6 +1391,7 @@ export default function Dashboard() {
                     const d = new Date(o.date);
                     if (isNaN(d.getTime())) return;
                     if (d.getTime() < startMs) return;
+                    if (d.getTime() > endMs) return;
                     const key = d.toISOString().slice(0, 10);
                     if (!(key in buckets)) return;
                     buckets[key] += o.total || 0;
@@ -1167,15 +1409,105 @@ export default function Dashboard() {
                   }
                   const points = Object.values(buckets);
                   const max = Math.max(1, ...points);
+                  const keys = Object.keys(buckets);
                   return (
                     <div className="h-16 flex items-end gap-1">
-                      {points.map((v, idx) => (
-                        <div
-                          key={idx}
-                          className="flex-1 rounded-sm bg-primary/30"
-                          style={{ height: `${Math.max(2, Math.round((v / max) * 64))}px` }}
-                        />
-                      ))}
+                      {points.map((v, idx) => {
+                        const key = keys[idx];
+                        return (
+                          <button
+                            key={key}
+                            className="flex-1 rounded-sm bg-primary/30 hover:bg-primary/40 focus:outline-none"
+                            style={{ height: `${Math.max(2, Math.round((v / max) * 64))}px` }}
+                            onClick={() => {
+                              setDrillDateKey(key);
+                              setDrillOpen(true);
+                            }}
+                            title={key}
+                          />
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Top-selling products (POS)</CardTitle>
+                <CardDescription>Top 10 by revenue</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const items = (posTopSelling || []).slice(0, 10).map((x: any) => {
+                    const id = String(x?._id || '');
+                    const product = (menu || []).find((m: any) => String(m.id) === id);
+                    return {
+                      id,
+                      name: product?.name || id.slice(-6) || 'Product',
+                      revenue: Number(x?.revenue) || 0,
+                      sold: Number(x?.sold) || 0,
+                    };
+                  });
+
+                  if (items.length === 0) return <div className="text-sm text-muted-foreground">No POS sales data.</div>;
+
+                  return (
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={items} margin={{ left: 8, right: 8 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} angle={-20} textAnchor="end" height={50} />
+                          <YAxis tick={{ fontSize: 12 }} />
+                          <RechartsTooltip />
+                          <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Category breakdown (POS)</CardTitle>
+                <CardDescription>Revenue by category</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const items = (posCategoryTrends || []).slice(0, 12).map((x: any) => ({
+                    category: String(x?._id || 'Unknown'),
+                    revenue: Number(x?.total) || 0,
+                    count: Number(x?.count) || 0,
+                  })).filter((x: any) => x.revenue > 0);
+
+                  if (items.length === 0) return <div className="text-sm text-muted-foreground">No category data.</div>;
+
+                  const colors = [
+                    'hsl(var(--primary))',
+                    'hsl(var(--secondary))',
+                    'hsl(280 70% 50%)',
+                    'hsl(160 70% 45%)',
+                    'hsl(30 90% 55%)',
+                    'hsl(210 80% 55%)',
+                  ];
+
+                  return (
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <RechartsTooltip />
+                          <Pie data={items} dataKey="revenue" nameKey="category" outerRadius={90}>
+                            {items.map((_, idx) => (
+                              <Cell key={idx} fill={colors[idx % colors.length]} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
                     </div>
                   );
                 })()}
