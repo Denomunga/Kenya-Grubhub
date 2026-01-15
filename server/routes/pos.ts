@@ -526,53 +526,36 @@ router.get("/reports/daily", requireAuth, async (req, res) => {
     const date = req.query.date ? new Date(req.query.date as string) : new Date();
     // Use date string for filtering to avoid timezone issues
     const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD format
-    // Also check last 24 hours as fallback
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     const [sales, refunds, summary] = await Promise.all([
       Sale.find({
         status: 'Completed',
-        $or: [
-          {
+        $expr: {
+          $eq: [
+            { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            dateString
+          ]
+        }
+      }).populate('cashier', 'name username'),
+      Sale.find({
+        status: 'Refunded',
+        $expr: {
+          $eq: [
+            { $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' } },
+            dateString
+          ]
+        }
+      }),
+      Sale.aggregate([
+        {
+          $match: {
+            status: 'Completed',
             $expr: {
               $eq: [
                 { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
                 dateString
               ]
             }
-          },
-          { createdAt: { $gte: twentyFourHoursAgo } }
-        ]
-      }).populate('cashier', 'name username'),
-      Sale.find({
-        status: 'Refunded',
-        $or: [
-          {
-            $expr: {
-              $eq: [
-                { $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' } },
-                dateString
-              ]
-            }
-          },
-          { updatedAt: { $gte: twentyFourHoursAgo } }
-        ]
-      }),
-      Sale.aggregate([
-        {
-          $match: {
-            status: 'Completed',
-            $or: [
-              {
-                $expr: {
-                  $eq: [
-                    { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                    dateString
-                  ]
-                }
-              },
-              { createdAt: { $gte: twentyFourHoursAgo } }
-            ]
           }
         },
         {
