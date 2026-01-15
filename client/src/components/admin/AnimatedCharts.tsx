@@ -9,9 +9,14 @@ import { apiFetch } from '@/lib/api';
 import { formatPriceKSHS } from '@/lib/format';
 
 interface OrderTrend {
+  iso: string;
   day: string;
-  orders: number;
-  revenue: number;
+  ordersOnline: number;
+  revenueOnline: number;
+  ordersPos: number;
+  revenuePos: number;
+  ordersTotal: number;
+  revenueTotal: number;
 }
 
 interface AnimatedChartsProps {
@@ -23,6 +28,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
   const [animatedValues, setAnimatedValues] = useState<{ [key: string]: number }>({});
   const [localPosRevenue, setLocalPosRevenue] = useState(0);
   const [trendsData, setTrendsData] = useState<any>(null);
+  const [posTrends, setPosTrends] = useState<any>(null);
 
   // Fetch POS total revenue (all-time) for accurate total calculation
   useEffect(() => {
@@ -50,8 +56,21 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
       }
     };
 
+    const fetchPosDailyTrends = async () => {
+      try {
+        const response = await apiFetch('/api/pos/reports/trends?days=30');
+        if (response.ok) {
+          const data = await response.json();
+          setPosTrends(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch POS trends:', error);
+      }
+    };
+
     fetchPOSTotal();
     fetchTrendsData();
+    fetchPosDailyTrends();
   }, []);
 
   // Refresh every 2 minutes
@@ -81,8 +100,21 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
         }
       };
 
+      const fetchPosDailyTrends = async () => {
+        try {
+          const response = await apiFetch('/api/pos/reports/trends?days=30');
+          if (response.ok) {
+            const data = await response.json();
+            setPosTrends(data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch POS trends:', error);
+        }
+      };
+
       fetchPOSTotal();
       fetchTrendsData();
+      fetchPosDailyTrends();
     }, 2 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -132,7 +164,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
   }, [orders, kpis, posTotalRevenue, localPosRevenue]);
 
   const orderTrends: OrderTrend[] = useMemo(() => {
-    const buckets: Record<string, { orders: number; revenue: number }> = {};
+    const onlineBuckets: Record<string, { orders: number; revenue: number }> = {};
     const now = new Date();
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
@@ -142,7 +174,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
       const d = new Date(start);
       d.setDate(d.getDate() + i);
       const key = d.toISOString().slice(0, 10);
-      buckets[key] = { orders: 0, revenue: 0 };
+      onlineBuckets[key] = { orders: 0, revenue: 0 };
     }
 
     (orders || []).forEach((o: any) => {
@@ -151,20 +183,50 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
       if (isNaN(d.getTime())) return;
       d.setHours(0, 0, 0, 0);
       const key = d.toISOString().slice(0, 10);
-      if (!buckets[key]) return;
-      buckets[key].orders += 1;
-      buckets[key].revenue += o?.total || 0;
+      if (!onlineBuckets[key]) return;
+      onlineBuckets[key].orders += 1;
+      onlineBuckets[key].revenue += o?.total || 0;
     });
 
-    return Object.entries(buckets).map(([iso, v]) => {
+    const posBuckets: Record<string, { orders: number; revenue: number }> = {};
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      posBuckets[key] = { orders: 0, revenue: 0 };
+    }
+
+    const dailySales = Array.isArray(posTrends?.dailySales) ? posTrends.dailySales : [];
+    dailySales.forEach((row: any) => {
+      const key = String(row?._id || '');
+      if (!key || !(key in posBuckets)) return;
+      posBuckets[key].orders = Number(row?.count || 0);
+      posBuckets[key].revenue = Number(row?.total || 0);
+    });
+
+    return Object.entries(onlineBuckets).map(([iso, v]) => {
       const d = new Date(iso);
       const day = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return { day, orders: v.orders, revenue: v.revenue };
+      const pos = posBuckets[iso] || { orders: 0, revenue: 0 };
+      const ordersOnline = v.orders;
+      const revenueOnline = v.revenue;
+      const ordersPos = pos.orders;
+      const revenuePos = pos.revenue;
+      return {
+        iso,
+        day,
+        ordersOnline,
+        revenueOnline,
+        ordersPos,
+        revenuePos,
+        ordersTotal: ordersOnline + ordersPos,
+        revenueTotal: revenueOnline + revenuePos,
+      };
     });
-  }, [orders]);
+  }, [orders, posTrends]);
 
   const hasTrendData = useMemo(() => {
-    return orderTrends.some((d) => d.orders > 0 || d.revenue > 0);
+    return orderTrends.some((d) => d.ordersTotal > 0 || d.revenueTotal > 0);
   }, [orderTrends]);
 
   const kpiItems = useMemo(() => {
@@ -204,7 +266,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
     <div className="space-y-6">
       <div className="space-y-1">
         <h2 className="text-2xl font-semibold text-foreground">Analytics</h2>
-        <p className="text-sm text-muted-foreground">Trends and KPIs for the last 30 days (orders data).</p>
+        <p className="text-sm text-muted-foreground">Trends and KPIs for the last 30 days (Online orders + POS).</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -243,7 +305,7 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
             </CardHeader>
             <CardContent>
               <div className="text-sm text-muted-foreground">
-                No order activity in the last 30 days.
+                No activity in the last 30 days.
               </div>
             </CardContent>
           </Card>
@@ -251,13 +313,13 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
           <>
             <Card className="border shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Revenue trend</CardTitle>
+                <CardTitle className="text-base font-semibold">Revenue trend (Online + POS)</CardTitle>
               </CardHeader>
               <CardContent>
                 <ChartContainer
                   className="h-64 w-full"
                   config={{
-                    revenue: { label: 'Revenue', color: 'hsl(var(--primary))' },
+                    revenueTotal: { label: 'Revenue', color: 'hsl(var(--primary))' },
                   }}
                 >
                   <LineChart data={orderTrends} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
@@ -268,20 +330,35 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
                       cursor={{ stroke: 'hsl(var(--border))' }}
                       content={
                         <ChartTooltipContent
-                          nameKey="revenue"
-                          formatter={(value) => (
-                            <div className="flex w-full items-center justify-between gap-6">
-                              <span className="text-muted-foreground">Revenue</span>
-                              <span className="font-mono font-medium tabular-nums">{formatPriceKSHS(Number(value) || 0)}</span>
-                            </div>
-                          )}
+                          nameKey="revenueTotal"
+                          formatter={(value, _name, item) => {
+                            const payload: any = item?.payload;
+                            const online = Number(payload?.revenueOnline || 0);
+                            const pos = Number(payload?.revenuePos || 0);
+                            return (
+                              <div className="grid gap-1">
+                                <div className="flex w-full items-center justify-between gap-6">
+                                  <span className="text-muted-foreground">Total</span>
+                                  <span className="font-mono font-medium tabular-nums">{formatPriceKSHS(Number(value) || 0)}</span>
+                                </div>
+                                <div className="flex w-full items-center justify-between gap-6">
+                                  <span className="text-muted-foreground">Online</span>
+                                  <span className="font-mono tabular-nums">{formatPriceKSHS(online)}</span>
+                                </div>
+                                <div className="flex w-full items-center justify-between gap-6">
+                                  <span className="text-muted-foreground">POS</span>
+                                  <span className="font-mono tabular-nums">{formatPriceKSHS(pos)}</span>
+                                </div>
+                              </div>
+                            );
+                          }}
                         />
                       }
                     />
                     <Line
                       type="monotone"
-                      dataKey="revenue"
-                      stroke="var(--color-revenue)"
+                      dataKey="revenueTotal"
+                      stroke="var(--color-revenueTotal)"
                       strokeWidth={2}
                       dot={false}
                       activeDot={{ r: 4 }}
@@ -293,13 +370,13 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
 
             <Card className="border shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Orders volume</CardTitle>
+                <CardTitle className="text-base font-semibold">Orders volume (Online + POS)</CardTitle>
               </CardHeader>
               <CardContent>
                 <ChartContainer
                   className="h-64 w-full"
                   config={{
-                    orders: { label: 'Orders', color: 'hsl(var(--secondary))' },
+                    ordersTotal: { label: 'Orders', color: 'hsl(var(--secondary))' },
                   }}
                 >
                   <BarChart data={orderTrends} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
@@ -310,17 +387,32 @@ const AnimatedCharts: React.FC<AnimatedChartsProps> = ({ posTotalRevenue = 0 }) 
                       cursor={{ fill: 'hsl(var(--muted))' }}
                       content={
                         <ChartTooltipContent
-                          nameKey="orders"
-                          formatter={(value) => (
-                            <div className="flex w-full items-center justify-between gap-6">
-                              <span className="text-muted-foreground">Orders</span>
-                              <span className="font-mono font-medium tabular-nums">{Number(value || 0).toLocaleString()}</span>
-                            </div>
-                          )}
+                          nameKey="ordersTotal"
+                          formatter={(value, _name, item) => {
+                            const payload: any = item?.payload;
+                            const online = Number(payload?.ordersOnline || 0);
+                            const pos = Number(payload?.ordersPos || 0);
+                            return (
+                              <div className="grid gap-1">
+                                <div className="flex w-full items-center justify-between gap-6">
+                                  <span className="text-muted-foreground">Total</span>
+                                  <span className="font-mono font-medium tabular-nums">{Number(value || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex w-full items-center justify-between gap-6">
+                                  <span className="text-muted-foreground">Online</span>
+                                  <span className="font-mono tabular-nums">{online.toLocaleString()}</span>
+                                </div>
+                                <div className="flex w-full items-center justify-between gap-6">
+                                  <span className="text-muted-foreground">POS</span>
+                                  <span className="font-mono tabular-nums">{pos.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            );
+                          }}
                         />
                       }
                     />
-                    <Bar dataKey="orders" fill="var(--color-orders)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="ordersTotal" fill="var(--color-ordersTotal)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ChartContainer>
               </CardContent>
