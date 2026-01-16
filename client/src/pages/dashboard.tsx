@@ -1254,37 +1254,37 @@ export default function Dashboard() {
                 Orders
               </span>
             </TabsTrigger>
-            <TabsTrigger value="pos" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
+            <TabsTrigger value="pos" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
                 POS
               </span>
             </TabsTrigger>
-            <TabsTrigger value="menu" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
+            <TabsTrigger value="menu" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <Mail className="h-4 w-4" />
                 Menu
               </span>
             </TabsTrigger>
-            <TabsTrigger value="location" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
+            <TabsTrigger value="location" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <MapPinned className="h-4 w-4" />
                 Location
               </span>
             </TabsTrigger>
-            <TabsTrigger value="news" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
+            <TabsTrigger value="news" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <Newspaper className="h-4 w-4" />
                 News
               </span>
             </TabsTrigger>
-            <TabsTrigger value="newsletter" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
+            <TabsTrigger value="newsletter" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <Mail className="h-4 w-4" />
                 Newsletter
               </span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
+            <TabsTrigger value="settings" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
               <span className="inline-flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 Settings
@@ -1304,6 +1304,12 @@ export default function Dashboard() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setActiveTab("pos")}>POS</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setActiveTab("menu")}>Menu</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setActiveTab("location")}>Location</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setActiveTab("news")}>News</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setActiveTab("newsletter")}>Newsletter</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setActiveTab("settings")}>Settings</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setActiveTab("users")}>Users</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setActiveTab("audit")}>Audit</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setActiveTab("user-audit")}>User Audit</DropdownMenuItem>
