@@ -126,7 +126,7 @@ export default function Dashboard() {
   const [commandQuery, setCommandQuery] = React.useState("");
 
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
-  const [notificationsSeenAt, setNotificationsSeenAt] = React.useState<number>(() => Date.now());
+  const [notificationReadIds, setNotificationReadIds] = React.useState<Set<string>>(() => new Set());
 
   type PinnedAction = {
     kind: "tab" | "action" | "order" | "product";
@@ -142,12 +142,24 @@ export default function Dashboard() {
   const [productDetailOpen, setProductDetailOpen] = React.useState(false);
   const [selectedProduct, setSelectedProduct] = React.useState<any | null>(null);
 
-  type ActivityItem = { id: string; ts: number; label: string; meta?: string; tone?: "info" | "success" | "warning" };
+  type ActivityItem = { id: string; ts: number; label: string; meta?: string; tone?: "info" | "success" | "warning"; tab?: string; orderId?: string };
   const [activity, setActivity] = React.useState<ActivityItem[]>([]);
 
   const unreadCount = React.useMemo(() => {
-    return activity.filter((a) => a.ts > notificationsSeenAt).length;
-  }, [activity, notificationsSeenAt]);
+    return activity.filter((a) => !notificationReadIds.has(a.id)).length;
+  }, [activity, notificationReadIds]);
+
+  React.useEffect(() => {
+    setNotificationReadIds((prev) => {
+      if (prev.size === 0) return prev;
+      const current = new Set(activity.map((a) => a.id));
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (current.has(id)) next.add(id);
+      });
+      return next;
+    });
+  }, [activity]);
 
   React.useEffect(() => {
     const loadPins = async () => {
@@ -387,36 +399,36 @@ export default function Dashboard() {
   }, []);
 
   React.useEffect(() => {
-    const add = (label: string, meta?: string, tone: ActivityItem["tone"] = "info") => {
+    const add = (label: string, meta?: string, tone: ActivityItem["tone"] = "info", nextTab?: string, orderId?: string) => {
       setActivity((prev) => {
-        const next: ActivityItem[] = [{ id: `${Date.now()}-${Math.random()}`, ts: Date.now(), label, meta, tone }, ...prev];
+        const next: ActivityItem[] = [{ id: `${Date.now()}-${Math.random()}`, ts: Date.now(), label, meta, tone, tab: nextTab, orderId }, ...prev];
         return next.slice(0, 20);
       });
     };
 
     const onOrderNew = (e: any) => {
       const p = e.detail;
-      add(`New order #${p?.id}`, p?.total ? formatPriceKSHS(p.total) : undefined, "success");
+      add(`New order #${p?.id}`, p?.total ? formatPriceKSHS(p.total) : undefined, "success", "orders", p?.id ? String(p.id) : undefined);
     };
     const onOrderUpdate = (e: any) => {
       const p = e.detail;
-      add(`Order #${p?.id} updated`, p?.status ? `Status: ${p.status}` : undefined, "info");
+      add(`Order #${p?.id} updated`, p?.status ? `Status: ${p.status}` : undefined, "info", "orders", p?.id ? String(p.id) : undefined);
     };
     const onPosSale = (e: any) => {
       const p = e.detail;
-      add("POS sale completed", p?.total ? formatPriceKSHS(p.total) : undefined, "success");
+      add("POS sale completed", p?.total ? formatPriceKSHS(p.total) : undefined, "success", "pos");
     };
     const onAuditReview = (e: any) => {
       const p = e.detail;
-      add("Review audit", p?.action ? `Action: ${p.action}` : undefined, "warning");
+      add("Review audit", p?.action ? `Action: ${p.action}` : undefined, "warning", "audit");
     };
     const onAuditNews = (e: any) => {
       const p = e.detail;
-      add("News audit", p?.action ? `Action: ${p.action}` : undefined, "info");
+      add("News audit", p?.action ? `Action: ${p.action}` : undefined, "info", "news");
     };
     const onAuditUser = (e: any) => {
       const p = e.detail;
-      add("User audit", p?.action ? `Action: ${p.action}` : undefined, "info");
+      add("User audit", p?.action ? `Action: ${p.action}` : undefined, "info", "user-audit");
     };
     const onHealth = (_e: any) => {
       setServerHealthUpdatedAt(Date.now());
@@ -1140,7 +1152,6 @@ export default function Dashboard() {
                   open={notificationsOpen}
                   onOpenChange={(open) => {
                     setNotificationsOpen(open);
-                    if (open) setNotificationsSeenAt(Date.now());
                   }}
                 >
                   <PopoverTrigger asChild>
@@ -1167,7 +1178,9 @@ export default function Dashboard() {
                         variant="outline"
                         size="sm"
                         className="h-8"
-                        onClick={() => setNotificationsSeenAt(Date.now())}
+                        onClick={() => {
+                          setNotificationReadIds(new Set(activity.map((a) => a.id)));
+                        }}
                       >
                         <Check className="h-4 w-4 mr-2" />
                         Mark read
@@ -1178,7 +1191,49 @@ export default function Dashboard() {
                         <div className="text-sm text-muted-foreground">No notifications yet.</div>
                       ) : (
                         activity.slice(0, 15).map((a) => (
-                          <div key={a.id} className="flex items-start justify-between gap-3">
+                          <div
+                            key={a.id}
+                            className="flex items-start justify-between gap-3 rounded-md border px-3 py-2 cursor-pointer hover:bg-muted/30"
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              setNotificationReadIds((prev) => {
+                                const next = new Set(prev);
+                                next.add(a.id);
+                                return next;
+                              });
+                              setNotificationsOpen(false);
+
+                              if (a.tab) setActiveTab(a.tab);
+                              if (a.tab === "orders" && a.orderId) {
+                                const o = (orders || []).find((x: any) => String(x.id) === String(a.orderId));
+                                if (o) {
+                                  setSelectedOrder(o);
+                                  setOrderDetailOpen(true);
+                                }
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setNotificationReadIds((prev) => {
+                                  const next = new Set(prev);
+                                  next.add(a.id);
+                                  return next;
+                                });
+                                setNotificationsOpen(false);
+
+                                if (a.tab) setActiveTab(a.tab);
+                                if (a.tab === "orders" && a.orderId) {
+                                  const o = (orders || []).find((x: any) => String(x.id) === String(a.orderId));
+                                  if (o) {
+                                    setSelectedOrder(o);
+                                    setOrderDetailOpen(true);
+                                  }
+                                }
+                              }
+                            }}
+                          >
                             <div className="min-w-0">
                               <div className="text-sm font-medium">{a.label}</div>
                               {a.meta && <div className="text-xs text-muted-foreground">{a.meta}</div>}
