@@ -160,7 +160,7 @@ export default function Menu() {
     '@type': 'CollectionPage',
     name: 'Product Catalog - KenyaGrubHub',
     description: 'Browse our complete catalog of premium laptops, mobiles, and stationery in Kenya',
-    url: 'https://kenyagrubhub.com/menu',
+    url: 'https://kenya-grubhub-gx7x.vercel.app/menu',
     mainEntity: {
       '@type': 'ItemList',
       numberOfItems: menu.length,
@@ -168,7 +168,7 @@ export default function Menu() {
         '@type': 'Product',
         position: index + 1,
         name: item.name,
-        url: `https://kenyagrubhub.com/menu?product=${item.id}`,
+        url: `https://kenya-grubhub-gx7x.vercel.app/menu?product=${item.id}`,
         image: item.image,
         description: item.description,
         brand: item.brand ? { '@type': 'Brand', name: item.brand } : undefined,

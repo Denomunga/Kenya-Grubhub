@@ -60,7 +60,7 @@ export function useProductStructuredData(product: Product) {
       seller: {
         '@type': 'Organization',
         name: 'KenyaGrubHub',
-        url: 'https://kenyagrubhub.com'
+        url: 'https://kenya-grubhub-gx7x.vercel.app'
       }
     },
     category: product.category
@@ -73,7 +73,7 @@ export function useBusinessStructuredData(business: BusinessInfo) {
     '@type': 'LocalBusiness',
     name: business.name,
     description: business.description,
-    url: business.url,
+    url: business.url || 'https://kenya-grubhub-gx7x.vercel.app',
     logo: business.logo,
     telephone: business.phone,
     email: business.email,
@@ -118,13 +118,13 @@ export function useWebsiteStructuredData() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'KenyaGrubHub',
-    url: 'https://kenyagrubhub.com',
+    url: 'https://kenya-grubhub-gx7x.vercel.app',
     description: 'Shop premium laptops, mobiles, and stationery in Kenya. Fast delivery across Kenya with secure checkout.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://kenyagrubhub.com/search?q={search_term_string}'
+        urlTemplate: 'https://kenya-grubhub-gx7x.vercel.app/search?q={search_term_string}'
       },
       'query-input': 'required name=search_term_string'
     }

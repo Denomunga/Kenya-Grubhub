@@ -34,7 +34,7 @@ Allow: /chat
 Crawl-delay: 1
 
 # Sitemap location
-Sitemap: https://kenyagrubhub.com/sitemap.xml
+Sitemap: https://kenya-grubhub-gx7x.vercel.app/sitemap.xml
 
 # Additional SEO directives
 # Allow image indexing

@@ -13,8 +13,8 @@ interface SEOMetaTagsProps {
 
 const SITE_NAME = 'KenyaGrubHub';
 const DEFAULT_DESCRIPTION = 'Shop premium laptops, mobiles, and stationery in Kenya. HP, Dell, Lenovo, Asus, Apple MacBooks, and more. Fast delivery across Kenya with secure checkout.';
-const DEFAULT_KEYWORDS = 'laptops Kenya, mobiles Kenya, stationery Kenya, HP laptops, Dell laptops, Lenovo laptops, Asus laptops, Apple MacBooks, Microsoft Surface, mobile phones Nairobi';
-const SITE_URL = 'https://kenyagrubhub.com';
+const DEFAULT_KEYWORDS = 'laptops Kenya, mobiles Kenya, stationery Kenya, HP laptops, Dell laptops, Lenovo laptops, Asus laptops, Apple MacBooks, Microsoft Surface, mobile phones Nairobi, electronics Kenya, online shopping Kenya';
+const SITE_URL = 'https://kenya-grubhub-gx7x.vercel.app';
 
 export function SEOMetaTags({
   title,
