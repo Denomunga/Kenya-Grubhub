@@ -14,6 +14,7 @@ import { Auth0Provider } from "@auth0/auth0-react";
 import { HybridAuthProvider } from "@/lib/hybrid-auth";
 import { auth0Config } from "@/lib/auth0-config";
 import { ThemeProvider } from "next-themes";
+import { HelmetProvider } from 'react-helmet-async';
 
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -130,30 +131,32 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <DndProvider backend={HTML5Backend}>
-        <Auth0Provider
-          domain={auth0Config.domain}
-          clientId={auth0Config.clientId}
-          authorizationParams={{
-            redirect_uri: auth0Config.redirectUri,
-            audience: auth0Config.audience,
-            scope: auth0Config.scope
-          }}
-        >
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <HybridAuthProvider>
-              <ChatProvider>
-                <DataProvider>
-                  <Router />
-                  <Toaster />
-                </DataProvider>
-              </ChatProvider>
-            </HybridAuthProvider>
-          </ThemeProvider>
-        </Auth0Provider>
-      </DndProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <DndProvider backend={HTML5Backend}>
+          <Auth0Provider
+            domain={auth0Config.domain}
+            clientId={auth0Config.clientId}
+            authorizationParams={{
+              redirectUri: auth0Config.redirectUri,
+              audience: auth0Config.audience,
+              scope: auth0Config.scope
+            }}
+          >
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              <HybridAuthProvider>
+                <ChatProvider>
+                  <DataProvider>
+                    <Router />
+                    <Toaster />
+                  </DataProvider>
+                </ChatProvider>
+              </HybridAuthProvider>
+            </ThemeProvider>
+          </Auth0Provider>
+        </DndProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 }
 

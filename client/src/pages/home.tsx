@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, MapPin, CheckCircle, AlertCircle, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
+import { SEOMetaTags } from "@/components/seo/SEOMetaTags";
+import { useWebsiteStructuredData } from "@/components/seo/StructuredData";
 
 
 interface NewsItem {
@@ -44,6 +46,9 @@ export default function Home() {
   
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  
+  // SEO structured data
+  const websiteStructuredData = useWebsiteStructuredData();
   
   // Parallax scroll effect - optimized with throttling and reduced motion support
   const [scrollY, setScrollY] = useState(0);
@@ -300,7 +305,14 @@ export default function Home() {
   }, [selectedNewsId]);
 
   return (
-    <div className="min-h-screen bg-background gradient-mesh particle-container">
+    <>
+      <SEOMetaTags 
+        title="Premium Laptops, Mobiles & Stationery in Kenya"
+        description="Shop premium laptops, mobiles, and stationery in Kenya. HP, Dell, Lenovo, Asus, Apple MacBooks, and more. Fast delivery across Kenya with secure checkout."
+        keywords="laptops Kenya, mobiles Kenya, stationery Kenya, HP laptops, Dell laptops, Lenovo laptops, Asus laptops, Apple MacBooks, Microsoft Surface, mobile phones Nairobi, electronics Kenya, online shopping Kenya"
+        structuredData={websiteStructuredData}
+      />
+      <div className="min-h-screen bg-background gradient-mesh particle-container">
       {/* Hero Section */}
       <div className="relative">
         <HeroSection />
@@ -781,6 +793,7 @@ export default function Home() {
         </motion.div>
       </motion.section>
     </div>
+    </>
   );
 }
 

@@ -1,21 +1,59 @@
 User-agent: *
 Allow: /
 
-# Block access to admin areas (if any)
+# Block access to admin areas
 Disallow: /admin/
 Disallow: /api/admin/
+Disallow: /dashboard/
+Disallow: /profile/
+Disallow: /orders/
 
-# Block access to sensitive files
-Disallow: *.env
-Disallow: *.log
+# Block access to sensitive files and directories
+Disallow: *.env$
+Disallow: *.log$
 Disallow: /server/
 Disallow: /node_modules/
+Disallow: /dist/
+Disallow: /*.json$
+Disallow: /src/
 
-# Allow crawling of main content
+# Block authentication and utility pages
+Disallow: /login
+Disallow: /auth/
+Disallow: /confirm-password
+Disallow: /confirm-phone
+
+# Allow crawling of main content areas
+Allow: /
 Allow: /menu
 Allow: /home
 Allow: /news
 Allow: /chat
 
-# Sitemap
+# Crawl delay (optional, be respectful)
+Crawl-delay: 1
+
+# Sitemap location
 Sitemap: https://kenyagrubhub.com/sitemap.xml
+
+# Additional SEO directives
+# Allow image indexing
+Allow: *.jpg$
+Allow: *.jpeg$
+Allow: *.png$
+Allow: *.webp$
+Allow: *.svg$
+
+# Allow CSS and JS for rendering
+Allow: *.css$
+Allow: *.js$
+
+# Block common bot patterns
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /

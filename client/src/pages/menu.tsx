@@ -27,6 +27,8 @@ import { Input } from "@/components/ui/input";
 import ProductImageViewer, { ProductImage } from "@/components/ui/ProductImageViewer";
 import LocationPicker from '@/components/ui/LocationPicker';
 import OrderConfirmation from '@/components/ui/OrderConfirmation';
+import { SEOMetaTags } from "@/components/seo/SEOMetaTags";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 // Helper small form component to post a review for the currently open product
 function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct }: { 
@@ -151,6 +153,34 @@ export default function Menu() {
 
   const [wishlist, setWishlist] = useState<Set<string>>(() => new Set());
   const [compare, setCompare] = useState<Set<string>>(() => new Set());
+
+  // SEO structured data for the main category page
+  const categoryStructuredData = useMemo(() => ({
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Product Catalog - KenyaGrubHub',
+    description: 'Browse our complete catalog of premium laptops, mobiles, and stationery in Kenya',
+    url: 'https://kenyagrubhub.com/menu',
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: menu.length,
+      itemListElement: menu.slice(0, 10).map((item, index) => ({
+        '@type': 'Product',
+        position: index + 1,
+        name: item.name,
+        url: `https://kenyagrubhub.com/menu?product=${item.id}`,
+        image: item.image,
+        description: item.description,
+        brand: item.brand ? { '@type': 'Brand', name: item.brand } : undefined,
+        offers: {
+          '@type': 'Offer',
+          price: item.price,
+          priceCurrency: 'KES',
+          availability: item.available ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
+        }
+      }))
+    }
+  }), [menu]);
 
   // Handle product ID from URL parameter
   useEffect(() => {
@@ -366,7 +396,15 @@ export default function Menu() {
   const cartTotal = cart.reduce((sum, i) => sum + (i.item.price * i.quantity), 0);
 
   return (
-    <div className="min-h-screen w-full particle-container gradient-mesh">
+    <>
+      <SEOMetaTags 
+        title="Product Catalog - Premium Electronics in Kenya"
+        description="Browse our complete catalog of premium laptops, mobiles, and stationery in Kenya. HP, Dell, Lenovo, Asus, Apple and more with competitive prices."
+        keywords="product catalog Kenya, laptops catalog, mobile phones catalog, stationery catalog, electronics shopping Kenya, HP laptops Kenya, Dell laptops Kenya"
+        structuredData={categoryStructuredData}
+      />
+      <Breadcrumbs items={[{ name: 'Products', url: '/menu' }]} />
+      <div className="min-h-screen w-full particle-container gradient-mesh">
       <div className="container mx-auto px-6 py-14">
         <div className="mb-8">
           <div>
@@ -1318,5 +1356,6 @@ export default function Menu() {
       </Sheet>
       </div>
     </div>
+    </>
   );
 }
