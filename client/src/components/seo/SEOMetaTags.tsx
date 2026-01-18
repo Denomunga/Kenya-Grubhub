@@ -1,5 +1,4 @@
-import { Helmet } from 'react-helmet-async';
-import { useMemo } from 'react';
+import { useEffect } from 'react';
 
 interface SEOMetaTagsProps {
   title?: string;
@@ -27,57 +26,94 @@ export function SEOMetaTags({
   structuredData,
   canonicalUrl
 }: SEOMetaTagsProps) {
-  const fullTitle = useMemo(() => {
-    return title ? `${title} | ${SITE_NAME}` : SITE_NAME;
-  }, [title]);
+  useEffect(() => {
+    // Update document title
+    const fullTitle = title ? `${title} | ${SITE_NAME}` : SITE_NAME;
+    document.title = fullTitle;
 
-  const fullOgUrl = useMemo(() => {
-    return ogUrl || `${SITE_URL}${window.location.pathname}`;
-  }, [ogUrl]);
+    // Update or create meta tags
+    updateMetaTag('description', description);
+    updateMetaTag('keywords', keywords);
+    updateMetaTag('author', SITE_NAME);
+    updateMetaTag('robots', noindex ? 'noindex, nofollow' : 'index, follow');
+    updateMetaTag('language', 'English');
+    updateMetaTag('revisit-after', '7 days');
+    
+    // Canonical URL
+    updateCanonicalUrl(canonicalUrl || `${SITE_URL}${window.location.pathname}`);
+    
+    // Open Graph / Facebook
+    const fullOgUrl = ogUrl || `${SITE_URL}${window.location.pathname}`;
+    updateMetaProperty('og:type', 'website');
+    updateMetaProperty('og:url', fullOgUrl);
+    updateMetaProperty('og:title', fullTitle);
+    updateMetaProperty('og:description', description);
+    updateMetaProperty('og:image', ogImage);
+    updateMetaProperty('og:site_name', SITE_NAME);
+    
+    // Twitter
+    updateMetaProperty('twitter:card', 'summary_large_image');
+    updateMetaProperty('twitter:url', fullOgUrl);
+    updateMetaProperty('twitter:title', fullTitle);
+    updateMetaProperty('twitter:description', description);
+    updateMetaProperty('twitter:image', ogImage);
+    
+    // Additional SEO Meta
+    updateMetaTag('theme-color', '#f59e0b');
+    updateMetaTag('msapplication-TileColor', '#f59e0b');
+    
+    // Structured Data
+    if (structuredData) {
+      updateStructuredData(structuredData);
+    }
 
-  const fullCanonicalUrl = useMemo(() => {
-    return canonicalUrl || `${SITE_URL}${window.location.pathname}`;
-  }, [canonicalUrl]);
+  }, [title, description, keywords, ogImage, ogUrl, noindex, structuredData, canonicalUrl]);
 
-  return (
-    <Helmet>
-      {/* Basic Meta Tags */}
-      <title>{fullTitle}</title>
-      <meta name="description" content={description} />
-      <meta name="keywords" content={keywords} />
-      <meta name="author" content={SITE_NAME} />
-      <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
-      <meta name="language" content="English" />
-      <meta name="revisit-after" content="7 days" />
-      
-      {/* Canonical URL */}
-      <link rel="canonical" href={fullCanonicalUrl} />
-      
-      {/* Open Graph / Facebook */}
-      <meta property="og:type" content="website" />
-      <meta property="og:url" content={fullOgUrl} />
-      <meta property="og:title" content={fullTitle} />
-      <meta property="og:description" content={description} />
-      <meta property="og:image" content={ogImage} />
-      <meta property="og:site_name" content={SITE_NAME} />
-      
-      {/* Twitter */}
-      <meta property="twitter:card" content="summary_large_image" />
-      <meta property="twitter:url" content={fullOgUrl} />
-      <meta property="twitter:title" content={fullTitle} />
-      <meta property="twitter:description" content={description} />
-      <meta property="twitter:image" content={ogImage} />
-      
-      {/* Additional SEO Meta */}
-      <meta name="theme-color" content="#f59e0b" />
-      <meta name="msapplication-TileColor" content="#f59e0b" />
-      
-      {/* Structured Data */}
-      {structuredData && (
-        <script type="application/ld+json">
-          {JSON.stringify(structuredData)}
-        </script>
-      )}
-    </Helmet>
-  );
+  return null; // This component doesn't render anything
+}
+
+// Helper function to update meta tags
+function updateMetaTag(name: string, content: string) {
+  let meta = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement;
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = name;
+    document.head.appendChild(meta);
+  }
+  meta.content = content;
+}
+
+// Helper function to update Open Graph meta properties
+function updateMetaProperty(property: string, content: string) {
+  let meta = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement;
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.setAttribute('property', property);
+    document.head.appendChild(meta);
+  }
+  meta.content = content;
+}
+
+// Helper function to update structured data
+function updateStructuredData(data: Record<string, any>) {
+  // Remove existing structured data scripts
+  const existingScripts = document.querySelectorAll('script[type="application/ld+json"]');
+  existingScripts.forEach(script => script.remove());
+
+  // Add new structured data
+  const script = document.createElement('script');
+  script.type = 'application/ld+json';
+  script.textContent = JSON.stringify(data);
+  document.head.appendChild(script);
+}
+
+// Helper function to update canonical URL
+function updateCanonicalUrl(url: string) {
+  let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'canonical';
+    document.head.appendChild(link);
+  }
+  link.href = url;
 }
