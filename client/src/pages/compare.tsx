@@ -102,7 +102,7 @@ export default function ComparePage() {
                 <TableRow>
                   <TableHead className="w-44">Feature</TableHead>
                   {items.map((item) => (
-                    <TableHead key={item.id} className="min-w-[240px] align-top">
+                    <TableHead key={item.id} className="min-w-60 align-top">
                       <div className="space-y-3">
                         <div className="h-20 w-full bg-muted overflow-hidden rounded-md">
                           <img
