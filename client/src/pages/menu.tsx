@@ -463,29 +463,29 @@ export default function Menu() {
                     )}
                   </Button>
                 </SheetTrigger>
-                <SheetContent>
+                <SheetContent className="w-full sm:max-w-md">
                   <SheetHeader>
                     <SheetTitle>Favorites</SheetTitle>
-                    <SheetDescription>Products you’ve saved.</SheetDescription>
+                    <SheetDescription>Products you've saved.</SheetDescription>
                   </SheetHeader>
 
-                  <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
+                  <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[70vh]">
                     {favoritesItems.length === 0 ? (
                       <div className="text-center text-muted-foreground py-8">No favorites yet.</div>
                     ) : (
                       favoritesItems.map((item: MenuItem) => (
-                        <div key={item.id} className="flex items-center gap-4 border-b pb-4">
+                        <div key={item.id} className="flex items-start gap-3 border-b pb-3">
                           <ProductImage
                             images={item.images || (item.image ? [item.image] : [])}
                             productName={item.name}
-                            className="h-16 w-16 rounded-md object-cover cursor-pointer"
+                            className="h-14 w-14 rounded-md object-cover cursor-pointer shrink-0"
                             onImageClick={(e) => handleImageClick(item, e)}
                             enableSlideshow={false}
                           />
-                          <div className="flex-1">
-                            <h4 className="font-bold text-sm">{item.name}</h4>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-sm truncate">{item.name}</h4>
                             <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
-                            <div className="mt-2 flex items-center gap-2">
+                            <div className="mt-2 flex flex-col gap-1">
                               <Button
                                 type="button"
                                 size="sm"
@@ -493,6 +493,7 @@ export default function Menu() {
                                   addToCart(item);
                                 }}
                                 disabled={!item.available}
+                                className="w-full"
                               >
                                 Add to Cart
                               </Button>
@@ -504,6 +505,7 @@ export default function Menu() {
                                   toggleWishlist(item.id);
                                   toast({ title: "Removed", description: `${item.name} removed from favorites.` });
                                 }}
+                                className="w-full"
                               >
                                 Remove
                               </Button>
@@ -513,7 +515,7 @@ export default function Menu() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-8 w-8 shrink-0"
                             onClick={() => setLocation(`/menu?product=${item.id}`)}
                           >
                             <Eye className="h-4 w-4" />
@@ -537,7 +539,7 @@ export default function Menu() {
                     )}
                   </Button>
                 </SheetTrigger>
-                <SheetContent className="w-[95vw] sm:max-w-6xl">
+                <SheetContent className="w-full sm:max-w-6xl">
                   <SheetHeader>
                     <SheetTitle>Compare</SheetTitle>
                     <SheetDescription>Products in your compare list.</SheetDescription>
@@ -556,11 +558,11 @@ export default function Menu() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-44">Feature</TableHead>
+                            <TableHead className="w-32 sm:w-44">Feature</TableHead>
                             {compareItems.map((item) => (
-                              <TableHead key={item.id} className="min-w-60 align-top">
+                              <TableHead key={item.id} className="min-w-48 sm:min-w-60 align-top">
                                 <div className="space-y-3">
-                                  <div className="h-20 w-full bg-muted overflow-hidden rounded-md">
+                                  <div className="h-16 sm:h-20 w-full bg-muted overflow-hidden rounded-md">
                                     <img
                                       src={item.image || item.images?.[0] || ""}
                                       alt={item.name}
@@ -568,8 +570,8 @@ export default function Menu() {
                                     />
                                   </div>
                                   <div>
-                                    <div className="font-semibold leading-snug">{item.name}</div>
-                                    <div className="text-xs text-muted-foreground line-clamp-2">{item.description}</div>
+                                    <div className="font-semibold leading-snug text-sm">{item.name}</div>
+                                    <div className="text-xs text-muted-foreground line-clamp-2 hidden sm:block">{item.description}</div>
                                   </div>
                                 </div>
                               </TableHead>
@@ -701,10 +703,11 @@ export default function Menu() {
                                       addToCart(item);
                                       toast({ title: "Added to cart", description: `${item.name} added.` });
                                     }}
+                                    className="w-full"
                                   >
                                     Add to Cart
                                   </Button>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex flex-col sm:flex-row gap-2">
                                     <Button
                                       type="button"
                                       variant="secondary"
@@ -750,41 +753,41 @@ export default function Menu() {
                      )}
                    </Button>
                  </SheetTrigger>
-                 <SheetContent>
+                 <SheetContent className="w-full sm:max-w-md">
                    <SheetHeader>
                      <SheetTitle>Your Order</SheetTitle>
                      <SheetDescription>Review your items before checkout.</SheetDescription>
                    </SheetHeader>
                   
-                   <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
+                   <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[70vh]">
                      {cart.length === 0 ? (
                        <div className="text-center text-muted-foreground py-8">
                          Your cart is empty.
                        </div>
                      ) : (
                        cart.map(({ item, quantity }) => (
-                         <div key={item.id} className="flex items-center gap-4 border-b pb-4">
+                         <div key={item.id} className="flex items-center gap-3 border-b pb-3">
                            <ProductImage
                              images={item.images || (item.image ? [item.image] : [])}
                              productName={item.name}
-                             className="h-16 w-16 rounded-md object-cover cursor-pointer"
+                             className="h-14 w-14 rounded-md object-cover cursor-pointer shrink-0"
                              onImageClick={(e) => handleImageClick(item, e)}
                              enableSlideshow={false}
                            />
-                           <div className="flex-1">
-                             <h4 className="font-bold text-sm">{item.name}</h4>
+                           <div className="flex-1 min-w-0">
+                             <h4 className="font-bold text-sm truncate">{item.name}</h4>
                              <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
                              <div className="flex items-center gap-2 mt-2">
-                               <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, -(item.quantityStep || 1))}>
+                               <Button variant="outline" size="icon" className="h-6 w-6 shrink-0" onClick={() => updateQuantity(item.id, -(item.quantityStep || 1))}>
                                  <Minus className="h-3 w-3" />
                                </Button>
                                <span className="text-xs font-bold w-4 text-center">{quantity}</span>
-                               <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantityStep || 1)}>
+                               <Button variant="outline" size="icon" className="h-6 w-6 shrink-0" onClick={() => updateQuantity(item.id, item.quantityStep || 1)}>
                                  <Plus className="h-3 w-3" />
                                </Button>
                              </div>
                            </div>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.id)}>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0" onClick={() => removeFromCart(item.id)}>
                              <span className="sr-only">Remove</span>
                              <Plus className="h-4 w-4 rotate-45" />
                            </Button>
