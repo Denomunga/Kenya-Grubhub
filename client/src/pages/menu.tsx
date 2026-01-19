@@ -425,6 +425,12 @@ export default function Menu() {
                      <SheetDescription>Products you’ve saved.</SheetDescription>
                    </SheetHeader>
 
+                   <div className="mt-4">
+                     <Button type="button" variant="secondary" className="w-full" onClick={() => setLocation("/favorites")}>
+                       Open Favorites Page
+                     </Button>
+                   </div>
+
                    <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
                      {favoritesItems.length === 0 ? (
                        <div className="text-center text-muted-foreground py-8">No favorites yet.</div>
@@ -498,6 +504,12 @@ export default function Menu() {
                      <SheetTitle>Compare</SheetTitle>
                      <SheetDescription>Products in your compare list.</SheetDescription>
                    </SheetHeader>
+
+                   <div className="mt-4">
+                     <Button type="button" variant="secondary" className="w-full" onClick={() => setLocation("/compare")}>
+                       Open Compare Page
+                     </Button>
+                   </div>
 
                    <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
                      {compareItems.length === 0 ? (
