@@ -384,10 +384,6 @@ export default function Menu() {
     return menu.filter((p: MenuItem) => wishlist.has(p.id));
   }, [menu, wishlist]);
 
-  const compareItems = useMemo(() => {
-    return menu.filter((p: MenuItem) => compare.has(p.id));
-  }, [menu, compare]);
-
   return (
     <>
       <SEOMetaTags 
@@ -487,85 +483,22 @@ export default function Menu() {
                  </SheetContent>
                </Sheet>
 
-               {/* Compare Sheet */}
-               <Sheet>
-                 <SheetTrigger asChild>
-                   <Button type="button" variant="outline" size="icon" className="relative" aria-label="Compare">
-                     <GitCompare className={`h-4 w-4 ${compare.size > 0 ? "text-primary" : ""}`} />
-                     {compare.size > 0 && (
-                       <Badge className="absolute -top-1 -right-1 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-[10px] border-2 border-white shadow-xl z-10">
-                         {compare.size > 9 ? "9+" : compare.size}
-                       </Badge>
-                     )}
-                   </Button>
-                 </SheetTrigger>
-                 <SheetContent>
-                   <SheetHeader>
-                     <SheetTitle>Compare</SheetTitle>
-                     <SheetDescription>Products in your compare list.</SheetDescription>
-                   </SheetHeader>
-
-                   <div className="mt-4">
-                     <Button type="button" variant="secondary" className="w-full" onClick={() => setLocation("/compare")}>
-                       Open Compare Page
-                     </Button>
-                   </div>
-
-                   <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
-                     {compareItems.length === 0 ? (
-                       <div className="text-center text-muted-foreground py-8">No products to compare yet.</div>
-                     ) : (
-                       compareItems.map((item: MenuItem) => (
-                         <div key={item.id} className="flex items-center gap-4 border-b pb-4">
-                           <ProductImage
-                             images={item.images || (item.image ? [item.image] : [])}
-                             productName={item.name}
-                             className="h-16 w-16 rounded-md object-cover cursor-pointer"
-                             onImageClick={(e) => handleImageClick(item, e)}
-                             enableSlideshow={false}
-                           />
-                           <div className="flex-1">
-                             <h4 className="font-bold text-sm">{item.name}</h4>
-                             <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
-                             <div className="mt-2 flex items-center gap-2">
-                               <Button
-                                 type="button"
-                                 size="sm"
-                                 onClick={() => {
-                                   addToCart(item);
-                                 }}
-                                 disabled={!item.available}
-                               >
-                                 Add to Cart
-                               </Button>
-                               <Button
-                                 type="button"
-                                 size="sm"
-                                 variant="outline"
-                                 onClick={() => {
-                                   toggleCompare(item.id);
-                                   toast({ title: "Removed", description: `${item.name} removed from compare.` });
-                                 }}
-                               >
-                                 Remove
-                               </Button>
-                             </div>
-                           </div>
-                           <Button
-                             type="button"
-                             variant="ghost"
-                             size="icon"
-                             className="h-8 w-8"
-                             onClick={() => setLocation(`/menu?product=${item.id}`)}
-                           >
-                             <Eye className="h-4 w-4" />
-                           </Button>
-                         </div>
-                       ))
-                     )}
-                   </div>
-                 </SheetContent>
-               </Sheet>
+               {/* Compare Button */}
+               <Button 
+                 type="button" 
+                 variant="outline" 
+                 size="icon" 
+                 className="relative" 
+                 aria-label="Compare"
+                 onClick={() => setLocation("/compare")}
+               >
+                 <GitCompare className={`h-4 w-4 ${compare.size > 0 ? "text-primary" : ""}`} />
+                 {compare.size > 0 && (
+                   <Badge className="absolute -top-1 -right-1 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-[10px] border-2 border-white shadow-xl z-10">
+                     {compare.size > 9 ? "9+" : compare.size}
+                   </Badge>
+                 )}
+               </Button>
 
                {/* Cart Sheet */}
                <Sheet>
