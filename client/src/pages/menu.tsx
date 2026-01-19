@@ -380,10 +380,6 @@ export default function Menu() {
 
   const cartTotal = cart.reduce((sum, i) => sum + (i.item.price * i.quantity), 0);
 
-  const favoritesItems = useMemo(() => {
-    return menu.filter((p: MenuItem) => wishlist.has(p.id));
-  }, [menu, wishlist]);
-
   return (
     <>
       <SEOMetaTags 
@@ -403,85 +399,22 @@ export default function Menu() {
              </div>
 
              <div className="flex items-center gap-2 shrink-0">
-               {/* Favorites Sheet */}
-               <Sheet>
-                 <SheetTrigger asChild>
-                   <Button type="button" variant="outline" size="icon" className="relative" aria-label="Favorites">
-                     <Heart className={`h-4 w-4 ${wishlist.size > 0 ? "text-red-600" : ""}`} />
-                     {wishlist.size > 0 && (
-                       <Badge className="absolute -top-1 -right-1 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-[10px] border-2 border-white shadow-xl z-10">
-                         {wishlist.size > 9 ? "9+" : wishlist.size}
-                       </Badge>
-                     )}
-                   </Button>
-                 </SheetTrigger>
-                 <SheetContent>
-                   <SheetHeader>
-                     <SheetTitle>Favorites</SheetTitle>
-                     <SheetDescription>Products you’ve saved.</SheetDescription>
-                   </SheetHeader>
-
-                   <div className="mt-4">
-                     <Button type="button" variant="secondary" className="w-full" onClick={() => setLocation("/favorites")}>
-                       Open Favorites Page
-                     </Button>
-                   </div>
-
-                   <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
-                     {favoritesItems.length === 0 ? (
-                       <div className="text-center text-muted-foreground py-8">No favorites yet.</div>
-                     ) : (
-                       favoritesItems.map((item: MenuItem) => (
-                         <div key={item.id} className="flex items-center gap-4 border-b pb-4">
-                           <ProductImage
-                             images={item.images || (item.image ? [item.image] : [])}
-                             productName={item.name}
-                             className="h-16 w-16 rounded-md object-cover cursor-pointer"
-                             onImageClick={(e) => handleImageClick(item, e)}
-                             enableSlideshow={false}
-                           />
-                           <div className="flex-1">
-                             <h4 className="font-bold text-sm">{item.name}</h4>
-                             <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
-                             <div className="mt-2 flex items-center gap-2">
-                               <Button
-                                 type="button"
-                                 size="sm"
-                                 onClick={() => {
-                                   addToCart(item);
-                                 }}
-                                 disabled={!item.available}
-                               >
-                                 Add to Cart
-                               </Button>
-                               <Button
-                                 type="button"
-                                 size="sm"
-                                 variant="outline"
-                                 onClick={() => {
-                                   toggleWishlist(item.id);
-                                   toast({ title: "Removed", description: `${item.name} removed from favorites.` });
-                                 }}
-                               >
-                                 Remove
-                               </Button>
-                             </div>
-                           </div>
-                           <Button
-                             type="button"
-                             variant="ghost"
-                             size="icon"
-                             className="h-8 w-8"
-                             onClick={() => setLocation(`/menu?product=${item.id}`)}
-                           >
-                             <Eye className="h-4 w-4" />
-                           </Button>
-                         </div>
-                       ))
-                     )}
-                   </div>
-                 </SheetContent>
-               </Sheet>
+               {/* Favorites Button */}
+               <Button 
+                 type="button" 
+                 variant="outline" 
+                 size="icon" 
+                 className="relative" 
+                 aria-label="Favorites"
+                 onClick={() => setLocation("/favorites")}
+               >
+                 <Heart className={`h-4 w-4 ${wishlist.size > 0 ? "text-red-600" : ""}`} />
+                 {wishlist.size > 0 && (
+                   <Badge className="absolute -top-1 -right-1 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-[10px] border-2 border-white shadow-xl z-10">
+                     {wishlist.size > 9 ? "9+" : wishlist.size}
+                   </Badge>
+                 )}
+               </Button>
 
                {/* Compare Button */}
                <Button 
