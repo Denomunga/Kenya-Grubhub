@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from 'wouter';
 import { motion } from "framer-motion";
-import heroImage from "@assets/generated_images/a.jpeg";
+import heroImage from "@assets/generated_images/acbd.jpeg";
 const HeroSection = () => {
 
   return (
@@ -18,6 +18,8 @@ const HeroSection = () => {
           alt="Modern Kenyan Laptops, Stationery, Computer Accessories, and Repairs"
           className="w-full h-full object-cover"
           loading="eager"
+          fetchPriority="high"
+          decoding="async"
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ duration: 1.2, ease: "easeOut" }}

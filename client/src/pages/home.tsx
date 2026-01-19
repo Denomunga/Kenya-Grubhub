@@ -5,7 +5,6 @@ import { apiFetch } from "@/lib/api";
 import HeroSection from "@/components/home/HeroSection";
 import CategoryFilter from "@/components/home/CategoryFilter";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
-import InteractiveMap from "@/components/home/InteractiveMap";
 import ProductSearch from "@/components/search/ProductSearch";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, MapPin, CheckCircle, AlertCircle, Eye } from "lucide-react";
@@ -13,6 +12,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { SEOMetaTags } from "@/components/seo/SEOMetaTags";
 import { useWebsiteStructuredData } from "@/components/seo/StructuredData";
+import { useIntersectionObserver } from "@/hooks/usePerformanceOptimizations";
+
+const LazyInteractiveMap = React.lazy(() => import("@/components/home/InteractiveMap"));
 
 
 interface NewsItem {
@@ -49,6 +51,14 @@ export default function Home() {
   
   // SEO structured data
   const websiteStructuredData = useWebsiteStructuredData();
+
+  const mapObserver = useIntersectionObserver(
+    {
+      threshold: 0.01,
+      rootMargin: '300px'
+    },
+    true
+  );
   
   // Parallax scroll effect - optimized with throttling and reduced motion support
   const [scrollY, setScrollY] = useState(0);
@@ -788,8 +798,17 @@ export default function Home() {
           initial={{ x: 100 }}
           whileInView={{ x: 0 }}
           transition={{ duration: 0.6 }}
+          ref={mapObserver.ref as any}
         >
-          <InteractiveMap />
+          {mapObserver.hasBeenVisible ? (
+            <React.Suspense
+              fallback={<div className="h-[600px] w-full bg-muted" />}
+            >
+              <LazyInteractiveMap />
+            </React.Suspense>
+          ) : (
+            <div className="h-[600px] w-full bg-muted" />
+          )}
         </motion.div>
       </motion.section>
     </div>
