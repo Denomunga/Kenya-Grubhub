@@ -21,6 +21,14 @@ import {
   SheetTrigger,
   SheetFooter,
 } from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -133,7 +141,7 @@ export default function Menu() {
   const [searchParams] = useSearchParams();
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchedProducts, setSearchedProducts] = useState<MenuItem[]>([]);
-  const { cart, addToCart: addToCartShared, removeFromCart, setCartItemQuantity, clearCart, wishlist, compare, toggleWishlist, toggleCompare } = useShop();
+  const { cart, addToCart: addToCartShared, removeFromCart, setCartItemQuantity, clearCart, wishlist, compare, toggleWishlist, toggleCompare, clearCompare } = useShop();
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [orderConfirmationOpen, setOrderConfirmationOpen] = useState(false);
@@ -288,6 +296,41 @@ export default function Menu() {
     const decimals = getStepDecimals(step);
     const normalized = Math.round(value / step) * step;
     return Number(normalized.toFixed(decimals));
+  };
+
+  const renderText = (value: unknown) => {
+    if (value === undefined || value === null || value === "") return "—";
+    return String(value);
+  };
+
+  const renderDimensions = (value: any) => {
+    if (!value) return "—";
+    const { length, width, height } = value;
+    if ([length, width, height].every((v) => v === undefined || v === null || v === "")) return "—";
+    return `${renderText(length)}L × ${renderText(width)}W × ${renderText(height)}H cm`;
+  };
+
+  const renderTags = (tags: any) => {
+    if (!Array.isArray(tags) || tags.length === 0) return "—";
+    return tags.slice(0, 6).join(", ");
+  };
+
+  const renderKeySpecs = (specs: any) => {
+    if (!specs || typeof specs !== "object") return "—";
+    const entries = Object.entries(specs).slice(0, 6);
+    if (entries.length === 0) return "—";
+    return (
+      <div className="space-y-1">
+        {entries.map(([k, v]) => {
+          const label = String(k).replace(/([A-Z])/g, " $1").trim();
+          return (
+            <div key={String(k)} className="text-xs">
+              <span className="font-medium capitalize">{label}:</span> {renderText(v)}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   const updateQuantity = (itemId: string, delta: number) => {
@@ -494,65 +537,203 @@ export default function Menu() {
                     )}
                   </Button>
                 </SheetTrigger>
-                <SheetContent>
+                <SheetContent className="w-[95vw] sm:max-w-6xl">
                   <SheetHeader>
                     <SheetTitle>Compare</SheetTitle>
                     <SheetDescription>Products in your compare list.</SheetDescription>
                   </SheetHeader>
 
-                  <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
-                    {compareItems.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-8">No products to compare yet.</div>
-                    ) : (
-                      compareItems.map((item: MenuItem) => (
-                        <div key={item.id} className="flex items-center gap-4 border-b pb-4">
-                          <ProductImage
-                            images={item.images || (item.image ? [item.image] : [])}
-                            productName={item.name}
-                            className="h-16 w-16 rounded-md object-cover cursor-pointer"
-                            onImageClick={(e) => handleImageClick(item, e)}
-                            enableSlideshow={false}
-                          />
-                          <div className="flex-1">
-                            <h4 className="font-bold text-sm">{item.name}</h4>
-                            <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
-                            <div className="mt-2 flex items-center gap-2">
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={() => {
-                                  addToCart(item);
-                                }}
-                                disabled={!item.available}
-                              >
-                                Add to Cart
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  toggleCompare(item.id);
-                                  toast({ title: "Removed", description: `${item.name} removed from compare.` });
-                                }}
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setLocation(`/menu?product=${item.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))
-                    )}
+                  <div className="mt-4 flex items-center justify-end gap-2">
+                    <Button type="button" variant="outline" disabled={compareItems.length === 0} onClick={() => clearCompare()}>
+                      Clear
+                    </Button>
                   </div>
+
+                  {compareItems.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-10">No products to compare yet.</div>
+                  ) : (
+                    <div className="mt-4 overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-44">Feature</TableHead>
+                            {compareItems.map((item) => (
+                              <TableHead key={item.id} className="min-w-60 align-top">
+                                <div className="space-y-3">
+                                  <div className="h-20 w-full bg-muted overflow-hidden rounded-md">
+                                    <img
+                                      src={item.image || item.images?.[0] || ""}
+                                      alt={item.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                  <div>
+                                    <div className="font-semibold leading-snug">{item.name}</div>
+                                    <div className="text-xs text-muted-foreground line-clamp-2">{item.description}</div>
+                                  </div>
+                                </div>
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="font-medium">Price</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id} className="font-bold text-primary tabular-nums">
+                                {formatPriceKSHS(item.price)}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Availability</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{item.available ? "In stock" : "Out of stock"}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Stock</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{(item as any).stock === undefined ? "—" : renderText((item as any).stock)}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Category</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{renderText(item.category)}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Brand</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{renderText((item as any).brand)}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Condition</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{renderText((item as any).condition)}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Year</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{renderText((item as any).year)}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Size</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{renderText((item as any).size)}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Color</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{renderText((item as any).color)}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Material</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{renderText((item as any).material)}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Location</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{renderText((item as any).location)}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Weight</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>
+                                {(item as any).weight === undefined ? "—" : `${renderText((item as any).weight)} kg`}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Dimensions</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{renderDimensions((item as any).dimensions)}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Tags</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id} className="text-xs text-muted-foreground">
+                                {renderTags((item as any).tags)}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Key Specs</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>{renderKeySpecs((item as any).specifications)}</TableCell>
+                            ))}
+                          </TableRow>
+
+                          <TableRow>
+                            <TableCell className="font-medium">Actions</TableCell>
+                            {compareItems.map((item) => (
+                              <TableCell key={item.id}>
+                                <div className="flex flex-col gap-2">
+                                  <Button
+                                    type="button"
+                                    disabled={!item.available}
+                                    onClick={() => {
+                                      addToCart(item);
+                                      toast({ title: "Added to cart", description: `${item.name} added.` });
+                                    }}
+                                  >
+                                    Add to Cart
+                                  </Button>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      className="flex-1"
+                                      onClick={() => setLocation(`/menu?product=${item.id}`)}
+                                    >
+                                      View
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      className="flex-1"
+                                      onClick={() => {
+                                        toggleCompare(item.id);
+                                        toast({ title: "Removed", description: `${item.name} removed from compare.` });
+                                      }}
+                                      aria-label={`Remove ${item.name} from compare`}
+                                    >
+                                      Remove
+                                    </Button>
+                                  </div>
+                                </div>
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </SheetContent>
               </Sheet>
 
