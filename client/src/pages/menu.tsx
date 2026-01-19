@@ -9,7 +9,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, GitCompare, Heart, ShoppingBag, Plus, Minus, Trash, MapPin, Phone } from "lucide-react";
+import { Eye, GitCompare, Heart, ShoppingBag, Plus, Minus, Trash, Trash2, MapPin, Phone, ShoppingCart } from "lucide-react";
 import { formatPriceKSHS, formatPrice } from "@/lib/format";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -753,55 +753,81 @@ export default function Menu() {
                      )}
                    </Button>
                  </SheetTrigger>
-                 <SheetContent className="w-full sm:max-w-md">
-                   <SheetHeader>
-                     <SheetTitle>Your Order</SheetTitle>
-                     <SheetDescription>Review your items before checkout.</SheetDescription>
-                   </SheetHeader>
-                  
-                   <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[70vh]">
-                     {cart.length === 0 ? (
-                       <div className="text-center text-muted-foreground py-8">
-                         Your cart is empty.
-                       </div>
-                     ) : (
-                       cart.map(({ item, quantity }) => (
-                         <div key={item.id} className="flex items-center gap-3 border-b pb-3">
-                           <ProductImage
-                             images={item.images || (item.image ? [item.image] : [])}
-                             productName={item.name}
-                             className="h-14 w-14 rounded-md object-cover cursor-pointer shrink-0"
-                             onImageClick={(e) => handleImageClick(item, e)}
-                             enableSlideshow={false}
-                           />
-                           <div className="flex-1 min-w-0">
-                             <h4 className="font-bold text-sm truncate">{item.name}</h4>
-                             <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
-                             <div className="flex items-center gap-2 mt-2">
-                               <Button variant="outline" size="icon" className="h-6 w-6 shrink-0" onClick={() => updateQuantity(item.id, -(item.quantityStep || 1))}>
-                                 <Minus className="h-3 w-3" />
-                               </Button>
-                               <span className="text-xs font-bold w-4 text-center">{quantity}</span>
-                               <Button variant="outline" size="icon" className="h-6 w-6 shrink-0" onClick={() => updateQuantity(item.id, item.quantityStep || 1)}>
-                                 <Plus className="h-3 w-3" />
-                               </Button>
-                             </div>
-                           </div>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0" onClick={() => removeFromCart(item.id)}>
-                             <span className="sr-only">Remove</span>
-                             <Plus className="h-4 w-4 rotate-45" />
-                           </Button>
-                         </div>
-                       ))
-                     )}
-                   </div>
+                 <SheetContent className="w-full sm:max-w-md p-0">
+                   <div className="flex flex-col h-full">
+                     <SheetHeader className="p-6 pb-2">
+                       <SheetTitle className="text-lg">Your Order</SheetTitle>
+                       <SheetDescription className="text-sm">Review your items before checkout.</SheetDescription>
+                     </SheetHeader>
+                     
+                    <div className="flex-1 overflow-y-auto px-6 pb-4">
+                      <div className="space-y-3">
+                        {cart.length === 0 ? (
+                          <div className="text-center text-muted-foreground py-12">
+                            <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p className="text-base">Your cart is empty.</p>
+                            <p className="text-sm mt-2">Add some products to get started!</p>
+                          </div>
+                        ) : (
+                          cart.map(({ item, quantity }) => (
+                            <div key={item.id} className="bg-card border rounded-lg p-3 shadow-sm">
+                              <div className="flex gap-3">
+                                <ProductImage
+                                  images={item.images || (item.image ? [item.image] : [])}
+                                  productName={item.name}
+                                  className="h-16 w-16 rounded-lg object-cover cursor-pointer shrink-0"
+                                  onImageClick={(e) => handleImageClick(item, e)}
+                                  enableSlideshow={false}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-sm leading-tight mb-1 line-clamp-2">{item.name}</h4>
+                                  <p className="text-sm font-medium text-primary mb-2">{formatPriceKSHS(item.price)}</p>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1 bg-muted rounded-md p-1">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-7 w-7 p-0 hover:bg-background" 
+                                        onClick={() => updateQuantity(item.id, -(item.quantityStep || 1))}
+                                      >
+                                        <Minus className="h-3 w-3" />
+                                      </Button>
+                                      <span className="text-sm font-medium w-8 text-center">{quantity}</span>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-7 w-7 p-0 hover:bg-background" 
+                                        onClick={() => updateQuantity(item.id, item.quantityStep || 1)}
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" 
+                                      onClick={() => removeFromCart(item.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
 
-                   <SheetFooter className="mt-auto border-t pt-4">
+                   <SheetFooter className="border-t bg-background p-6 mt-auto">
                      <div className="w-full space-y-4">
                        {/* Location Display */}
                        <div className="space-y-2">
                          <div className="flex justify-between items-center">
-                           <span className="text-sm font-medium">Delivery Location:</span>
+                           <span className="text-sm font-medium flex items-center gap-2">
+                             <MapPin className="h-4 w-4" />
+                             Delivery Location
+                           </span>
                            <Button 
                              size="sm" 
                              variant="outline" 
@@ -811,19 +837,19 @@ export default function Menu() {
                            </Button>
                          </div>
                          {selectedLocation ? (
-                           <div className="bg-muted p-2 rounded text-sm">
-                             <div className="flex items-center gap-2">
-                               <MapPin className="h-4 w-4 text-primary" />
-                               <span className="truncate">{selectedLocation.address}</span>
+                           <div className="bg-muted/50 p-3 rounded-lg text-sm">
+                             <div className="flex items-start gap-2">
+                               <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                               <span className="flex-1">{selectedLocation.address}</span>
                              </div>
                              {selectedLocation.instructions && (
-                               <p className="text-xs text-muted-foreground mt-1">
-                                 Instructions: {selectedLocation.instructions}
+                               <p className="text-xs text-muted-foreground mt-2 ml-6">
+                                 {selectedLocation.instructions}
                                </p>
                              )}
                            </div>
                          ) : (
-                           <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground text-center">
+                           <div className="bg-muted/30 p-3 rounded-lg text-sm text-muted-foreground text-center border border-dashed">
                              No delivery location selected
                            </div>
                          )}
@@ -832,7 +858,10 @@ export default function Menu() {
                        {/* Phone Number Display/Input */}
                        <div className="space-y-2">
                          <div className="flex justify-between items-center">
-                           <span className="text-sm font-medium">Contact Phone:</span>
+                           <span className="text-sm font-medium flex items-center gap-2">
+                             <Phone className="h-4 w-4" />
+                             Contact Phone
+                           </span>
                            {!user?.phone && !showPhoneInput && (
                              <Button 
                                size="sm" 
@@ -844,20 +873,22 @@ export default function Menu() {
                            )}
                          </div>
                          {user?.phone ? (
-                           <div className="bg-muted p-2 rounded text-sm">
-                             <div className="flex items-center gap-2">
-                               <Phone className="h-4 w-4 text-primary" />
-                               <span>{user.phone}</span>
+                           <div className="bg-muted/50 p-3 rounded-lg text-sm">
+                             <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-2">
+                                 <Phone className="h-4 w-4 text-primary" />
+                                 <span>{user.phone}</span>
+                               </div>
                                <Button 
                                  size="sm" 
                                  variant="ghost" 
-                                 className="h-6 px-2 text-xs"
+                                 className="h-7 px-2 text-xs hover:bg-background"
                                  onClick={() => {
                                    setCheckoutPhone(user.phone || '');
                                    setShowPhoneInput(true);
                                  }}
                                >
-                                 Update
+                                 Edit
                                </Button>
                              </div>
                            </div>
@@ -865,16 +896,15 @@ export default function Menu() {
                            <div className="space-y-2">
                              <Input
                                type="tel"
-                               placeholder="e.g. +254700000000"
+                               placeholder="+254700000000"
                                value={checkoutPhone}
                                onChange={(e) => setCheckoutPhone(e.target.value)}
-                               className="w-full"
+                               className="text-sm"
                              />
                              <div className="flex gap-2">
                                <Button 
                                  size="sm" 
                                  variant="outline" 
-                                 className="flex-1"
                                  onClick={() => {
                                    setShowPhoneInput(false);
                                    setCheckoutPhone('');
@@ -884,11 +914,8 @@ export default function Menu() {
                                </Button>
                                <Button 
                                  size="sm" 
-                                 className="flex-1"
                                  onClick={() => {
-                                   if (checkoutPhone.trim()) {
-                                     setShowPhoneInput(false);
-                                   }
+                                   setShowPhoneInput(false);
                                  }}
                                >
                                  Save
@@ -896,26 +923,32 @@ export default function Menu() {
                              </div>
                            </div>
                          ) : (
-                           <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground text-center">
+                           <div className="bg-muted/30 p-3 rounded-lg text-sm text-muted-foreground text-center border border-dashed">
                              No phone number provided
                            </div>
                          )}
                        </div>
 
-                       <div className="flex items-center justify-between text-sm font-medium">
-                         <span>Total</span>
-                         <span className="tabular-nums">{formatPriceKSHS(cartTotal)}</span>
+                       {/* Total and Checkout */}
+                       <div className="space-y-3 pt-2">
+                         <div className="flex items-center justify-between text-base font-medium">
+                           <span>Total</span>
+                           <span className="text-lg font-bold text-primary">{formatPriceKSHS(cartTotal)}</span>
+                         </div>
+                         <Button 
+                           className="w-full h-11 text-base font-medium" 
+                           disabled={cart.length === 0 || !selectedLocation || (!user?.phone && !checkoutPhone.trim())} 
+                           onClick={handleCheckout}
+                         >
+                           {cart.length === 0 ? 'Add Items to Cart' : 
+                            !selectedLocation ? 'Select Location' :
+                            (!user?.phone && !checkoutPhone.trim()) ? 'Add Phone Number' :
+                            'Proceed to Checkout'}
+                         </Button>
                        </div>
-
-                       <Button 
-                         className="w-full h-12 text-lg" 
-                         disabled={cart.length === 0 || !selectedLocation || (!user?.phone && !checkoutPhone.trim())} 
-                         onClick={handleCheckout}
-                       >
-                         Checkout {selectedLocation ? '' : '(Location Required)'}{(!user?.phone && !checkoutPhone.trim()) ? ' (Phone Required)' : ''}
-                       </Button>
                      </div>
                    </SheetFooter>
+                   </div>
                  </SheetContent>
                </Sheet>
              </div>
@@ -931,9 +964,9 @@ export default function Menu() {
 
           <div className="flex flex-col md:flex-row justify-between items-end gap-4 mt-6">
            <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
-             <TabsList className="bg-muted">
+             <TabsList className="bg-muted w-full overflow-x-auto flex-nowrap scrollbar-hide">
                {categories.map(cat => (
-                 <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary">
+                 <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0">
                    {cat}
                  </TabsTrigger>
                ))}
