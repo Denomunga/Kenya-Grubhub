@@ -3,7 +3,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
@@ -227,19 +226,8 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
   }, [filters]);
 
   return (
-    <Card className={`${className} border-0 shadow-xl bg-linear-to-br from-background/90 to-muted/40 backdrop-blur-lg`}>
-      <CardContent className="p-5 sm:p-6 lg:p-6">
+    <div className={`${className} space-y-5`}>
         <div className="space-y-5">
-          {/* Header with icon */}
-          <div className="text-center mb-4">
-            <div className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-linear-to-r from-blue-500 to-purple-600 text-white mb-2">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Discover Products
-            </h2>
-            <p className="text-muted-foreground text-sm">Find exactly what you're looking for</p>
-          </div>
 
           {/* Main Search Bar */}
           <div className="relative group">
@@ -503,32 +491,33 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Results Summary */}
-          <div className="flex items-center justify-between p-4 bg-linear-to-r from-muted/40 to-muted/20 rounded-lg border border-border">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-              <span className="text-xs font-medium text-foreground">
-                {isLoading ? (
-                  'Searching...'
-                ) : (
-                  <>
-                    <span className="text-base font-bold text-blue-600">{filteredProducts.length}</span>
-                    <span className="text-muted-foreground"> of </span>
-                    <span className="text-base font-bold text-purple-600">{products.length}</span>
-                    <span className="text-muted-foreground"> products found</span>
-                  </>
-                )}
-              </span>
-            </div>
-            {filteredProducts.length === 0 && !isLoading && (
-              <div className="text-xs text-muted-foreground italic">
-                Try adjusting your filters or search terms
+          {/* Results Summary - Only show when searching */}
+          {filters.query && (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                <span className="text-xs font-medium text-foreground">
+                  {isLoading ? (
+                    'Searching...'
+                  ) : (
+                    <>
+                      <span className="text-base font-bold text-blue-600">{filteredProducts.length}</span>
+                      <span className="text-muted-foreground"> of </span>
+                      <span className="text-base font-bold text-purple-600">{products.length}</span>
+                      <span className="text-muted-foreground"> products found</span>
+                    </>
+                  )}
+                </span>
               </div>
-            )}
-          </div>
+              {filteredProducts.length === 0 && !isLoading && (
+                <div className="text-xs text-muted-foreground italic">
+                  Try adjusting your search terms
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 };
 
