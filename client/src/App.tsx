@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,7 +7,7 @@ import { ChatProvider } from "@/lib/chatApi";
 import { ShopProvider } from "@/lib/shop";
 import { Layout } from "@/components/layout";
 import NotFound from "@/pages/not-found";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PageLoader } from "@/components/ui/LoadingStates";
 import { CSRFTokenManager } from "@/lib/csrf";
@@ -93,8 +93,16 @@ const Profile = lazy(() => import("@/pages/profile"));
 const ConfirmPassword = lazy(() => import("@/pages/confirm-password"));
 const NewsDetail = lazy(() => import("@/pages/news-detail"));
 const ConfirmPhone = lazy(() => import("@/pages/confirm-phone"));
-const Favorites = lazy(() => import("@/pages/favorites"));
-const Compare = lazy(() => import("@/pages/compare"));
+
+function RedirectToMenu() {
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    setLocation("/menu");
+  }, [setLocation]);
+
+  return null;
+}
 
 function Router() {
   return (
@@ -115,8 +123,8 @@ function Router() {
             <Switch>
               <Route path="/" component={Home} />
               <Route path="/menu" component={Menu} />
-              <Route path="/favorites" component={Favorites} />
-              <Route path="/compare" component={Compare} />
+              <Route path="/favorites" component={RedirectToMenu} />
+              <Route path="/compare" component={RedirectToMenu} />
               <Route path="/login" component={Auth} />
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/chat" component={Chat} />
