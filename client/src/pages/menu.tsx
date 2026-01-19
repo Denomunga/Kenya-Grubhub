@@ -151,6 +151,8 @@ export default function Menu() {
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [checkoutPhone, setCheckoutPhone] = useState<string>('');
   const [showPhoneInput, setShowPhoneInput] = useState<boolean>(false);
+  const [favoritesSheetOpen, setFavoritesSheetOpen] = useState<boolean>(false);
+  const [compareSheetOpen, setCompareSheetOpen] = useState<boolean>(false);
 
   // SEO structured data for the main category page
   const categoryStructuredData = useMemo(() => ({
@@ -416,6 +418,145 @@ export default function Menu() {
               </TabsList>
             </Tabs>
 
+            <div className="flex items-center gap-2">
+            {/* Favorites Sheet */}
+            <Sheet open={favoritesSheetOpen} onOpenChange={setFavoritesSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="relative">
+                  <Heart className="h-4 w-4" />
+                  {wishlist.size > 0 && (
+                   <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs border-2 border-white shadow-xl z-10">
+                      {wishlist.size > 9 ? '9+' : wishlist.size}
+                    </Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-full sm:max-w-md">
+                <SheetHeader>
+                  <SheetTitle>Your Favorites</SheetTitle>
+                  <SheetDescription>Items you've saved for later.</SheetDescription>
+                </SheetHeader>
+                
+                <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
+                  {wishlist.size === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">
+                      Your favorites list is empty.
+                    </div>
+                  ) : (
+                    Array.from(wishlist).map(itemId => {
+                      const item = menu.find(m => m.id === itemId);
+                      if (!item) return null;
+                      return (
+                        <div key={item.id} className="flex items-center gap-4 border-b pb-4">
+                          <ProductImage
+                            images={item.images || (item.image ? [item.image] : [])}
+                            productName={item.name}
+                            className="h-16 w-16 rounded-md object-cover cursor-pointer"
+                            onImageClick={(e) => handleImageClick(item, e)}
+                            enableSlideshow={false}
+                          />
+                          <div className="flex-1">
+                            <h4 className="font-bold text-sm">{item.name}</h4>
+                            <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              size="sm" 
+                              onClick={() => {
+                                addToCartShared(item);
+                                toast({ title: "Added to cart", description: `${item.name} has been added to your cart.` });
+                              }}
+                            >
+                              <ShoppingBag className="h-3 w-3 mr-1" />
+                              Add
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              onClick={() => toggleWishlist(item.id)}
+                            >
+                              <Trash className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            {/* Compare Sheet */}
+            <Sheet open={compareSheetOpen} onOpenChange={setCompareSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="relative">
+                  <GitCompare className="h-4 w-4" />
+                  {compare.size > 0 && (
+                   <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs border-2 border-white shadow-xl z-10">
+                      {compare.size > 9 ? '9+' : compare.size}
+                    </Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-full sm:max-w-md">
+                <SheetHeader>
+                  <SheetTitle>Compare Products</SheetTitle>
+                  <SheetDescription>Compare features and prices of selected items.</SheetDescription>
+                </SheetHeader>
+                
+                <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
+                  {compare.size === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">
+                      Your compare list is empty.
+                    </div>
+                  ) : (
+                    Array.from(compare).map(itemId => {
+                      const item = menu.find(m => m.id === itemId);
+                      if (!item) return null;
+                      return (
+                        <div key={item.id} className="flex items-center gap-4 border-b pb-4">
+                          <ProductImage
+                            images={item.images || (item.image ? [item.image] : [])}
+                            productName={item.name}
+                            className="h-16 w-16 rounded-md object-cover cursor-pointer"
+                            onImageClick={(e) => handleImageClick(item, e)}
+                            enableSlideshow={false}
+                          />
+                          <div className="flex-1">
+                            <h4 className="font-bold text-sm">{item.name}</h4>
+                            <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              <Badge variant="outline" className="text-xs">{item.category}</Badge>
+                              {item.brand && <Badge variant="secondary" className="text-xs">{item.brand}</Badge>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              size="sm" 
+                              onClick={() => {
+                                addToCartShared(item);
+                                toast({ title: "Added to cart", description: `${item.name} has been added to your cart.` });
+                              }}
+                            >
+                              <ShoppingBag className="h-3 w-3 mr-1" />
+                              Add
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              onClick={() => toggleCompare(item.id)}
+                            >
+                              <Trash className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+
             {/* Cart Sheet */}
             <Sheet>
               <SheetTrigger asChild>
@@ -594,6 +735,7 @@ export default function Menu() {
             </SheetContent>
           </Sheet>
         </div>
+      </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
