@@ -9,6 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, Printer, Search, BarChart3, Users, TrendingUp, Heart, LogOut,  RotateCcw, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiFetch } from '@/lib/api';
@@ -89,6 +92,12 @@ export default function POSSystem() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
+
+  const [isMobile, setIsMobile] = useState(false);
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkQuantities, setBulkQuantities] = useState<Record<string, number>>({});
 
   const [paymentMethod, setPaymentMethod] = useState<string>('Cash');
   const [paymentAmount, setPaymentAmount] = useState<string>('');
@@ -376,6 +385,14 @@ export default function POSSystem() {
     return {
       unit: product?.unit || 'pcs',
       step: product?.quantityStep || 1,
+    };
+  };
+
+  const getProductMeta = (productId: string) => {
+    const product = (products as Product[]).find((p: Product) => p.id === productId);
+    return {
+      step: product?.quantityStep || 1,
+      stock: product?.stock,
     };
   };
 
@@ -1073,8 +1090,244 @@ export default function POSSystem() {
     receiptWindow.print();
   };
 
+  const cartSummary = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Shopping Cart</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {cart.length === 0 ? (
+          <div className="text-muted-foreground text-center py-10 px-6">Cart is empty</div>
+        ) : (
+          <ScrollArea className="h-80 px-6">
+            <div className="space-y-4 py-4">
+              {cart.map((item) => {
+                const isLowStock = item.stock !== undefined && item.stock <= 5 && item.stock > 0;
+                const isOutOfStock = item.stock === 0;
+                return (
+                  <div key={item.productId} className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium truncate">{item.name}</div>
+                        {isOutOfStock && <Badge variant="destructive">Out</Badge>}
+                        {isLowStock && <Badge variant="secondary">Low</Badge>}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {formatPriceKSHS(item.price)} x {item.quantity}{item.unit ? ` ${item.unit}` : ''} • {formatPriceKSHS(item.price * item.quantity)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-10 w-10"
+                        aria-label={`Decrease quantity for ${item.name}`}
+                        onClick={() => updateQuantity(item.productId, item.quantity - (item.quantityStep || 1))}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-10 text-center font-medium tabular-nums">{item.quantity}</span>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-10 w-10"
+                        aria-label={`Increase quantity for ${item.name}`}
+                        onClick={() => updateQuantity(item.productId, item.quantity + (item.quantityStep || 1))}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        className="h-10 w-10"
+                        aria-label={`Remove ${item.name} from cart`}
+                        onClick={() => removeFromCart(item.productId)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const totalsAndPayment = (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Totals</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Subtotal</span>
+            <span className="font-medium">{formatPriceKSHS(getSubtotal())}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="discount">Discount</Label>
+              <Input
+                id="discount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={discount}
+                onChange={(e) => {
+                  const newDiscount = parseFloat(e.target.value) || 0;
+                  setDiscount(newDiscount);
+                  const currentPayment = parseFloat(paymentAmount) || 0;
+                  const newTotal = getSubtotal() + tax - newDiscount;
+                  if (currentPayment < newTotal) {
+                    setPaymentAmount(newTotal.toString());
+                  }
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="tax">Tax</Label>
+              <Input
+                id="tax"
+                type="number"
+                min="0"
+                step="0.01"
+                value={tax}
+                onChange={(e) => {
+                  const newTax = parseFloat(e.target.value) || 0;
+                  setTax(newTax);
+                  const currentPayment = parseFloat(paymentAmount) || 0;
+                  const newTotal = getSubtotal() + newTax - discount;
+                  if (currentPayment < newTotal) {
+                    setPaymentAmount(newTotal.toString());
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between border-t pt-3">
+            <span className="text-lg font-bold">Total</span>
+            <span className="text-lg font-bold">{formatPriceKSHS(getTotal())}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <Label htmlFor="paymentMethod">Payment Method</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger className="h-12 text-base">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Card">Card</SelectItem>
+                  <SelectItem value="Mobile Money">Mobile Money</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="paymentAmount">Payment Amount</Label>
+              <Input
+                id="paymentAmount"
+                ref={paymentAmountInputRef}
+                type="number"
+                min="0"
+                step="0.01"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="Enter payment amount"
+                className="h-12 text-base"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="customerName">Customer Name (Optional)</Label>
+              <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="h-11" />
+            </div>
+            <div>
+              <Label htmlFor="customerPhone">Customer Phone (Optional)</Label>
+              <Input id="customerPhone" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="h-11" />
+            </div>
+          </div>
+
+          {paymentAmount && parseFloat(paymentAmount) >= getTotal() && (
+            <div className="flex justify-between font-medium">
+              <span>Change:</span>
+              <span>{formatPriceKSHS(parseFloat(paymentAmount) - getTotal())}</span>
+            </div>
+          )}
+          <Button
+            onClick={() => {
+              processSale();
+            }}
+            disabled={cart.length === 0 || isProcessing || !paymentAmount}
+            className="w-full h-12 text-base font-semibold"
+            size="lg"
+          >
+            <CreditCard className="h-5 w-5 mr-2" />
+            {isProcessing ? 'Processing...' : 'Complete Sale'}
+          </Button>
+        </CardContent>
+      </Card>
+    </>
+  );
+
+  const toggleBulkSelected = (productId: string, checked: boolean) => {
+    setBulkSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(productId);
+      else next.delete(productId);
+      return next;
+    });
+  };
+
+  const setBulkQuantity = (productId: string, qty: number) => {
+    const meta = getProductMeta(productId);
+    const normalized = normalizeToStep(qty, meta.step);
+    setBulkQuantities((prev) => ({ ...prev, [productId]: normalized }));
+  };
+
+  const bulkAddToCart = () => {
+    if (bulkSelectedIds.size === 0) {
+      toast({ title: 'Error', description: 'Select at least one product', variant: 'destructive' });
+      return;
+    }
+
+    const selected = Array.from(bulkSelectedIds);
+    for (const id of selected) {
+      const meta = getProductMeta(id);
+      const rawQty = bulkQuantities[id] ?? meta.step;
+      const qty = normalizeToStep(rawQty, meta.step);
+      addProductToCart(id, qty);
+    }
+
+    setBulkSelectedIds(new Set());
+    setBulkQuantities({});
+    setBulkAddOpen(false);
+    if (isMobile) setCartDrawerOpen(true);
+  };
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)');
+    const apply = () => setIsMobile(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
   return (
-    <div className="space-y-8">
+    <div className={`space-y-8 ${posMode === 'sell' && isMobile ? 'pb-24' : ''}`}>
       {/* M-Pesa Payment Dialog */}
       <MpesaPaymentDialog
         open={waitingForPayment}
@@ -1082,7 +1335,6 @@ export default function POSSystem() {
           setWaitingForPayment(false);
           setCurrentSaleId('');
           setCurrentSale(null); // Clear the current sale to prevent receipt dialog
-          
           // Clear cart and reset form for clean state after cancellation
           setCart([]);
           setPaymentAmount('');
@@ -1090,7 +1342,6 @@ export default function POSSystem() {
           setCustomerPhone('');
           setDiscount(0);
           setTax(0);
-          
           // Cancel the M-Pesa payment by updating sale status to Failed
           if (currentSaleId) {
             try {
@@ -1107,7 +1358,6 @@ export default function POSSystem() {
               console.error('Failed to cancel M-Pesa payment:', error);
             }
           }
-          
           // Don't generate receipt when dialog is canceled
           toast({ title: 'Payment Canceled', description: 'M-Pesa payment was canceled' });
         }}
@@ -1178,7 +1428,12 @@ export default function POSSystem() {
           <div className="lg:col-span-7 xl:col-span-8 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Product Search & Favorites</CardTitle>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle>Product Search & Favorites</CardTitle>
+                  <Button type="button" variant="outline" onClick={() => setBulkAddOpen(true)}>
+                    Bulk Add
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end">
@@ -1355,194 +1610,12 @@ export default function POSSystem() {
             </Card>
           </div>
 
-          <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-20 self-start">
-            <Card>
-              <CardHeader>
-                <CardTitle>Shopping Cart</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {cart.length === 0 ? (
-                  <div className="text-muted-foreground text-center py-10 px-6">Cart is empty</div>
-                ) : (
-                  <ScrollArea className="h-80 px-6">
-                    <div className="space-y-4 py-4">
-                      {cart.map((item) => {
-                        const isLowStock = item.stock !== undefined && item.stock <= 5 && item.stock > 0;
-                        const isOutOfStock = item.stock === 0;
-                        return (
-                          <div key={item.productId} className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <div className="font-medium truncate">{item.name}</div>
-                                {isOutOfStock && <Badge variant="destructive">Out</Badge>}
-                                {isLowStock && <Badge variant="secondary">Low</Badge>}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {formatPriceKSHS(item.price)} x {item.quantity}{item.unit ? ` ${item.unit}` : ''} • {formatPriceKSHS(item.price * item.quantity)}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="h-10 w-10"
-                                aria-label={`Decrease quantity for ${item.name}`}
-                                onClick={() => updateQuantity(item.productId, item.quantity - (item.quantityStep || 1))}
-                              >
-                                <Minus className="h-4 w-4" />
-                              </Button>
-                              <span className="w-10 text-center font-medium tabular-nums">{item.quantity}</span>
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="h-10 w-10"
-                                aria-label={`Increase quantity for ${item.name}`}
-                                onClick={() => updateQuantity(item.productId, item.quantity + (item.quantityStep || 1))}
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="destructive"
-                                className="h-10 w-10"
-                                aria-label={`Remove ${item.name} from cart`}
-                                onClick={() => removeFromCart(item.productId)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Totals</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Subtotal</span>
-                  <span className="font-medium">{formatPriceKSHS(getSubtotal())}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="discount">Discount</Label>
-                    <Input
-                      id="discount"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={discount}
-                      onChange={(e) => {
-                        const newDiscount = parseFloat(e.target.value) || 0;
-                        setDiscount(newDiscount);
-                        // Auto-adjust payment amount if it's less than the new total
-                        const currentPayment = parseFloat(paymentAmount) || 0;
-                        const newTotal = getSubtotal() + tax - newDiscount;
-                        if (currentPayment < newTotal) {
-                          setPaymentAmount(newTotal.toString());
-                        }
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="tax">Tax</Label>
-                    <Input
-                      id="tax"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={tax}
-                      onChange={(e) => {
-                        const newTax = parseFloat(e.target.value) || 0;
-                        setTax(newTax);
-                        // Auto-adjust payment amount if it's less than the new total
-                        const currentPayment = parseFloat(paymentAmount) || 0;
-                        const newTotal = getSubtotal() + newTax - discount;
-                        if (currentPayment < newTotal) {
-                          setPaymentAmount(newTotal.toString());
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between border-t pt-3">
-                  <span className="text-lg font-bold">Total</span>
-                  <span className="text-lg font-bold">{formatPriceKSHS(getTotal())}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <Label htmlFor="paymentMethod">Payment Method</Label>
-                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                      <SelectTrigger className="h-12 text-base">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="Card">Card</SelectItem>
-                        <SelectItem value="Mobile Money">Mobile Money</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="paymentAmount">Payment Amount</Label>
-                    <Input
-                      id="paymentAmount"
-                      ref={paymentAmountInputRef}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={paymentAmount}
-                      onChange={(e) => setPaymentAmount(e.target.value)}
-                      placeholder="Enter payment amount"
-                      className="h-12 text-base"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="customerName">Customer Name (Optional)</Label>
-                    <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="h-11" />
-                  </div>
-                  <div>
-                    <Label htmlFor="customerPhone">Customer Phone (Optional)</Label>
-                    <Input id="customerPhone" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="h-11" />
-                  </div>
-                </div>
-
-                {paymentAmount && parseFloat(paymentAmount) >= getTotal() && (
-                  <div className="flex justify-between font-medium">
-                    <span>Change:</span>
-                    <span>{formatPriceKSHS(parseFloat(paymentAmount) - getTotal())}</span>
-                  </div>
-                )}
-                <Button
-                  onClick={processSale}
-                  disabled={cart.length === 0 || isProcessing || !paymentAmount}
-                  className="w-full h-12 text-base font-semibold"
-                  size="lg"
-                >
-                  <CreditCard className="h-5 w-5 mr-2" />
-                  {isProcessing ? 'Processing...' : 'Complete Sale'}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+          {!isMobile && (
+            <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-20 self-start">
+              {cartSummary}
+              {totalsAndPayment}
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
@@ -2013,6 +2086,117 @@ export default function POSSystem() {
             </Card>
           )}
         </div>
+      )}
+
+      <Dialog open={bulkAddOpen} onOpenChange={setBulkAddOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Bulk Add Products</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm text-muted-foreground">
+                Select multiple products, set quantities, then add all to cart.
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const ids = filteredProducts.map((p) => p.id).filter(Boolean);
+                  setBulkSelectedIds(new Set(ids));
+                }}
+              >
+                Select All
+              </Button>
+            </div>
+
+            <Separator />
+
+            <ScrollArea className="h-[420px]">
+              <div className="space-y-2 pr-4">
+                {filteredProducts.map((p) => {
+                  const checked = bulkSelectedIds.has(p.id);
+                  const step = p.quantityStep || 1;
+                  const qty = bulkQuantities[p.id] ?? step;
+                  const isOutOfStock = p.stock === 0;
+                  return (
+                    <div key={p.id} className="flex items-center gap-3 rounded-lg border p-3">
+                      <Checkbox
+                        checked={checked}
+                        disabled={isOutOfStock}
+                        onCheckedChange={(v) => toggleBulkSelected(p.id, v === true)}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate">{p.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatPriceKSHS(p.price)}
+                          {typeof p.stock === 'number' ? ` • Stock: ${p.stock}` : ''}
+                        </div>
+                      </div>
+                      <div className="w-28">
+                        <Input
+                          type="number"
+                          min={step}
+                          step={step}
+                          disabled={!checked || isOutOfStock}
+                          value={qty}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            setBulkQuantity(p.id, isNaN(v) ? step : v);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+
+            <div className="flex items-center justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setBulkAddOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={bulkAddToCart}>
+                Add Selected to Cart
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {posMode === 'sell' && isMobile && (
+        <>
+          <Drawer open={cartDrawerOpen} onOpenChange={setCartDrawerOpen}>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>Cart & Checkout</DrawerTitle>
+              </DrawerHeader>
+              <div className="px-4 pb-6 space-y-4">
+                {cartSummary}
+                {totalsAndPayment}
+              </div>
+            </DrawerContent>
+          </Drawer>
+
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <div className="mx-auto max-w-4xl px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{cart.length} items</div>
+                  <div className="text-xs text-muted-foreground">Total: {formatPriceKSHS(getTotal())}</div>
+                </div>
+                <Button
+                  type="button"
+                  className="shrink-0"
+                  disabled={cart.length === 0}
+                  onClick={() => setCartDrawerOpen(true)}
+                >
+                  Open Cart
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Receipt Dialog */}
