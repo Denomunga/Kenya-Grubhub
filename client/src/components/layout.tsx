@@ -182,15 +182,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 ? 'bg-blue-100 text-blue-800 shadow-xl border-blue-300 hover:bg-blue-200'
                 : "bg-white text-blue-700 hover:bg-blue-50 border-2 border-blue-600 hover:border-blue-700"
           }`}
-          whileHover={{ scale: 1.02, x: 5 }}
+          whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
         >
           {children}
           {isActive && (
             <motion.div 
-              className="absolute bottom-0 left-0 right-0 h-1 mx-auto bg-blue-600"
-              layoutId="activeTab"
-              initial={false}
+              className="absolute bottom-0 left-0 right-0 h-1 mx-auto bg-blue-600 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: "100%" }}
+              exit={{ width: 0 }}
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />
           )}
