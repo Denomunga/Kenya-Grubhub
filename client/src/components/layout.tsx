@@ -8,6 +8,7 @@ import {
   Menu, X, Laptop, MapPin, 
   MessageSquare, LayoutDashboard, Moon, Sun
 } from "lucide-react";
+import { useShop } from "@/lib/shop";
 import { apiFetch } from "@/lib/api";
 import { useTheme } from "next-themes";
 import {
@@ -27,6 +28,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const { hasUnread, unreadCount, markAsRead } = useUnreadMessages();
   useOrderNotifications();
+  const { wishlist, compare } = useShop();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -260,6 +262,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <nav className="hidden md:flex items-center gap-6">
             <NavLink href="/">Home</NavLink>
             <NavLink href="/menu">Products</NavLink>
+            <NavLink href="/favorites">
+              <span className="relative">
+                Favorites
+                {wishlist.size > 0 && (
+                  <span className="absolute -top-2 -right-5 bg-red-500 text-white text-xs rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
+                    {wishlist.size > 9 ? '9+' : wishlist.size}
+                  </span>
+                )}
+              </span>
+            </NavLink>
+            <NavLink href="/compare">
+              <span className="relative">
+                Compare
+                {compare.size > 0 && (
+                  <span className="absolute -top-2 -right-5 bg-blue-600 text-white text-xs rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
+                    {compare.size > 9 ? '9+' : compare.size}
+                  </span>
+                )}
+              </span>
+            </NavLink>
             <NavLink href="/chat" onClick={() => {
               // Clear notifications when navigating to chat
               if (isAdmin || isStaff) {
@@ -466,6 +488,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 {[
                   { href: "/", label: "Home", icon: "🏠", desc: "Welcome page" },
                   { href: "/menu", label: "Products", icon: "🛍️", desc: "Browse items" },
+                  { href: "/favorites", label: `Favorites${wishlist.size ? ` (${wishlist.size > 9 ? '9+' : wishlist.size})` : ''}`, icon: "❤️", desc: "Saved items" },
+                  { href: "/compare", label: `Compare${compare.size ? ` (${compare.size > 9 ? '9+' : compare.size})` : ''}`, icon: "⚖️", desc: "Compare items" },
                   { href: "/chat", label: "ASK FOR DISCOUNT", icon: "💬", desc: "Talk to staff", special: true },
                   ...(isAdmin || isStaff ? [{ href: "/dashboard", label: "Dashboard", icon: "📊", desc: "Admin panel", special: true }] : [])
                 ].map((item, index) => (

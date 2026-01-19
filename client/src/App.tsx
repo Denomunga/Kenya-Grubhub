@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { DataProvider } from "@/lib/data";
 import { ChatProvider } from "@/lib/chatApi";
+import { ShopProvider } from "@/lib/shop";
 import { Layout } from "@/components/layout";
 import NotFound from "@/pages/not-found";
 import { Suspense, lazy } from "react";
@@ -92,6 +93,8 @@ const Profile = lazy(() => import("@/pages/profile"));
 const ConfirmPassword = lazy(() => import("@/pages/confirm-password"));
 const NewsDetail = lazy(() => import("@/pages/news-detail"));
 const ConfirmPhone = lazy(() => import("@/pages/confirm-phone"));
+const Favorites = lazy(() => import("@/pages/favorites"));
+const Compare = lazy(() => import("@/pages/compare"));
 
 function Router() {
   return (
@@ -112,6 +115,8 @@ function Router() {
             <Switch>
               <Route path="/" component={Home} />
               <Route path="/menu" component={Menu} />
+              <Route path="/favorites" component={Favorites} />
+              <Route path="/compare" component={Compare} />
               <Route path="/login" component={Auth} />
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/chat" component={Chat} />
@@ -145,7 +150,9 @@ function App() {
             <HybridAuthProvider>
               <ChatProvider>
                 <DataProvider>
-                  <Router />
+                  <ShopProvider>
+                    <Router />
+                  </ShopProvider>
                   <Toaster />
                 </DataProvider>
               </ChatProvider>

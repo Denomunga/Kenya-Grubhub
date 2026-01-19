@@ -98,6 +98,7 @@ export default function POSSystem() {
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
   const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(() => new Set());
   const [bulkQuantities, setBulkQuantities] = useState<Record<string, number>>({});
+  const [bulkSearchQuery, setBulkSearchQuery] = useState<string>('');
 
   const [paymentMethod, setPaymentMethod] = useState<string>('Cash');
   const [paymentAmount, setPaymentAmount] = useState<string>('');
@@ -530,6 +531,30 @@ export default function POSSystem() {
     return all.filter((p) => (p.category || '') === selectedCategory);
   }, [products, selectedCategory]);
 
+  const bulkFavorites = useMemo<Product[]>(() => {
+    const q = bulkSearchQuery.trim().toLowerCase();
+    const base = filteredProducts.filter((p) => favorites.includes(p.id));
+    if (!q) return base;
+    return base.filter((p) => {
+      const haystack = `${p.name || ''} ${p.brand || ''} ${p.category || ''}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [filteredProducts, favorites, bulkSearchQuery]);
+
+  const bulkNonFavorites = useMemo<Product[]>(() => {
+    const q = bulkSearchQuery.trim().toLowerCase();
+    const base = filteredProducts.filter((p) => !favorites.includes(p.id));
+    if (!q) return base;
+    return base.filter((p) => {
+      const haystack = `${p.name || ''} ${p.brand || ''} ${p.category || ''}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [filteredProducts, favorites, bulkSearchQuery]);
+
+  const bulkVisibleProducts = useMemo<Product[]>(() => {
+    return [...bulkFavorites, ...bulkNonFavorites];
+  }, [bulkFavorites, bulkNonFavorites]);
+
   const processSale = () => {
     if (cart.length === 0) {
       toast({ title: 'Error', description: 'Cart is empty', variant: 'destructive' });
@@ -916,6 +941,10 @@ export default function POSSystem() {
           receiptData
         })
       });
+
+      // Refresh receipts and stats after creating receipt
+      loadReceipts();
+      loadReceiptStats();
     } catch (error) {
       console.warn('Failed to save receipt automatically:', error);
     }
@@ -1388,7 +1417,7 @@ export default function POSSystem() {
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-2xl font-bold leading-tight">POS</h2>
+          <h2 className="text-2xl font-bold">POS</h2>
           <div className="text-sm text-muted-foreground">
             MS COMPUTERS{user?.name ? ` • Cashier: ${user.name}` : ''}
           </div>
@@ -1622,7 +1651,9 @@ export default function POSSystem() {
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h3 className="text-xl font-bold">Management</h3>
-              <div className="text-sm text-muted-foreground">Receipts, Sales, Stock and Reports</div>
+              <div className="text-sm text-muted-foreground">
+                Receipts, Sales, Stock and Reports
+              </div>
             </div>
             <Tabs
               value={managementTab}
@@ -1645,10 +1676,18 @@ export default function POSSystem() {
               }}
             >
               <TabsList className="p-1 bg-muted/50 rounded-xl border">
-                <TabsTrigger value="receipts" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Receipts</TabsTrigger>
-                <TabsTrigger value="sales" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Sales</TabsTrigger>
-                <TabsTrigger value="stock" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Stock</TabsTrigger>
-                <TabsTrigger value="reports" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Reports</TabsTrigger>
+                <TabsTrigger value="receipts" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  Receipts
+                </TabsTrigger>
+                <TabsTrigger value="sales" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  Sales
+                </TabsTrigger>
+                <TabsTrigger value="stock" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  Stock
+                </TabsTrigger>
+                <TabsTrigger value="reports" className="px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  Reports
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -2088,67 +2127,157 @@ export default function POSSystem() {
         </div>
       )}
 
-      <Dialog open={bulkAddOpen} onOpenChange={setBulkAddOpen}>
+      <Dialog
+        open={bulkAddOpen}
+        onOpenChange={(open) => {
+          setBulkAddOpen(open);
+          if (!open) {
+            setBulkSearchQuery('');
+          }
+        }}
+      >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Bulk Add Products</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="space-y-2">
               <div className="text-sm text-muted-foreground">
                 Select multiple products, set quantities, then add all to cart.
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  const ids = filteredProducts.map((p) => p.id).filter(Boolean);
-                  setBulkSelectedIds(new Set(ids));
-                }}
-              >
-                Select All
-              </Button>
+
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={bulkSearchQuery}
+                    onChange={(e) => setBulkSearchQuery(e.target.value)}
+                    placeholder="Search products by name, brand, or category..."
+                    className="pl-10"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const ids = bulkVisibleProducts.map((p) => p.id).filter(Boolean);
+                    setBulkSelectedIds(new Set(ids));
+                  }}
+                >
+                  Select All
+                </Button>
+              </div>
             </div>
 
             <Separator />
 
             <ScrollArea className="h-[420px]">
               <div className="space-y-2 pr-4">
-                {filteredProducts.map((p) => {
-                  const checked = bulkSelectedIds.has(p.id);
-                  const step = p.quantityStep || 1;
-                  const qty = bulkQuantities[p.id] ?? step;
-                  const isOutOfStock = p.stock === 0;
-                  return (
-                    <div key={p.id} className="flex items-center gap-3 rounded-lg border p-3">
-                      <Checkbox
-                        checked={checked}
-                        disabled={isOutOfStock}
-                        onCheckedChange={(v) => toggleBulkSelected(p.id, v === true)}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate">{p.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {formatPriceKSHS(p.price)}
-                          {typeof p.stock === 'number' ? ` • Stock: ${p.stock}` : ''}
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Favorites</div>
+                  {bulkFavorites.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No favorites</div>
+                  ) : (
+                    bulkFavorites.map((p) => {
+                      const checked = bulkSelectedIds.has(p.id);
+                      const step = p.quantityStep || 1;
+                      const qty = bulkQuantities[p.id] ?? step;
+                      const isOutOfStock = p.stock === 0;
+                      return (
+                        <div key={p.id} className="flex items-center gap-3 rounded-lg border p-3">
+                          <Checkbox
+                            checked={checked}
+                            disabled={isOutOfStock}
+                            onCheckedChange={(v) => toggleBulkSelected(p.id, v === true)}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">{p.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {formatPriceKSHS(p.price)}
+                              {typeof p.stock === 'number' ? ` • Stock: ${p.stock}` : ''}
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            aria-label={`Remove ${p.name} from favorites`}
+                            onClick={() => {
+                              void toggleFavorite(p.id);
+                            }}
+                          >
+                            <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                          </Button>
+                          <div className="w-28">
+                            <Input
+                              type="number"
+                              min={step}
+                              step={step}
+                              disabled={!checked || isOutOfStock}
+                              value={qty}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value);
+                                setBulkQuantity(p.id, isNaN(v) ? step : v);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">All Products</div>
+                  {bulkNonFavorites.map((p) => {
+                    const checked = bulkSelectedIds.has(p.id);
+                    const step = p.quantityStep || 1;
+                    const qty = bulkQuantities[p.id] ?? step;
+                    const isOutOfStock = p.stock === 0;
+                    return (
+                      <div key={p.id} className="flex items-center gap-3 rounded-lg border p-3">
+                        <Checkbox
+                          checked={checked}
+                          disabled={isOutOfStock}
+                          onCheckedChange={(v) => toggleBulkSelected(p.id, v === true)}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{p.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {formatPriceKSHS(p.price)}
+                            {typeof p.stock === 'number' ? ` • Stock: ${p.stock}` : ''}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="outline"
+                          aria-label={`Add ${p.name} to favorites`}
+                          onClick={() => {
+                            void toggleFavorite(p.id);
+                          }}
+                        >
+                          <Heart className="h-4 w-4" />
+                        </Button>
+                        <div className="w-28">
+                          <Input
+                            type="number"
+                            min={step}
+                            step={step}
+                            disabled={!checked || isOutOfStock}
+                            value={qty}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value);
+                              setBulkQuantity(p.id, isNaN(v) ? step : v);
+                            }}
+                          />
                         </div>
                       </div>
-                      <div className="w-28">
-                        <Input
-                          type="number"
-                          min={step}
-                          step={step}
-                          disabled={!checked || isOutOfStock}
-                          value={qty}
-                          onChange={(e) => {
-                            const v = parseFloat(e.target.value);
-                            setBulkQuantity(p.id, isNaN(v) ? step : v);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </ScrollArea>
 
@@ -2178,7 +2307,7 @@ export default function POSSystem() {
             </DrawerContent>
           </Drawer>
 
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
             <div className="mx-auto max-w-4xl px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">

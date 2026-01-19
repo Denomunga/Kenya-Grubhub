@@ -29,6 +29,7 @@ import LocationPicker from '@/components/ui/LocationPicker';
 import OrderConfirmation from '@/components/ui/OrderConfirmation';
 import { SEOMetaTags } from "@/components/seo/SEOMetaTags";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
+import { useShop } from "@/lib/shop";
 
 // Helper small form component to post a review for the currently open product
 function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct }: { 
@@ -132,7 +133,7 @@ export default function Menu() {
   const [searchParams] = useSearchParams();
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchedProducts, setSearchedProducts] = useState<MenuItem[]>([]);
-  const [cart, setCart] = useState<{ item: MenuItem; quantity: number }[]>([]);
+  const { cart, addToCart: addToCartShared, removeFromCart, setCartItemQuantity, clearCart, wishlist, compare, toggleWishlist, toggleCompare } = useShop();
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [orderConfirmationOpen, setOrderConfirmationOpen] = useState(false);
@@ -150,9 +151,6 @@ export default function Menu() {
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [checkoutPhone, setCheckoutPhone] = useState<string>('');
   const [showPhoneInput, setShowPhoneInput] = useState<boolean>(false);
-
-  const [wishlist, setWishlist] = useState<Set<string>>(() => new Set());
-  const [compare, setCompare] = useState<Set<string>>(() => new Set());
 
   // SEO structured data for the main category page
   const categoryStructuredData = useMemo(() => ({
@@ -266,18 +264,8 @@ export default function Menu() {
   }, [menu, activeCategory, searchedProducts]);
 
   const addToCart = (item: MenuItem) => {
-    setCart(prev => {
-      const existing = prev.find(i => i.item.id === item.id);
-      if (existing) {
-        return prev.map(i => i.item.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
-      }
-      return [...prev, { item, quantity: 1 }];
-    });
+    addToCartShared(item, 1);
     toast({ title: "Added to cart", description: `${item.name} added.` });
-  };
-
-  const removeFromCart = (itemId: string) => {
-    setCart(prev => prev.filter(i => i.item.id !== itemId));
   };
 
   const handleImageClick = (item: MenuItem, e?: React.MouseEvent) => {
@@ -303,14 +291,11 @@ export default function Menu() {
   };
 
   const updateQuantity = (itemId: string, delta: number) => {
-    setCart(prev => prev.map(i => {
-      if (i.item.id === itemId) {
-        const step = i.item.quantityStep || 1;
-        const newQ = normalizeToStep(i.quantity + delta, step);
-        return newQ > 0 ? { ...i, quantity: newQ } : i;
-      }
-      return i;
-    }));
+    const line = cart.find((i) => i.item.id === itemId);
+    if (!line) return;
+    const step = line.item.quantityStep || 1;
+    const newQ = normalizeToStep(line.quantity + delta, step);
+    setCartItemQuantity(itemId, newQ);
   };
         
 
@@ -387,7 +372,7 @@ export default function Menu() {
     setOrderConfirmationOpen(true);
     
     // Clear cart and location
-    setCart([]);
+    clearCart();
     setSelectedLocation(null);
     setCheckoutPhone('');
     setShowPhoneInput(false);
@@ -662,12 +647,7 @@ export default function Menu() {
                         aria-label={wishlist.has(item.id) ? `Remove ${item.name} from wishlist` : `Add ${item.name} to wishlist`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setWishlist((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(item.id)) next.delete(item.id);
-                            else next.add(item.id);
-                            return next;
-                          });
+                          toggleWishlist(item.id);
                         }}
                       >
                         <Heart className={`h-4 w-4 ${wishlist.has(item.id) ? "fill-current" : ""}`} />
@@ -681,12 +661,7 @@ export default function Menu() {
                         aria-label={compare.has(item.id) ? `Remove ${item.name} from compare` : `Add ${item.name} to compare`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setCompare((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(item.id)) next.delete(item.id);
-                            else next.add(item.id);
-                            return next;
-                          });
+                          toggleCompare(item.id);
                         }}
                       >
                         <GitCompare className="h-4 w-4" />

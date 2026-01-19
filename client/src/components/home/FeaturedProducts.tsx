@@ -5,8 +5,9 @@ import { Eye, GitCompare, Heart, Plus, Star } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { formatPriceKSHS } from "@/lib/format";
+import { useShop } from "@/lib/shop";
 
 const AnimatedCard = motion.create(Card);
 
@@ -115,8 +116,7 @@ const LoadingSkeleton = () => (
 
 const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
   const [, setLocation] = useLocation();
-  const [wishlist, setWishlist] = useState<Set<string>>(() => new Set());
-  const [compare, setCompare] = useState<Set<string>>(() => new Set());
+  const { wishlist, compare, toggleWishlist, toggleCompare } = useShop();
 
   return (
     <section className="py-16 relative overflow-hidden">
@@ -201,12 +201,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
                         aria-label={wishlist.has(item.id) ? `Remove ${item.name} from wishlist` : `Add ${item.name} to wishlist`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setWishlist((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(item.id)) next.delete(item.id);
-                            else next.add(item.id);
-                            return next;
-                          });
+                          toggleWishlist(item.id);
                         }}
                       >
                         <Heart className={`h-4 w-4 ${wishlist.has(item.id) ? "fill-current" : ""}`} />
@@ -220,12 +215,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
                         aria-label={compare.has(item.id) ? `Remove ${item.name} from compare` : `Add ${item.name} to compare`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setCompare((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(item.id)) next.delete(item.id);
-                            else next.add(item.id);
-                            return next;
-                          });
+                          toggleCompare(item.id);
                         }}
                       >
                         <GitCompare className="h-4 w-4" />
