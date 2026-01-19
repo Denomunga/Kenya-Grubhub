@@ -498,60 +498,234 @@ export default function Menu() {
                   )}
                 </Button>
               </SheetTrigger>
-              <SheetContent className="w-full sm:max-w-md">
+              <SheetContent className="w-full sm:max-w-6xl max-h-[90vh] overflow-y-auto">
                 <SheetHeader>
                   <SheetTitle>Compare Products</SheetTitle>
-                  <SheetDescription>Compare features and prices of selected items.</SheetDescription>
+                  <SheetDescription>Compare features and specifications side by side.</SheetDescription>
                 </SheetHeader>
                 
-                <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
+                <div className="mt-8">
                   {compare.size === 0 ? (
                     <div className="text-center text-muted-foreground py-8">
                       Your compare list is empty.
                     </div>
                   ) : (
-                    Array.from(compare).map(itemId => {
-                      const item = menu.find(m => m.id === itemId);
-                      if (!item) return null;
-                      return (
-                        <div key={item.id} className="flex items-center gap-4 border-b pb-4">
-                          <ProductImage
-                            images={item.images || (item.image ? [item.image] : [])}
-                            productName={item.name}
-                            className="h-16 w-16 rounded-md object-cover cursor-pointer"
-                            onImageClick={(e) => handleImageClick(item, e)}
-                            enableSlideshow={false}
-                          />
-                          <div className="flex-1">
-                            <h4 className="font-bold text-sm">{item.name}</h4>
-                            <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              <Badge variant="outline" className="text-xs">{item.category}</Badge>
-                              {item.brand && <Badge variant="secondary" className="text-xs">{item.brand}</Badge>}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              size="sm" 
-                              onClick={() => {
-                                addToCartShared(item);
-                                toast({ title: "Added to cart", description: `${item.name} has been added to your cart.` });
-                              }}
-                            >
-                              <ShoppingBag className="h-3 w-3 mr-1" />
-                              Add
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              onClick={() => toggleCompare(item.id)}
-                            >
-                              <Trash className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr>
+                            <th className="text-left p-3 border-b font-semibold bg-muted/50">Feature</th>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return null;
+                              return (
+                                <th key={item.id} className="text-center p-3 border-b min-w-[200px]">
+                                  <div className="space-y-2">
+                                    <ProductImage
+                                      images={item.images || (item.image ? [item.image] : [])}
+                                      productName={item.name}
+                                      className="h-20 w-20 mx-auto rounded-md object-cover cursor-pointer"
+                                      onImageClick={(e) => handleImageClick(item, e)}
+                                      enableSlideshow={false}
+                                    />
+                                    <div className="font-bold text-sm">{item.name}</div>
+                                    <div className="text-primary font-semibold">{formatPriceKSHS(item.price)}</div>
+                                    <Button 
+                                      size="sm" 
+                                      className="w-full"
+                                      onClick={() => {
+                                        addToCartShared(item);
+                                        toast({ title: "Added to cart", description: `${item.name} has been added to your cart.` });
+                                      }}
+                                    >
+                                      <ShoppingBag className="h-3 w-3 mr-1" />
+                                      Add to Cart
+                                    </Button>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      className="w-full"
+                                      onClick={() => toggleCompare(item.id)}
+                                    >
+                                      <Trash className="h-3 w-3 mr-1" />
+                                      Remove
+                                    </Button>
+                                  </div>
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Price</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center font-semibold text-primary">
+                                  {formatPriceKSHS(item.price)}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Category</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center">
+                                  <Badge variant="outline">{item.category}</Badge>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Brand</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center">
+                                  {item.brand || <span className="text-muted-foreground">-</span>}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Condition</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center">
+                                  {item.condition ? (
+                                    <Badge variant={item.condition === 'new' ? 'default' : 'secondary'}>
+                                      {item.condition}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Availability</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center">
+                                  {item.available ? (
+                                    <Badge variant="default" className="bg-green-600">In Stock</Badge>
+                                  ) : (
+                                    <Badge variant="destructive">Out of Stock</Badge>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Stock</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center">
+                                  {item.stock !== undefined ? item.stock : <span className="text-muted-foreground">-</span>}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Size</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center">
+                                  {item.size || <span className="text-muted-foreground">-</span>}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Color</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center">
+                                  {item.color || <span className="text-muted-foreground">-</span>}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Year</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center">
+                                  {item.year || <span className="text-muted-foreground">-</span>}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Weight</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center">
+                                  {item.weight ? `${item.weight}kg` : <span className="text-muted-foreground">-</span>}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Description</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center text-sm">
+                                  <div className="max-h-20 overflow-y-auto line-clamp-3">
+                                    {item.description}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr className="hover:bg-muted/30">
+                            <td className="p-3 border-b font-medium">Specifications</td>
+                            {Array.from(compare).map(itemId => {
+                              const item = menu.find(m => m.id === itemId);
+                              if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                              return (
+                                <td key={itemId} className="p-3 border-b text-center text-sm">
+                                  {item.specifications && Object.keys(item.specifications).length > 0 ? (
+                                    <div className="space-y-1">
+                                      {Object.entries(item.specifications).map(([key, value]) => (
+                                        <div key={key} className="text-xs">
+                                          <span className="font-medium">{key}:</span> {String(value)}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               </SheetContent>
