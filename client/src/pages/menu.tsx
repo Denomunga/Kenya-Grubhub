@@ -399,6 +399,406 @@ export default function Menu() {
             <p className="text-muted-foreground">Explore our wide selection of Comfy Wears.</p>
           </div>
 
+          {/* Professional Action Buttons */}
+          <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div></div>
+            <div className="flex items-center gap-3 bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-lg border border-gray-200">
+              <div className="text-sm font-semibold text-gray-600 mr-2">Quick Actions:</div>
+              
+              {/* Favorites Sheet */}
+              <Sheet open={favoritesSheetOpen} onOpenChange={setFavoritesSheetOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="relative bg-white hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all duration-300 shadow-sm hover:shadow-md">
+                    <Heart className="h-4 w-4 mr-2" />
+                    Favorites
+                    {wishlist.size > 0 && (
+                     <Badge className="absolute -top-2 -right-2 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs border-2 border-white shadow-lg z-10 animate-pulse">
+                        {wishlist.size > 9 ? '9+' : wishlist.size}
+                      </Badge>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-full sm:max-w-md">
+                  <SheetHeader>
+                    <SheetTitle>Your Favorites</SheetTitle>
+                    <SheetDescription>Items you've saved for later.</SheetDescription>
+                  </SheetHeader>
+                  
+                  <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
+                    {wishlist.size === 0 ? (
+                      <div className="text-center text-muted-foreground py-8">
+                        Your favorites list is empty.
+                      </div>
+                    ) : (
+                      Array.from(wishlist).map(itemId => {
+                        const item = menu.find(m => m.id === itemId);
+                        if (!item) return null;
+                        return (
+                          <div key={item.id} className="flex items-center gap-4 border-b pb-4">
+                            <ProductImage
+                              images={item.images || (item.image ? [item.image] : [])}
+                              productName={item.name}
+                              className="h-16 w-16 rounded-md object-cover cursor-pointer"
+                              onImageClick={(e) => handleImageClick(item, e)}
+                              enableSlideshow={false}
+                            />
+                            <div className="flex-1">
+                              <h4 className="font-bold text-sm">{item.name}</h4>
+                              <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                size="sm" 
+                                onClick={() => {
+                                  addToCartShared(item);
+                                  toast({ title: "Added to cart", description: `${item.name} has been added to your cart.` });
+                                }}
+                              >
+                                <ShoppingBag className="h-3 w-3 mr-1" />
+                                Add
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="icon"
+                                onClick={() => toggleWishlist(item.id)}
+                              >
+                                <Trash className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              {/* Compare Sheet */}
+              <Sheet open={compareSheetOpen} onOpenChange={setCompareSheetOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="relative bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-all duration-300 shadow-sm hover:shadow-md">
+                    <GitCompare className="h-4 w-4 mr-2" />
+                    Compare
+                    {compare.size > 0 && (
+                     <Badge className="absolute -top-2 -right-2 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs border-2 border-white shadow-lg z-10 animate-pulse">
+                        {compare.size > 9 ? '9+' : compare.size}
+                      </Badge>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-full sm:max-w-6xl max-h-[90vh] overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle>Compare Products</SheetTitle>
+                    <SheetDescription>Compare features and specifications side by side.</SheetDescription>
+                  </SheetHeader>
+                  
+                  <div className="mt-8">
+                    {compare.size === 0 ? (
+                      <div className="text-center text-muted-foreground py-8">
+                        Your compare list is empty.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr>
+                              <th className="text-left p-3 border-b font-semibold bg-muted/50">Feature</th>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return null;
+                                return (
+                                  <th key={item.id} className="text-center p-3 border-b min-w-[200px]">
+                                    <div className="space-y-2">
+                                      <ProductImage
+                                        images={item.images || (item.image ? [item.image] : [])}
+                                        productName={item.name}
+                                        className="h-20 w-20 mx-auto rounded-md object-cover cursor-pointer"
+                                        onImageClick={(e) => handleImageClick(item, e)}
+                                        enableSlideshow={false}
+                                      />
+                                      <div className="font-bold text-sm">{item.name}</div>
+                                      <div className="text-primary font-semibold">{formatPriceKSHS(item.price)}</div>
+                                      <Button 
+                                        size="sm" 
+                                        className="w-full"
+                                        onClick={() => {
+                                          addToCartShared(item);
+                                          toast({ title: "Added to cart", description: `${item.name} has been added to your cart.` });
+                                        }}
+                                      >
+                                        <ShoppingBag className="h-3 w-3 mr-1" />
+                                        Add to Cart
+                                      </Button>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        className="w-full"
+                                        onClick={() => toggleCompare(item.id)}
+                                      >
+                                        <Trash className="h-3 w-3 mr-1" />
+                                        Remove
+                                      </Button>
+                                    </div>
+                                  </th>
+                                );
+                              })}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Price</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center font-semibold text-primary">
+                                    {formatPriceKSHS(item.price)}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Category</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center">
+                                    <Badge variant="outline">{item.category}</Badge>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Brand</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center">
+                                    {item.brand || <span className="text-muted-foreground">-</span>}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Condition</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center">
+                                    {item.condition ? (
+                                      <Badge variant={item.condition === 'new' ? 'default' : 'secondary'}>
+                                        {item.condition}
+                                      </Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground">-</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Availability</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center">
+                                    {item.available ? (
+                                      <Badge variant="default" className="bg-green-600">In Stock</Badge>
+                                    ) : (
+                                      <Badge variant="destructive">Out of Stock</Badge>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Stock</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center">
+                                    {item.stock !== undefined ? item.stock : <span className="text-muted-foreground">-</span>}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Size</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center">
+                                    {item.size || <span className="text-muted-foreground">-</span>}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Color</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center">
+                                    {item.color || <span className="text-muted-foreground">-</span>}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Year</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center">
+                                    {item.year || <span className="text-muted-foreground">-</span>}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Weight</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center">
+                                    {item.weight ? `${item.weight}kg` : <span className="text-muted-foreground">-</span>}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Description</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center text-sm">
+                                    <div className="max-h-20 overflow-y-auto line-clamp-3">
+                                      {item.description}
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-muted/30">
+                              <td className="p-3 border-b font-medium">Specifications</td>
+                              {Array.from(compare).map(itemId => {
+                                const item = menu.find(m => m.id === itemId);
+                                if (!item) return <td key={itemId} className="p-3 border-b text-center">-</td>;
+                                return (
+                                  <td key={itemId} className="p-3 border-b text-center text-sm">
+                                    {item.specifications && Object.keys(item.specifications).length > 0 ? (
+                                      <div className="space-y-1">
+                                        {Object.entries(item.specifications).map(([key, value]) => (
+                                          <div key={key} className="text-xs">
+                                            <span className="font-medium">{key}:</span> {String(value)}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted-foreground">-</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              {/* Cart Sheet */}
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button className="relative bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    Cart
+                    {cart.length > 0 && (
+                     <Badge className="absolute -top-2 -right-2 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs border-2 border-white shadow-lg z-10 animate-pulse">
+                        {cart.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>Your Order</SheetTitle>
+                    <SheetDescription>Review your items before checkout.</SheetDescription>
+                  </SheetHeader>
+                  
+                  <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
+                    {cart.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-8">
+                        Your cart is empty.
+                      </div>
+                    ) : (
+                      cart.map(({ item, quantity }) => (
+                        <div key={item.id} className="flex items-center gap-4 border-b pb-4">
+                          <ProductImage
+                            images={item.images || (item.image ? [item.image] : [])}
+                            productName={item.name}
+                            className="h-16 w-16 rounded-md object-cover cursor-pointer"
+                            onImageClick={(e) => handleImageClick(item, e)}
+                            enableSlideshow={false}
+                          />
+                          <div className="flex-1">
+                            <h4 className="font-bold text-sm">{item.name}</h4>
+                            <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, -(item.quantityStep || 1))}>
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="text-sm font-medium w-8 text-center">{quantity}</span>
+                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, (item.quantityStep || 1))}>
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <Button variant="outline" size="icon" onClick={() => removeFromCart(item.id)}>
+                            <Trash className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  
+                  {cart.length > 0 && (
+                    <SheetFooter>
+                      <div className="w-full space-y-4">
+                        <div className="border-t pt-4">
+                          <div className="flex justify-between items-center mb-4">
+                            <span className="font-semibold">Total:</span>
+                            <span className="font-bold text-lg text-primary">
+                              {formatPriceKSHS(cart.reduce((sum, { item, quantity }) => sum + (item.price * quantity), 0))}
+                            </span>
+                          </div>
+                          <Button 
+                            className="w-full" 
+                            onClick={handleCheckout}
+                          >
+                            Checkout {selectedLocation ? '' : '(Location Required)'}{(!user?.phone && !checkoutPhone.trim()) ? ' (Phone Required)' : ''}
+                          </Button>
+                        </div>
+                      </div>
+                    </SheetFooter>
+                  )}
+                </SheetContent>
+              </Sheet>
+            </div>
+          </div>
+
           {/* Search Component */}
           <div className="mt-6 max-w-5xl mx-auto">
             <ProductSearch 
@@ -730,187 +1130,7 @@ export default function Menu() {
                 </div>
               </SheetContent>
             </Sheet>
-
-            {/* Cart Sheet */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button className="relative">
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  Cart
-                  {cart.length > 0 && (
-                   <Badge className="absolute -top-1 -right-1 h-7 w-7 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs border-2 border-white shadow-xl animate-pulse z-10">
-                      {cart.length}
-                    </Badge>
-                  )}
-                </Button>
-              </SheetTrigger>
-            <SheetContent>
-              <SheetHeader>
-                <SheetTitle>Your Order</SheetTitle>
-                <SheetDescription>Review your items before checkout.</SheetDescription>
-              </SheetHeader>
-              
-              <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
-                {cart.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    Your cart is empty.
-                  </div>
-                ) : (
-                  cart.map(({ item, quantity }) => (
-                    <div key={item.id} className="flex items-center gap-4 border-b pb-4">
-                      <ProductImage
-                        images={item.images || (item.image ? [item.image] : [])}
-                        productName={item.name}
-                        className="h-16 w-16 rounded-md object-cover cursor-pointer"
-                        onImageClick={(e) => handleImageClick(item, e)}
-                        enableSlideshow={false}
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-bold text-sm">{item.name}</h4>
-                        <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, -(item.quantityStep || 1))}>
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="text-xs font-bold w-4 text-center">{quantity}</span>
-                          <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantityStep || 1)}>
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.id)}>
-                        <span className="sr-only">Remove</span>
-                        <Plus className="h-4 w-4 rotate-45" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <SheetFooter className="mt-auto border-t pt-4">
-                <div className="w-full space-y-4">
-                  {/* Location Display */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Delivery Location:</span>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => setLocationDialogOpen(true)}
-                      >
-                        {selectedLocation ? 'Change' : 'Select'}
-                      </Button>
-                    </div>
-                    {selectedLocation ? (
-                      <div className="bg-muted p-2 rounded text-sm">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-primary" />
-                          <span className="truncate">{selectedLocation.address}</span>
-                        </div>
-                        {selectedLocation.instructions && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Instructions: {selectedLocation.instructions}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground text-center">
-                        No delivery location selected
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Phone Number Display/Input */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Contact Phone:</span>
-                      {!user?.phone && !showPhoneInput && (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => setShowPhoneInput(true)}
-                        >
-                          Add Phone
-                        </Button>
-                      )}
-                    </div>
-                    {user?.phone ? (
-                      <div className="bg-muted p-2 rounded text-sm">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-primary" />
-                          <span>{user.phone}</span>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-6 px-2 text-xs"
-                            onClick={() => {
-                              setCheckoutPhone(user.phone || '');
-                              setShowPhoneInput(true);
-                            }}
-                          >
-                            Update
-                          </Button>
-                        </div>
-                      </div>
-                    ) : showPhoneInput ? (
-                      <div className="space-y-2">
-                        <Input
-                          type="tel"
-                          placeholder="e.g. +254700000000"
-                          value={checkoutPhone}
-                          onChange={(e) => setCheckoutPhone(e.target.value)}
-                          className="w-full"
-                        />
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="flex-1"
-                            onClick={() => {
-                              setShowPhoneInput(false);
-                              setCheckoutPhone('');
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            className="flex-1"
-                            onClick={() => {
-                              if (checkoutPhone.trim()) {
-                                setShowPhoneInput(false);
-                              }
-                            }}
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground text-center">
-                        Not provided
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-center font-bold text-lg">
-                    <span>Total</span>
-                    <span>{formatPriceKSHS(cartTotal)}</span>
-                  </div>
-                  <Button 
-                    className="w-full h-12 text-lg" 
-                    disabled={cart.length === 0 || !selectedLocation || (!user?.phone && !checkoutPhone.trim())} 
-                    onClick={handleCheckout}
-                  >
-                    Checkout {selectedLocation ? '' : '(Location Required)'}{(!user?.phone && !checkoutPhone.trim()) ? ' (Phone Required)' : ''}
-                  </Button>
-                </div>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </div>
-      </div>
+          </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <AnimatePresence mode="popLayout">
@@ -1645,6 +1865,8 @@ export default function Menu() {
           )}
         </SheetContent>
       </Sheet>
+      </div>
+      </div>
       </div>
     </div>
     </>
