@@ -964,9 +964,9 @@ export default function Menu() {
 
           <div className="flex flex-col md:flex-row justify-between items-end gap-4 mt-6 relative">
            <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
-             <TabsList className="bg-muted w-full overflow-x-auto flex-nowrap p-0.5">
+             <TabsList className="bg-muted w-full overflow-x-auto flex-nowrap p-1">
                {categories.map(cat => (
-                 <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm px-2 sm:px-3 py-2">
+                 <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm px-3 py-2 min-w-[80px] sm:min-w-[100px]">
                    {cat}
                  </TabsTrigger>
                ))}
