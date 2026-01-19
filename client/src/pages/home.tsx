@@ -319,13 +319,13 @@ export default function Home() {
       </div>
       
       <main className="relative z-10">
-        <div className="container mx-auto px-4 py-16">
+        <div className="container mx-auto px-4 py-8">
           <div className="relative z-32">
             {/* Search Component */}
             <ProductSearch 
               products={menu}
               onFilteredProducts={setSearchedProducts}
-              className="mb-8 mt-6 lg:mt-10 max-w-4xl mx-auto"
+              className="mb-6 mt-2 max-w-4xl mx-auto"
             />
             
             <CategoryFilter 
