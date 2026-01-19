@@ -964,9 +964,9 @@ export default function Menu() {
 
           <div className="flex flex-col md:flex-row justify-between items-end gap-4 mt-6">
            <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
-             <TabsList className="bg-muted w-full overflow-x-auto flex-nowrap scrollbar-hide">
+             <TabsList className="bg-muted w-full overflow-x-auto flex-nowrap scrollbar-hide p-1">
                {categories.map(cat => (
-                 <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0">
+                 <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm min-w-[100px] px-3 py-2">
                    {cat}
                  </TabsTrigger>
                ))}
