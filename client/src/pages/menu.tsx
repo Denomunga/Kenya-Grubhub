@@ -1002,7 +1002,7 @@ export default function Menu() {
                   <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                   {/* Quick actions */}
-                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between opacity-100 sm:opacity-0 sm:translate-y-1 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 transition-all duration-300">
                     <Button
                       type="button"
                       size="icon"
@@ -1175,7 +1175,7 @@ export default function Menu() {
                 <CardFooter className="p-6 pt-0 flex gap-3 items-center bg-muted/10 border-t border-border/50">
                   <div className="flex-1 relative group">
                     <Button 
-                      className="w-full sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" 
+                      className="w-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" 
                       disabled={!item.available}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1214,7 +1214,7 @@ export default function Menu() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="text-xs sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300"
+                        className="text-xs opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300"
                         onClick={() => {
                           setSelectedProductForDetail(item);
                           setProductDetailOpen(true);
