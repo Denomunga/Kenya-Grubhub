@@ -398,12 +398,343 @@ export default function Menu() {
       />
       <Breadcrumbs items={[{ name: 'Products', url: '/menu' }]} />
       <div className="min-h-screen w-full particle-container gradient-mesh">
-      <div className="container mx-auto px-6 py-14">
-        <div className="mb-8">
-          <div>
-            <h1 className="text-4xl font-heading font-bold text-primary mb-2">Our Products</h1>
-            <p className="text-muted-foreground">Explore our wide selection of Comfy Wears.</p>
-          </div>
+       <div className="container mx-auto px-6 py-14">
+         <div className="mb-8">
+           <div className="flex items-start justify-between gap-4">
+             <div>
+               <h1 className="text-4xl font-heading font-bold text-primary mb-2">Our Products</h1>
+               <p className="text-muted-foreground">Explore our wide selection of Comfy Wears.</p>
+             </div>
+
+             <div className="flex items-center gap-2 shrink-0">
+               {/* Favorites Sheet */}
+               <Sheet>
+                 <SheetTrigger asChild>
+                   <Button type="button" variant="outline" size="icon" className="relative" aria-label="Favorites">
+                     <Heart className={`h-4 w-4 ${wishlist.size > 0 ? "text-red-600" : ""}`} />
+                     {wishlist.size > 0 && (
+                       <Badge className="absolute -top-1 -right-1 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-[10px] border-2 border-white shadow-xl z-10">
+                         {wishlist.size > 9 ? "9+" : wishlist.size}
+                       </Badge>
+                     )}
+                   </Button>
+                 </SheetTrigger>
+                 <SheetContent>
+                   <SheetHeader>
+                     <SheetTitle>Favorites</SheetTitle>
+                     <SheetDescription>Products you’ve saved.</SheetDescription>
+                   </SheetHeader>
+
+                   <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
+                     {favoritesItems.length === 0 ? (
+                       <div className="text-center text-muted-foreground py-8">No favorites yet.</div>
+                     ) : (
+                       favoritesItems.map((item: MenuItem) => (
+                         <div key={item.id} className="flex items-center gap-4 border-b pb-4">
+                           <ProductImage
+                             images={item.images || (item.image ? [item.image] : [])}
+                             productName={item.name}
+                             className="h-16 w-16 rounded-md object-cover cursor-pointer"
+                             onImageClick={(e) => handleImageClick(item, e)}
+                             enableSlideshow={false}
+                           />
+                           <div className="flex-1">
+                             <h4 className="font-bold text-sm">{item.name}</h4>
+                             <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
+                             <div className="mt-2 flex items-center gap-2">
+                               <Button
+                                 type="button"
+                                 size="sm"
+                                 onClick={() => {
+                                   addToCart(item);
+                                 }}
+                                 disabled={!item.available}
+                               >
+                                 Add to Cart
+                               </Button>
+                               <Button
+                                 type="button"
+                                 size="sm"
+                                 variant="outline"
+                                 onClick={() => {
+                                   toggleWishlist(item.id);
+                                   toast({ title: "Removed", description: `${item.name} removed from favorites.` });
+                                 }}
+                               >
+                                 Remove
+                               </Button>
+                             </div>
+                           </div>
+                           <Button
+                             type="button"
+                             variant="ghost"
+                             size="icon"
+                             className="h-8 w-8"
+                             onClick={() => setLocation(`/menu?product=${item.id}`)}
+                           >
+                             <Eye className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       ))
+                     )}
+                   </div>
+                 </SheetContent>
+               </Sheet>
+
+               {/* Compare Sheet */}
+               <Sheet>
+                 <SheetTrigger asChild>
+                   <Button type="button" variant="outline" size="icon" className="relative" aria-label="Compare">
+                     <GitCompare className={`h-4 w-4 ${compare.size > 0 ? "text-primary" : ""}`} />
+                     {compare.size > 0 && (
+                       <Badge className="absolute -top-1 -right-1 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-[10px] border-2 border-white shadow-xl z-10">
+                         {compare.size > 9 ? "9+" : compare.size}
+                       </Badge>
+                     )}
+                   </Button>
+                 </SheetTrigger>
+                 <SheetContent>
+                   <SheetHeader>
+                     <SheetTitle>Compare</SheetTitle>
+                     <SheetDescription>Products in your compare list.</SheetDescription>
+                   </SheetHeader>
+
+                   <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
+                     {compareItems.length === 0 ? (
+                       <div className="text-center text-muted-foreground py-8">No products to compare yet.</div>
+                     ) : (
+                       compareItems.map((item: MenuItem) => (
+                         <div key={item.id} className="flex items-center gap-4 border-b pb-4">
+                           <ProductImage
+                             images={item.images || (item.image ? [item.image] : [])}
+                             productName={item.name}
+                             className="h-16 w-16 rounded-md object-cover cursor-pointer"
+                             onImageClick={(e) => handleImageClick(item, e)}
+                             enableSlideshow={false}
+                           />
+                           <div className="flex-1">
+                             <h4 className="font-bold text-sm">{item.name}</h4>
+                             <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
+                             <div className="mt-2 flex items-center gap-2">
+                               <Button
+                                 type="button"
+                                 size="sm"
+                                 onClick={() => {
+                                   addToCart(item);
+                                 }}
+                                 disabled={!item.available}
+                               >
+                                 Add to Cart
+                               </Button>
+                               <Button
+                                 type="button"
+                                 size="sm"
+                                 variant="outline"
+                                 onClick={() => {
+                                   toggleCompare(item.id);
+                                   toast({ title: "Removed", description: `${item.name} removed from compare.` });
+                                 }}
+                               >
+                                 Remove
+                               </Button>
+                             </div>
+                           </div>
+                           <Button
+                             type="button"
+                             variant="ghost"
+                             size="icon"
+                             className="h-8 w-8"
+                             onClick={() => setLocation(`/menu?product=${item.id}`)}
+                           >
+                             <Eye className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       ))
+                     )}
+                   </div>
+                 </SheetContent>
+               </Sheet>
+
+               {/* Cart Sheet */}
+               <Sheet>
+                 <SheetTrigger asChild>
+                   <Button className="relative">
+                     <ShoppingBag className="mr-2 h-4 w-4" />
+                     Cart
+                     {cart.length > 0 && (
+                       <Badge className="absolute -top-1 -right-1 h-7 w-7 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs border-2 border-white shadow-xl animate-pulse z-10">
+                         {cart.length}
+                       </Badge>
+                     )}
+                   </Button>
+                 </SheetTrigger>
+                 <SheetContent>
+                   <SheetHeader>
+                     <SheetTitle>Your Order</SheetTitle>
+                     <SheetDescription>Review your items before checkout.</SheetDescription>
+                   </SheetHeader>
+                  
+                   <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
+                     {cart.length === 0 ? (
+                       <div className="text-center text-muted-foreground py-8">
+                         Your cart is empty.
+                       </div>
+                     ) : (
+                       cart.map(({ item, quantity }) => (
+                         <div key={item.id} className="flex items-center gap-4 border-b pb-4">
+                           <ProductImage
+                             images={item.images || (item.image ? [item.image] : [])}
+                             productName={item.name}
+                             className="h-16 w-16 rounded-md object-cover cursor-pointer"
+                             onImageClick={(e) => handleImageClick(item, e)}
+                             enableSlideshow={false}
+                           />
+                           <div className="flex-1">
+                             <h4 className="font-bold text-sm">{item.name}</h4>
+                             <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
+                             <div className="flex items-center gap-2 mt-2">
+                               <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, -(item.quantityStep || 1))}>
+                                 <Minus className="h-3 w-3" />
+                               </Button>
+                               <span className="text-xs font-bold w-4 text-center">{quantity}</span>
+                               <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantityStep || 1)}>
+                                 <Plus className="h-3 w-3" />
+                               </Button>
+                             </div>
+                           </div>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.id)}>
+                             <span className="sr-only">Remove</span>
+                             <Plus className="h-4 w-4 rotate-45" />
+                           </Button>
+                         </div>
+                       ))
+                     )}
+                   </div>
+
+                   <SheetFooter className="mt-auto border-t pt-4">
+                     <div className="w-full space-y-4">
+                       {/* Location Display */}
+                       <div className="space-y-2">
+                         <div className="flex justify-between items-center">
+                           <span className="text-sm font-medium">Delivery Location:</span>
+                           <Button 
+                             size="sm" 
+                             variant="outline" 
+                             onClick={() => setLocationDialogOpen(true)}
+                           >
+                             {selectedLocation ? 'Change' : 'Select'}
+                           </Button>
+                         </div>
+                         {selectedLocation ? (
+                           <div className="bg-muted p-2 rounded text-sm">
+                             <div className="flex items-center gap-2">
+                               <MapPin className="h-4 w-4 text-primary" />
+                               <span className="truncate">{selectedLocation.address}</span>
+                             </div>
+                             {selectedLocation.instructions && (
+                               <p className="text-xs text-muted-foreground mt-1">
+                                 Instructions: {selectedLocation.instructions}
+                               </p>
+                             )}
+                           </div>
+                         ) : (
+                           <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground text-center">
+                             No delivery location selected
+                           </div>
+                         )}
+                       </div>
+
+                       {/* Phone Number Display/Input */}
+                       <div className="space-y-2">
+                         <div className="flex justify-between items-center">
+                           <span className="text-sm font-medium">Contact Phone:</span>
+                           {!user?.phone && !showPhoneInput && (
+                             <Button 
+                               size="sm" 
+                               variant="outline" 
+                               onClick={() => setShowPhoneInput(true)}
+                             >
+                               Add Phone
+                             </Button>
+                           )}
+                         </div>
+                         {user?.phone ? (
+                           <div className="bg-muted p-2 rounded text-sm">
+                             <div className="flex items-center gap-2">
+                               <Phone className="h-4 w-4 text-primary" />
+                               <span>{user.phone}</span>
+                               <Button 
+                                 size="sm" 
+                                 variant="ghost" 
+                                 className="h-6 px-2 text-xs"
+                                 onClick={() => {
+                                   setCheckoutPhone(user.phone || '');
+                                   setShowPhoneInput(true);
+                                 }}
+                               >
+                                 Update
+                               </Button>
+                             </div>
+                           </div>
+                         ) : showPhoneInput ? (
+                           <div className="space-y-2">
+                             <Input
+                               type="tel"
+                               placeholder="e.g. +254700000000"
+                               value={checkoutPhone}
+                               onChange={(e) => setCheckoutPhone(e.target.value)}
+                               className="w-full"
+                             />
+                             <div className="flex gap-2">
+                               <Button 
+                                 size="sm" 
+                                 variant="outline" 
+                                 className="flex-1"
+                                 onClick={() => {
+                                   setShowPhoneInput(false);
+                                   setCheckoutPhone('');
+                                 }}
+                               >
+                                 Cancel
+                               </Button>
+                               <Button 
+                                 size="sm" 
+                                 className="flex-1"
+                                 onClick={() => {
+                                   if (checkoutPhone.trim()) {
+                                     setShowPhoneInput(false);
+                                   }
+                                 }}
+                               >
+                                 Save
+                               </Button>
+                             </div>
+                           </div>
+                         ) : (
+                           <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground text-center">
+                             No phone number provided
+                           </div>
+                         )}
+                       </div>
+
+                       <div className="flex items-center justify-between text-sm font-medium">
+                         <span>Total</span>
+                         <span className="tabular-nums">{formatPriceKSHS(cartTotal)}</span>
+                       </div>
+
+                       <Button 
+                         className="w-full h-12 text-lg" 
+                         disabled={cart.length === 0 || !selectedLocation || (!user?.phone && !checkoutPhone.trim())} 
+                         onClick={handleCheckout}
+                       >
+                         Checkout {selectedLocation ? '' : '(Location Required)'}{(!user?.phone && !checkoutPhone.trim()) ? ' (Phone Required)' : ''}
+                       </Button>
+                     </div>
+                   </SheetFooter>
+                 </SheetContent>
+               </Sheet>
+             </div>
+           </div>
 
           {/* Search Component */}
           <div className="mt-6 max-w-5xl mx-auto">
@@ -414,344 +745,16 @@ export default function Menu() {
           </div>
 
           <div className="flex flex-col md:flex-row justify-between items-end gap-4 mt-6">
-            <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
-              <TabsList className="bg-muted">
-                {categories.map(cat => (
-                  <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary">
-                    {cat}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-
-            <div className="flex items-center gap-2">
-              {/* Favorites Sheet */}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button type="button" variant="outline" size="icon" className="relative" aria-label="Favorites">
-                    <Heart className={`h-4 w-4 ${wishlist.size > 0 ? "text-red-600" : ""}`} />
-                    {wishlist.size > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-[10px] border-2 border-white shadow-xl z-10">
-                        {wishlist.size > 9 ? "9+" : wishlist.size}
-                      </Badge>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent>
-                  <SheetHeader>
-                    <SheetTitle>Favorites</SheetTitle>
-                    <SheetDescription>Products you’ve saved.</SheetDescription>
-                  </SheetHeader>
-
-                  <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
-                    {favoritesItems.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-8">No favorites yet.</div>
-                    ) : (
-                      favoritesItems.map((item: MenuItem) => (
-                        <div key={item.id} className="flex items-center gap-4 border-b pb-4">
-                          <ProductImage
-                            images={item.images || (item.image ? [item.image] : [])}
-                            productName={item.name}
-                            className="h-16 w-16 rounded-md object-cover cursor-pointer"
-                            onImageClick={(e) => handleImageClick(item, e)}
-                            enableSlideshow={false}
-                          />
-                          <div className="flex-1">
-                            <h4 className="font-bold text-sm">{item.name}</h4>
-                            <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
-                            <div className="mt-2 flex items-center gap-2">
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={() => {
-                                  addToCart(item);
-                                }}
-                                disabled={!item.available}
-                              >
-                                Add to Cart
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  toggleWishlist(item.id);
-                                  toast({ title: "Removed", description: `${item.name} removed from favorites.` });
-                                }}
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setLocation(`/menu?product=${item.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </SheetContent>
-              </Sheet>
-
-              {/* Compare Sheet */}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button type="button" variant="outline" size="icon" className="relative" aria-label="Compare">
-                    <GitCompare className={`h-4 w-4 ${compare.size > 0 ? "text-primary" : ""}`} />
-                    {compare.size > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-[10px] border-2 border-white shadow-xl z-10">
-                        {compare.size > 9 ? "9+" : compare.size}
-                      </Badge>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent>
-                  <SheetHeader>
-                    <SheetTitle>Compare</SheetTitle>
-                    <SheetDescription>Products in your compare list.</SheetDescription>
-                  </SheetHeader>
-
-                  <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
-                    {compareItems.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-8">No products to compare yet.</div>
-                    ) : (
-                      compareItems.map((item: MenuItem) => (
-                        <div key={item.id} className="flex items-center gap-4 border-b pb-4">
-                          <ProductImage
-                            images={item.images || (item.image ? [item.image] : [])}
-                            productName={item.name}
-                            className="h-16 w-16 rounded-md object-cover cursor-pointer"
-                            onImageClick={(e) => handleImageClick(item, e)}
-                            enableSlideshow={false}
-                          />
-                          <div className="flex-1">
-                            <h4 className="font-bold text-sm">{item.name}</h4>
-                            <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
-                            <div className="mt-2 flex items-center gap-2">
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={() => {
-                                  addToCart(item);
-                                }}
-                                disabled={!item.available}
-                              >
-                                Add to Cart
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  toggleCompare(item.id);
-                                  toast({ title: "Removed", description: `${item.name} removed from compare.` });
-                                }}
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setLocation(`/menu?product=${item.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </SheetContent>
-              </Sheet>
-
-              {/* Cart Sheet */}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button className="relative">
-                    <ShoppingBag className="mr-2 h-4 w-4" />
-                    Cart
-                    {cart.length > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-7 w-7 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs border-2 border-white shadow-xl animate-pulse z-10">
-                        {cart.length}
-                      </Badge>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent>
-              <SheetHeader>
-                <SheetTitle>Your Order</SheetTitle>
-                <SheetDescription>Review your items before checkout.</SheetDescription>
-              </SheetHeader>
-              
-              <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[60vh]">
-                {cart.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    Your cart is empty.
-                  </div>
-                ) : (
-                  cart.map(({ item, quantity }) => (
-                    <div key={item.id} className="flex items-center gap-4 border-b pb-4">
-                      <ProductImage
-                        images={item.images || (item.image ? [item.image] : [])}
-                        productName={item.name}
-                        className="h-16 w-16 rounded-md object-cover cursor-pointer"
-                        onImageClick={(e) => handleImageClick(item, e)}
-                        enableSlideshow={false}
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-bold text-sm">{item.name}</h4>
-                        <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, -(item.quantityStep || 1))}>
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="text-xs font-bold w-4 text-center">{quantity}</span>
-                          <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantityStep || 1)}>
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.id)}>
-                        <span className="sr-only">Remove</span>
-                        <Plus className="h-4 w-4 rotate-45" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <SheetFooter className="mt-auto border-t pt-4">
-                <div className="w-full space-y-4">
-                  {/* Location Display */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Delivery Location:</span>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => setLocationDialogOpen(true)}
-                      >
-                        {selectedLocation ? 'Change' : 'Select'}
-                      </Button>
-                    </div>
-                    {selectedLocation ? (
-                      <div className="bg-muted p-2 rounded text-sm">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-primary" />
-                          <span className="truncate">{selectedLocation.address}</span>
-                        </div>
-                        {selectedLocation.instructions && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Instructions: {selectedLocation.instructions}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground text-center">
-                        No delivery location selected
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Phone Number Display/Input */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Contact Phone:</span>
-                      {!user?.phone && !showPhoneInput && (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => setShowPhoneInput(true)}
-                        >
-                          Add Phone
-                        </Button>
-                      )}
-                    </div>
-                    {user?.phone ? (
-                      <div className="bg-muted p-2 rounded text-sm">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-primary" />
-                          <span>{user.phone}</span>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-6 px-2 text-xs"
-                            onClick={() => {
-                              setCheckoutPhone(user.phone || '');
-                              setShowPhoneInput(true);
-                            }}
-                          >
-                            Update
-                          </Button>
-                        </div>
-                      </div>
-                    ) : showPhoneInput ? (
-                      <div className="space-y-2">
-                        <Input
-                          type="tel"
-                          placeholder="e.g. +254700000000"
-                          value={checkoutPhone}
-                          onChange={(e) => setCheckoutPhone(e.target.value)}
-                          className="w-full"
-                        />
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="flex-1"
-                            onClick={() => {
-                              setShowPhoneInput(false);
-                              setCheckoutPhone('');
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            className="flex-1"
-                            onClick={() => {
-                              if (checkoutPhone.trim()) {
-                                setShowPhoneInput(false);
-                              }
-                            }}
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground text-center">
-                        Not provided
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-center font-bold text-lg">
-                    <span>Total</span>
-                    <span>{formatPriceKSHS(cartTotal)}</span>
-                  </div>
-                  <Button 
-                    className="w-full h-12 text-lg" 
-                    disabled={cart.length === 0 || !selectedLocation || (!user?.phone && !checkoutPhone.trim())} 
-                    onClick={handleCheckout}
-                  >
-                    Checkout {selectedLocation ? '' : '(Location Required)'}{(!user?.phone && !checkoutPhone.trim()) ? ' (Phone Required)' : ''}
-                  </Button>
-                </div>
-              </SheetFooter>
-                </SheetContent>
-              </Sheet>
-            </div>
-        </div>
+           <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
+             <TabsList className="bg-muted">
+               {categories.map(cat => (
+                 <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary">
+                   {cat}
+                 </TabsTrigger>
+               ))}
+             </TabsList>
+           </Tabs>
+         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
