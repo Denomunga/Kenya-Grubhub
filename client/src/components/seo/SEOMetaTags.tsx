@@ -9,12 +9,12 @@ interface SEOMetaTagsProps {
   noindex?: boolean;
   structuredData?: Record<string, any>;
   canonicalUrl?: string;
+  structuredDataId?: string;
 }
 
 const SITE_NAME = 'KenyaGrubHub';
 const DEFAULT_DESCRIPTION = 'Shop premium laptops, mobiles, and stationery in Kenya. HP, Dell, Lenovo, Asus, Apple MacBooks, and more. Fast delivery across Kenya with secure checkout.';
 const DEFAULT_KEYWORDS = 'laptops Kenya, mobiles Kenya, stationery Kenya, HP laptops, Dell laptops, Lenovo laptops, Asus laptops, Apple MacBooks, Microsoft Surface, mobile phones Nairobi, electronics Kenya, online shopping Kenya';
-const SITE_URL = 'https://kenya-grubhub-gx7x.vercel.app';
 
 export function SEOMetaTags({
   title,
@@ -24,9 +24,12 @@ export function SEOMetaTags({
   ogUrl,
   noindex = false,
   structuredData,
-  canonicalUrl
+  canonicalUrl,
+  structuredDataId = 'seo-structured-data'
 }: SEOMetaTagsProps) {
   useEffect(() => {
+    const siteUrl = window.location.origin;
+
     // Update document title
     const fullTitle = title ? `${title} | ${SITE_NAME}` : SITE_NAME;
     document.title = fullTitle;
@@ -40,23 +43,25 @@ export function SEOMetaTags({
     updateMetaTag('revisit-after', '7 days');
     
     // Canonical URL
-    updateCanonicalUrl(canonicalUrl || `${SITE_URL}${window.location.pathname}`);
+    updateCanonicalUrl(canonicalUrl || `${siteUrl}${window.location.pathname}`);
     
     // Open Graph / Facebook
-    const fullOgUrl = ogUrl || `${SITE_URL}${window.location.pathname}`;
+    const fullOgUrl = ogUrl || `${siteUrl}${window.location.pathname}`;
+    const fullOgImage = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage.startsWith('/') ? ogImage : `/${ogImage}`}`;
     updateMetaProperty('og:type', 'website');
     updateMetaProperty('og:url', fullOgUrl);
     updateMetaProperty('og:title', fullTitle);
     updateMetaProperty('og:description', description);
-    updateMetaProperty('og:image', ogImage);
+    updateMetaProperty('og:image', fullOgImage);
     updateMetaProperty('og:site_name', SITE_NAME);
+    updateMetaProperty('og:locale', 'en_KE');
     
     // Twitter
     updateMetaProperty('twitter:card', 'summary_large_image');
     updateMetaProperty('twitter:url', fullOgUrl);
     updateMetaProperty('twitter:title', fullTitle);
     updateMetaProperty('twitter:description', description);
-    updateMetaProperty('twitter:image', ogImage);
+    updateMetaProperty('twitter:image', fullOgImage);
     
     // Additional SEO Meta
     updateMetaTag('theme-color', '#f59e0b');
@@ -64,10 +69,10 @@ export function SEOMetaTags({
     
     // Structured Data
     if (structuredData) {
-      updateStructuredData(structuredData);
+      updateStructuredData(structuredDataId, structuredData);
     }
 
-  }, [title, description, keywords, ogImage, ogUrl, noindex, structuredData, canonicalUrl]);
+  }, [title, description, keywords, ogImage, ogUrl, noindex, structuredData, canonicalUrl, structuredDataId]);
 
   return null; // This component doesn't render anything
 }
@@ -95,16 +100,15 @@ function updateMetaProperty(property: string, content: string) {
 }
 
 // Helper function to update structured data
-function updateStructuredData(data: Record<string, any>) {
-  // Remove existing structured data scripts
-  const existingScripts = document.querySelectorAll('script[type="application/ld+json"]');
-  existingScripts.forEach(script => script.remove());
-
-  // Add new structured data
-  const script = document.createElement('script');
-  script.type = 'application/ld+json';
+function updateStructuredData(id: string, data: Record<string, any>) {
+  let script = document.getElementById(id) as HTMLScriptElement | null;
+  if (!script) {
+    script = document.createElement('script');
+    script.id = id;
+    script.type = 'application/ld+json';
+    document.head.appendChild(script);
+  }
   script.textContent = JSON.stringify(data);
-  document.head.appendChild(script);
 }
 
 // Helper function to update canonical URL

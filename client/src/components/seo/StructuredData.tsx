@@ -41,6 +41,8 @@ interface BreadcrumbItem {
 }
 
 export function useProductStructuredData(product: Product) {
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://kenya-grubhub-gx7x.vercel.app';
+
   return useMemo(() => ({
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -60,7 +62,7 @@ export function useProductStructuredData(product: Product) {
       seller: {
         '@type': 'Organization',
         name: 'KenyaGrubHub',
-        url: 'https://kenya-grubhub-gx7x.vercel.app'
+        url: siteUrl
       }
     },
     category: product.category
@@ -68,12 +70,14 @@ export function useProductStructuredData(product: Product) {
 }
 
 export function useBusinessStructuredData(business: BusinessInfo) {
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://kenya-grubhub-gx7x.vercel.app';
+
   return useMemo(() => ({
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: business.name,
     description: business.description,
-    url: business.url || 'https://kenya-grubhub-gx7x.vercel.app',
+    url: business.url || siteUrl,
     logo: business.logo,
     telephone: business.phone,
     email: business.email,
@@ -114,21 +118,23 @@ export function useBreadcrumbStructuredData(items: BreadcrumbItem[]) {
 }
 
 export function useWebsiteStructuredData() {
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://kenya-grubhub-gx7x.vercel.app';
+
   return useMemo(() => ({
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'KenyaGrubHub',
-    url: 'https://kenya-grubhub-gx7x.vercel.app',
+    url: siteUrl,
     description: 'Shop premium laptops, mobiles, and stationery in Kenya. Fast delivery across Kenya with secure checkout.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://kenya-grubhub-gx7x.vercel.app/search?q={search_term_string}'
+        urlTemplate: `${siteUrl}/search?q={search_term_string}`
       },
       'query-input': 'required name=search_term_string'
     }
-  }), []);
+  }), [siteUrl]);
 }
 
 export function useArticleStructuredData(article: {
@@ -140,6 +146,8 @@ export function useArticleStructuredData(article: {
   modifiedDate?: string;
   url: string;
 }) {
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://kenya-grubhub-gx7x.vercel.app';
+
   return useMemo(() => ({
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -155,7 +163,7 @@ export function useArticleStructuredData(article: {
       name: 'KenyaGrubHub',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://kenyagrubhub.com/favicon2.png'
+        url: `${siteUrl}/favicon2.png`
       }
     },
     datePublished: article.publishDate,
@@ -164,5 +172,5 @@ export function useArticleStructuredData(article: {
       '@type': 'WebPage',
       '@id': article.url
     }
-  }), [article]);
+  }), [article, siteUrl]);
 }

@@ -14,6 +14,8 @@ export function usePageSeo(pageData: SeoPageData) {
   const [location] = useLocation();
 
   useEffect(() => {
+    const siteUrl = window.location.origin;
+
     // Update document title
     if (pageData.title) {
       document.title = `${pageData.title} | KenyaGrubHub`;
@@ -30,7 +32,7 @@ export function usePageSeo(pageData: SeoPageData) {
     // Update Open Graph tags
     updateMetaProperty('og:title', pageData.title);
     updateMetaProperty('og:description', pageData.description);
-    updateMetaProperty('og:url', `https://kenyagrubhub.com${location}`);
+    updateMetaProperty('og:url', `${siteUrl}${location}`);
     
     if (pageData.ogImage) {
       updateMetaProperty('og:image', pageData.ogImage);
@@ -46,11 +48,11 @@ export function usePageSeo(pageData: SeoPageData) {
 
     // Update structured data
     if (pageData.structuredData) {
-      updateStructuredData(pageData.structuredData);
+      updateStructuredData('seo-structured-data', pageData.structuredData);
     }
 
     // Update canonical URL
-    updateCanonicalUrl(`https://kenyagrubhub.com${location}`);
+    updateCanonicalUrl(`${siteUrl}${location}`);
 
   }, [pageData, location]);
 }
@@ -78,16 +80,15 @@ function updateMetaProperty(property: string, content: string) {
 }
 
 // Helper function to update structured data
-function updateStructuredData(data: Record<string, any>) {
-  // Remove existing structured data scripts
-  const existingScripts = document.querySelectorAll('script[type="application/ld+json"]');
-  existingScripts.forEach(script => script.remove());
-
-  // Add new structured data
-  const script = document.createElement('script');
-  script.type = 'application/ld+json';
+function updateStructuredData(id: string, data: Record<string, any>) {
+  let script = document.getElementById(id) as HTMLScriptElement | null;
+  if (!script) {
+    script = document.createElement('script');
+    script.id = id;
+    script.type = 'application/ld+json';
+    document.head.appendChild(script);
+  }
   script.textContent = JSON.stringify(data);
-  document.head.appendChild(script);
 }
 
 // Helper function to update canonical URL
@@ -133,6 +134,8 @@ export function useProductSchema(product: {
   brand?: string;
   available: boolean;
 }) {
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -153,7 +156,7 @@ export function useProductSchema(product: {
       seller: {
         '@type': 'Organization',
         name: 'KenyaGrubHub',
-        url: 'https://kenyagrubhub.com'
+        url: siteUrl
       }
     },
     category: product.category
