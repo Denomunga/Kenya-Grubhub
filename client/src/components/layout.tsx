@@ -104,7 +104,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const breadcrumbs = useMemo(() => {
-    const path = (location[0] || "/").split("?")[0];
+    const path = (location || "/").split("?")[0];
     const parts = path.split("/").filter(Boolean);
 
     const labelMap: Record<string, string> = {
@@ -171,7 +171,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const NavLink = ({ href, children, isDiscountButton = false }: { href: string; children: React.ReactNode; onClick?: () => void; isDiscountButton?: boolean }) => {
-    const isActive = location[0] === href;
+    const isActive = location === href;
     return (
       <Link href={href}>
         <motion.div 
@@ -182,16 +182,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 ? 'bg-blue-100 text-blue-800 shadow-xl border-blue-300 hover:bg-blue-200'
                 : "bg-white text-blue-700 hover:bg-blue-50 border-2 border-blue-600 hover:border-blue-700"
           }`}
-          whileHover={{ scale: 1.02, y: -2 }}
+          whileHover={{ scale: 1.02, x: 5 }}
           whileTap={{ scale: 0.98 }}
         >
           {children}
           {isActive && (
             <motion.div 
-              className="absolute bottom-0 left-0 right-0 h-1 mx-auto bg-blue-600 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: "100%" }}
-              exit={{ width: 0 }}
+              className="absolute bottom-0 left-0 right-0 h-1 mx-auto bg-blue-600"
+              layoutId="activeTab"
+              initial={false}
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />
           )}
