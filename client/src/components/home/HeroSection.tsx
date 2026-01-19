@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from 'wouter';
 import { motion } from "framer-motion";
-import heroImage from "@assets/generated_images/acbd.jpeg";
+import heroImage from "@assets/generated_images/a.jpeg";
 const HeroSection = () => {
 
   return (
