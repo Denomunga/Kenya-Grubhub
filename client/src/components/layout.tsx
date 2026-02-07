@@ -5,7 +5,7 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 import { Button } from "@/components/ui/button";
 import { 
-  Menu, X, Laptop, MapPin, 
+  Menu, X, Bomb, MapPin, 
   MessageSquare, LayoutDashboard, Moon, Sun
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
@@ -228,7 +228,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   animate={{ rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
                 >
-                  <Laptop className="h-6 w-6" />
+                  <Bomb className="h-6 w-6" />
                 </motion.div>
               </div>
               <span className="font-heading text-2xl font-bold tracking-tight flex items-center gap-2 text-gradient">
@@ -637,7 +637,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           >
             <div className="flex items-center gap-2 mb-4">
               <div className="p-1 rounded-md shadow-lg bg-white">
-                <Laptop className="h-5 w-5 text-primary" />
+                <Bomb className="h-5 w-5 text-primary" />
               </div>
               <span className="font-heading text-xl font-bold">MS-COMPUTERS</span>
             </div>

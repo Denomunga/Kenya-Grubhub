@@ -336,8 +336,8 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="relevance">Relevance</SelectItem>
-                  <SelectItem value="price-low">Price: Low to High</SelectItem>
-                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                  <SelectItem value="price-low">Price: Low $ High</SelectItem>
+                  <SelectItem value="price-high">Price: High $ Low</SelectItem>
                   <SelectItem value="name">Name</SelectItem>
                 </SelectContent>
               </Select>

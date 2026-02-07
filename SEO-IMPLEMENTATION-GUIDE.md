@@ -1,7 +1,7 @@
 # SEO Implementation Guide for KenyaGrubHub
 
 ## Overview
-This document outlines the SEO improvements implemented for the KenyaGrubHub web application to enhance Google search visibility and ranking.
+document outlines the SEO improvements implemented for the  web application to enhance Google search visibility and ranking.
 
 ## ✅ Completed SEO Enhancements
 
@@ -88,23 +88,20 @@ const productSchema = useProductStructuredData({
 - Proper image previews
 - Consistent branding
 
-## 🚀 Next Steps & Recommendations
-
-### Immediate Actions
-1. **Deploy Changes**: Push SEO improvements to production
-2. **Submit Sitemap**: Submit updated sitemap to Google Search Console
-3. **Monitor Performance**: Set up Google Analytics and Search Console
-
+***************************************************************************************
 ### Ongoing Optimization
-1. **Content Strategy**: Regular blog posts about tech products
+1. **Content Strategy**: Regular blog posts about .....
 2. **Local SEO**: Google My Business optimization
 3. **Performance**: Core Web Vitals monitoring
 4. **Backlinks**: Build quality inbound links
 
 ### Technical Improvements
-1. **Server-Side Rendering**: Consider Next.js for better SEO
+1. **Server-Side Rendering**: Next.js for better SEO
 2. **CDN Implementation**: Faster content delivery
 3. **Schema Expansion**: Add FAQ and review schemas
+
+****************************************************************************************************
+
 
 ## 📈 Expected Results
 
@@ -140,12 +137,93 @@ const productSchema = useProductStructuredData({
 
 ## 📞 Support
 
-For any SEO-related questions or additional optimizations needed:
+ SEO-related questions or additional optimizations needed:
 1. Check the implemented components in `/src/components/seo/`
 2. Review the custom hooks in `/src/hooks/useSeo.ts`
 3. Refer to Google's SEO guidelines for best practices
 
----
+
 
 *Last Updated: January 18, 2025*
-*Implementation Status: Complete*
+
+
+
+
+./ffmpeg.exe -framerate 59 -i enhanced/frame_%04d.png -c:v libx264 -pix_fmt yuv420p enhanced_video.mp4
+What to do now
+
+Leave it running until it reaches 100%.
+
+Don’t close PowerShell.
+
+Depending on your PC, this may take tens of minutes or even hours for 2147 frames.
+
+Once it’s done, you’ll have a folder:
+
+enhanced\
+
+
+with all the upscaled frames.
+
+Then we’ll rebuild the video with FFmpeg:
+
+./ffmpeg.exe -framerate 59 -i enhanced/frame_%04d.png -c:v libx264 -pix_fmt yuv420p enhanced_video.mp4
+
+
+-framerate 59 because your original video was ~59 fps.
+
+The result will be enhanced_video.mp4.
+
+
+You now have ~2147 PNG images inside:
+
+C:\Users\denni\Downloads\Telegram Desktop\frames
+
+STEP 2: Check Available Real-ESRGAN Models
+
+Run this:
+
+ls models
+
+
+You should see something like:
+
+realesrgan-x4plus.param
+realesrgan-x4plus.bin
+realesrgan-x4plus-anime.param
+...
+
+STEP 3: Enhance Frames with AI
+
+Assuming your goal is normal real-life video (not anime/cartoon), run:
+
+./realesrgan-ncnn-vulkan.exe -i frames -o enhanced -s 2 -n realesrgan-x4plus
+
+Explanation:
+
+-i frames → input folder with extracted frames
+
+-o enhanced → output folder for AI-enhanced frames
+
+-s 2 → upscale 2× (safe & fast for Intel HD 520)
+
+-n realesrgan-x4plus → best general model for real videos
+
+⚠️ This may take a while — Intel HD 520 is integrated graphics, so speed is moderate.
+
+STEP 4: Rebuild Video
+
+Once the frames are enhanced, run:
+
+./ffmpeg.exe -framerate 59 -i enhanced/frame_%04d.png -c:v libx264 -pix_fmt yuv420p enhanced_video.mp4
+
+
+Notes:
+
+Use -framerate 59 because your original video was 59.15 fps.
+
+Output will be enhanced_video.mp4 in the same folder.
+
+STEP 5: Enjoy Your AI-Enhanced Video
+
+✅ You’ll now have a clearer, upscaled video.

@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
+//import bcrypt from "bcryptjs";
 import { log } from "./logger.js";
 import { User } from "./models/User.js";
 
@@ -26,15 +26,15 @@ async function initializeDatabase() {
     // Check if admin exists
     const adminExists = await User.findOne({ username: "admin" });
     if (!adminExists) {
-      const hashedPassword = await bcrypt.hash("", 10);
-      await User.create({
-        username: "admin",
-        email: "admin@kenyanbistro.co.ke",
-        password: hashedPassword,
-        name: "Admin User",
-        role: "admin",
-      });
-      log("✅ Default admin user created (username: admin, password: admin)");
+     // const hashedPassword = await bcrypt.hash("", 10);
+      // await User.create({
+      //   username: "admin",
+      //   email: "admin@kenyanbistro.co.ke",
+      //   password: hashedPassword,
+      //   name: "Admin User",
+      //   role: "admin",
+      // });
+      // log("✅ Default admin user created (username: admin, password: admin)");
     }
   } catch (error) {
     log(`⚠️  Database initialization warning: ${error}`);
