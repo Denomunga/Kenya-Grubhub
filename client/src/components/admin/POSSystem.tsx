@@ -90,8 +90,7 @@ export default function POSSystem() {
   const { menu: products } = useData();
   const { user, logout } = useHybridAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<string>('');
-  const [quantity, setQuantity] = useState<number>(1);
+  // selectedProduct and quantity removed - product grid uses quick-add
 
   const [isMobile, setIsMobile] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -100,7 +99,7 @@ export default function POSSystem() {
   const [bulkQuantities, setBulkQuantities] = useState<Record<string, number>>({});
   const [bulkSearchQuery, setBulkSearchQuery] = useState<string>('');
 
-  const [paymentMethod, setPaymentMethod] = useState<string>('Cash');
+  const [paymentMethod, setPaymentMethod] = useState<string>('Mobile Money');
   const [paymentAmount, setPaymentAmount] = useState<string>('');
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('');
@@ -355,9 +354,9 @@ export default function POSSystem() {
 
   const handleNewSale = () => {
     setCart([]);
-    setSelectedProduct('');
-    setQuantity(1);
-    setPaymentMethod('Cash');
+    // grid uses quick-add
+    // quantity state removed
+    setPaymentMethod('Mobile Money');
     setPaymentAmount('');
     setCustomerName('');
     setCustomerPhone('');
@@ -379,14 +378,6 @@ export default function POSSystem() {
     const decimals = getStepDecimals(step);
     const normalized = Math.round(value / step) * step;
     return Number(normalized.toFixed(decimals));
-  };
-
-  const getSelectedProductMeta = () => {
-    const product = (products as Product[]).find((p: Product) => p.id === selectedProduct);
-    return {
-      unit: product?.unit || 'pcs',
-      step: product?.quantityStep || 1,
-    };
   };
 
   const getProductMeta = (productId: string) => {
@@ -468,12 +459,6 @@ export default function POSSystem() {
 
   const getSubtotal = () => cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const getTotal = () => getSubtotal() + tax - discount;
-
-  const addToCart = () => {
-    addProductToCart(selectedProduct, quantity);
-    setSelectedProduct('');
-    setQuantity(1);
-  };
 
   const searchProducts = async (query: string) => {
     if (!query.trim()) {
@@ -1256,9 +1241,9 @@ export default function POSSystem() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Mobile Money">M-Pesa (Mobile Money)</SelectItem>
                   <SelectItem value="Cash">Cash</SelectItem>
                   <SelectItem value="Card">Card</SelectItem>
-                  <SelectItem value="Mobile Money">Mobile Money</SelectItem>
                   <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
@@ -1489,7 +1474,7 @@ export default function POSSystem() {
                       }}
                     />
                     <div className="text-xs text-muted-foreground mt-1">
-                      F2: Search • F4: Receipts • F6: Stock • F7: Reports
+                      F1: New Sale • F2: Search • F4: Receipts • F6: Stock • F7: Reports • Enter: Quick-add first result
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -1562,79 +1547,96 @@ export default function POSSystem() {
               </CardContent>
             </Card>
 
+            {/* ═══ Product Grid with Category Tabs ═══ */}
             <Card>
-              <CardHeader>
-                <CardTitle>Add Products</CardTitle>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Product Grid</CardTitle>
+                  <span className="text-xs text-muted-foreground">Click to quick-add</span>
+                </div>
+                {/* Category Tabs */}
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  <Button
+                    variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-8 text-xs rounded-full px-3"
+                    onClick={() => setSelectedCategory('all')}
+                  >
+                    All ({(products as Product[]).filter((p: Product) => p.available).length})
+                  </Button>
+                  {categories.map((c) => {
+                    const count = (products as Product[]).filter((p: Product) => p.available && p.category === c).length;
+                    return (
+                      <Button
+                        key={c}
+                        variant={selectedCategory === c ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-8 text-xs rounded-full px-3"
+                        onClick={() => setSelectedCategory(c)}
+                      >
+                        {c} ({count})
+                      </Button>
+                    );
+                  })}
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="category">Category</Label>
-                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="All categories" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        {categories.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="product">Product</Label>
-                    <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select a product" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredProducts.map((product: Product) => {
-                          const isLowStock = product.stock !== undefined && product.stock <= 5;
-                          const isOutOfStock = product.stock === 0;
+              <CardContent>
+                <ScrollArea className="h-[340px]">
+                  {filteredProducts.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pr-3">
+                      {filteredProducts.map((product: Product) => {
+                        const isLowStock = product.stock !== undefined && product.stock <= 5 && product.stock > 0;
+                        const isOutOfStock = product.stock === 0;
+                        const isFav = favorites.includes(product.id);
+                        const inCart = cart.find(item => item.productId === product.id);
 
-                          return (
-                            <SelectItem
-                              key={product.id}
-                              value={product.id}
-                              disabled={isOutOfStock}
-                              className={isLowStock ? "text-orange-600 font-medium" : isOutOfStock ? "text-red-500 line-through" : ""}
-                            >
-                              {product.name} - {formatPriceKSHS(product.price)}
+                        return (
+                          <button
+                            key={product.id}
+                            disabled={isOutOfStock}
+                            className={`relative text-left p-3 rounded-lg border transition-all hover:shadow-md active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                              isOutOfStock
+                                ? 'opacity-50 cursor-not-allowed bg-muted/50'
+                                : inCart
+                                  ? 'border-primary bg-primary/5 shadow-sm'
+                                  : 'border-border hover:border-primary/50 bg-background'
+                            }`}
+                            onClick={() => {
+                              if (!isOutOfStock) {
+                                addProductToCart(product.id, product.quantityStep || 1);
+                              }
+                            }}
+                          >
+                            {isFav && (
+                              <Heart className="absolute top-1.5 right-1.5 h-3 w-3 fill-red-500 text-red-500" />
+                            )}
+                            {inCart && (
+                              <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                {inCart.quantity}
+                              </span>
+                            )}
+                            <div className="font-medium text-xs leading-tight truncate">{product.name}</div>
+                            <div className="text-sm font-bold text-primary mt-1">{formatPriceKSHS(product.price)}</div>
+                            <div className="flex items-center justify-between mt-1">
                               {product.stock !== undefined && (
-                                <span className={isLowStock ? "text-orange-600 font-bold" : isOutOfStock ? "text-red-500" : ""}>
-                                  {isOutOfStock ? " (OUT OF STOCK)" : ` (${product.stock} in stock${isLowStock ? " - LOW STOCK!" : ""})`}
+                                <span className={`text-[10px] ${isOutOfStock ? 'text-red-500 font-medium' : isLowStock ? 'text-orange-500' : 'text-muted-foreground'}`}>
+                                  {isOutOfStock ? 'OUT' : `${product.stock} left`}
                                 </span>
                               )}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="quantity">Quantity</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      min="1"
-                      step={getSelectedProductMeta().step}
-                      value={quantity}
-                      onChange={(e) => {
-                        const step = getSelectedProductMeta().step;
-                        const v = parseFloat(e.target.value);
-                        setQuantity(normalizeToStep(isNaN(v) ? step : v, step) || step);
-                      }}
-                      className="h-11 text-base"
-                    />
-                  </div>
-                </div>
-                <Button onClick={addToCart} className="w-full h-11 text-base font-semibold">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add to Cart
-                </Button>
+                              {product.unit && (
+                                <span className="text-[10px] text-muted-foreground">/{product.unit}</span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
+                      No products in this category
+                    </div>
+                  )}
+                </ScrollArea>
               </CardContent>
             </Card>
           </div>
@@ -1642,6 +1644,55 @@ export default function POSSystem() {
           {!isMobile && (
             <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-20 self-start">
               {cartSummary}
+
+              {/* ═══ Instant Receipt Preview ═══ */}
+              {cart.length > 0 && (
+                <Card className="border-dashed">
+                  <CardHeader className="py-3 px-4">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-medium">Receipt Preview</CardTitle>
+                      <Receipt className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    <div className="bg-muted/30 rounded-lg p-3 text-xs space-y-2 font-mono">
+                      <div className="text-center font-bold text-sm">MS-COMPUTERS</div>
+                      <Separator />
+                      {cart.map((item) => (
+                        <div key={item.productId} className="flex justify-between">
+                          <span className="truncate flex-1">{item.name} x{item.quantity}</span>
+                          <span className="ml-2 font-medium">{formatPriceKSHS(item.price * item.quantity)}</span>
+                        </div>
+                      ))}
+                      <Separator />
+                      <div className="flex justify-between">
+                        <span>Subtotal</span>
+                        <span>{formatPriceKSHS(getSubtotal())}</span>
+                      </div>
+                      {discount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>Discount</span>
+                          <span>-{formatPriceKSHS(discount)}</span>
+                        </div>
+                      )}
+                      {tax > 0 && (
+                        <div className="flex justify-between">
+                          <span>Tax</span>
+                          <span>{formatPriceKSHS(tax)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-sm border-t pt-1">
+                        <span>TOTAL</span>
+                        <span>{formatPriceKSHS(getTotal())}</span>
+                      </div>
+                      <div className="text-center text-muted-foreground mt-1">
+                        Payment: {paymentMethod}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {totalsAndPayment}
             </div>
           )}

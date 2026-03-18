@@ -802,6 +802,209 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Professional Dashboards for different roles
+
+  // Accounting Manager Dashboard
+  app.get("/api/dashboard/accounting-manager", requireAuth, async (req: Request, res: Response) => {
+    if (!req.user || !['admin', 'accounting_manager'].includes(req.user.role)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    try {
+      // Import accounting services dynamically to avoid circular imports
+      const { FinancialReportingService, ExpenseService, RecurringExpenseService } = await import('./modules/accounting/service');
+
+      const [trialBalance, expenses, upcomingExpenses, financialSummary] = await Promise.all([
+        FinancialReportingService.generateTrialBalance(),
+        ExpenseService.getExpenses({ status: 'pending' }, 1, 10),
+        RecurringExpenseService.getUpcomingExpenses(30),
+        FinancialReportingService.getFinancialSummary()
+      ]);
+
+      res.json({
+        trialBalance,
+        pendingExpenses: expenses.expenses,
+        upcomingRecurringExpenses: upcomingExpenses,
+        financialSummary: {
+          totalAssets: financialSummary.assets,
+          totalLiabilities: financialSummary.liabilities,
+          totalEquity: financialSummary.equity,
+          totalRevenue: financialSummary.revenue,
+          totalExpenses: financialSummary.expenses,
+          netIncome: financialSummary.netIncome
+        }
+      });
+    } catch (error) {
+      console.error("Accounting manager dashboard error:", error);
+      res.status(500).json({ message: "Failed to load dashboard" });
+    }
+  });
+
+  // HR Manager Dashboard
+  app.get("/api/dashboard/hr-manager", requireAuth, async (req: Request, res: Response) => {
+    if (!req.user || !['admin', 'hr_manager'].includes(req.user.role)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    try {
+      // Get user statistics and recent activities
+      const [totalUsers, recentUsers, usersByRole] = await Promise.all([
+        User.countDocuments(),
+        User.find().sort({ createdAt: -1 }).limit(5).select('name email role createdAt'),
+        User.aggregate([
+          { $group: { _id: '$role', count: { $sum: 1 } } },
+          { $sort: { count: -1 } }
+        ])
+      ]);
+
+      res.json({
+        totalUsers,
+        recentUsers,
+        usersByRole,
+        userGrowth: {
+          // This would typically include more complex analytics
+          total: totalUsers
+        }
+      });
+    } catch (error) {
+      console.error("HR manager dashboard error:", error);
+      res.status(500).json({ message: "Failed to load dashboard" });
+    }
+  });
+
+  // Sales Person Dashboard
+  app.get("/api/dashboard/sales-person", requireAuth, async (req: Request, res: Response) => {
+    if (!req.user || !['admin', 'sales_person'].includes(req.user.role)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    try {
+      // Import sales/order related models
+      const { Order } = await import('./models/Order');
+      const { Sale } = await import('./models/Sale');
+      const { Product } = await import('./models/Product');
+
+      const [recentOrders, recentSales, topProducts] = await Promise.all([
+        Order.find({ status: { $ne: 'Cancelled' } })
+          .sort({ createdAt: -1 })
+          .limit(10)
+          .populate('userId', 'name'),
+        Sale.find({ status: 'Completed' })
+          .sort({ createdAt: -1 })
+          .limit(10)
+          .populate('productId', 'name price'),
+        Product.find()
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .select('name price category')
+      ]);
+
+      // Calculate basic sales metrics
+      const totalOrders = await Order.countDocuments({ status: { $ne: 'Cancelled' } });
+      const totalSales = await Sale.countDocuments({ status: 'Completed' });
+
+      res.json({
+        recentOrders,
+        recentSales,
+        topProducts,
+        metrics: {
+          totalOrders,
+          totalSales,
+          conversionRate: totalSales > 0 ? (totalOrders / totalSales * 100).toFixed(2) : '0'
+        }
+      });
+    } catch (error) {
+      console.error("Sales person dashboard error:", error);
+      res.status(500).json({ message: "Failed to load dashboard" });
+    }
+  });
+
+  // Accounting Person Dashboard
+  app.get("/api/dashboard/accounting-person", requireAuth, async (req: Request, res: Response) => {
+    if (!req.user || !['admin', 'accounting_person'].includes(req.user.role)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    try {
+      // Import accounting services
+      const { ExpenseService, JournalEntryService } = await import('./modules/accounting/service');
+
+      const [pendingExpenses, recentJournalEntries, expenseStats] = await Promise.all([
+        ExpenseService.getExpenses({ status: 'pending' }, 1, 20),
+        JournalEntryService.getJournalEntries({}, 1, 10),
+        ExpenseService.getExpenseStats()
+      ]);
+
+      res.json({
+        pendingExpenses: pendingExpenses.expenses,
+        recentJournalEntries: recentJournalEntries.entries,
+        expenseStats
+      });
+    } catch (error) {
+      console.error("Accounting person dashboard error:", error);
+      res.status(500).json({ message: "Failed to load dashboard" });
+    }
+  });
+
+  // Admin Dashboard (comprehensive view)
+  app.get("/api/dashboard/admin", requireAuth, async (req: Request, res: Response) => {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    try {
+      // Import all necessary models and services
+      const { Order } = await import('./models/Order');
+      const { Sale } = await import('./models/Sale');
+      const { FinancialReportingService, ExpenseService } = await import('./modules/accounting/service');
+
+      const [
+        totalUsers,
+        totalOrders,
+        totalSales,
+        financialSummary,
+        pendingExpenses,
+        systemStats
+      ] = await Promise.all([
+        User.countDocuments(),
+        Order.countDocuments({ status: { $ne: 'Cancelled' } }),
+        Sale.countDocuments({ status: 'Completed' }),
+        FinancialReportingService.getFinancialSummary(),
+        ExpenseService.getExpenses({ status: 'pending' }, 1, 5),
+        // Basic system stats
+        Promise.resolve({
+          uptime: process.uptime(),
+          memory: process.memoryUsage(),
+          version: process.version
+        })
+      ]);
+
+      res.json({
+        overview: {
+          totalUsers,
+          totalOrders,
+          totalSales,
+          pendingExpenses: pendingExpenses.expenses.length
+        },
+        financialSummary: {
+          totalAssets: financialSummary.assets,
+          totalLiabilities: financialSummary.liabilities,
+          totalEquity: financialSummary.equity,
+          totalRevenue: financialSummary.revenue,
+          totalExpenses: financialSummary.expenses,
+          netIncome: financialSummary.netIncome
+        },
+        systemStats,
+        recentActivity: {
+          pendingExpenses: pendingExpenses.expenses
+        }
+      });
+    } catch (error) {
+      console.error("Admin dashboard error:", error);
+      res.status(500).json({ message: "Failed to load admin dashboard" });
+    }
+  });
+
   // Chat routes
 
   // Uploads: accepts single image uploads for admin/staff, stores them under /uploads

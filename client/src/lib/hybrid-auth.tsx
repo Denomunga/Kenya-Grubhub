@@ -33,6 +33,7 @@ interface HybridAuthContextType {
   isAdmin: boolean;
   isStaff: boolean;
   isManager: boolean;
+  isAccountant: boolean;
   allUsers: User[];
   refreshAllUsers: () => Promise<void>;
   loading: boolean;
@@ -333,6 +334,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
         isAdmin: currentUser?.role === "admin",
         isStaff: currentUser?.role === "staff" || currentUser?.role === "admin",
         isManager: currentUser?.role === "admin" || (currentUser?.role === "staff" && currentUser?.jobTitle === "Manager"),
+        isAccountant: currentUser?.role === "admin" || currentUser?.jobTitle === "Accountant" || currentUser?.jobTitle === "accountant",
         allUsers,
         refreshAllUsers,
         loading,

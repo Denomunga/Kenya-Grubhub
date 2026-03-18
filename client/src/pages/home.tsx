@@ -6,6 +6,7 @@ import HeroSection from "@/components/home/HeroSection";
 import CategoryFilter from "@/components/home/CategoryFilter";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
 import ProductSearch from "@/components/search/ProductSearch";
+import JobAdvertBanner from "@/components/home/JobAdvertBanner";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, MapPin, CheckCircle, AlertCircle, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -323,6 +324,8 @@ export default function Home() {
         structuredData={websiteStructuredData}
       />
       <div className="min-h-screen bg-background gradient-mesh particle-container">
+      {/* Job Advert Banner - visible to all users */}
+      <JobAdvertBanner />
       {/* Hero Section */}
       <div className="relative">
         <HeroSection />

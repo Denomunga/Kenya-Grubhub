@@ -5,7 +5,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   name: string;
-  role: "admin" | "staff" | "user";
+  role: "admin" | "staff" | "user" | "accounting_manager" | "hr_manager" | "sales_person" | "accounting_person" | "payroll_manager" | "procurement_manager";
   jobTitle?: string;
   avatar?: string;
   // Auth0 integration field
@@ -59,7 +59,7 @@ const UserSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ["admin", "staff", "user"],
+      enum: ["admin", "staff", "user", "accounting_manager", "hr_manager", "sales_person", "accounting_person", "payroll_manager", "procurement_manager"],
       default: "user",
     },
     jobTitle: {

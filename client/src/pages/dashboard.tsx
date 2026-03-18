@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Bell, Check, DollarSign, LayoutGrid, Mail, MapPin, MapPinned, MoreHorizontal, Newspaper, Phone, Pin, PinOff, Plus, Search, Settings, ShoppingBag, Users, TrendingUp } from "lucide-react";
+import { BarChart3, Bell, Check, CreditCard, DollarSign, LayoutGrid, Mail, MapPin, MapPinned, MoreHorizontal, Newspaper, Phone, Pin, PinOff, Plus, Search, Settings, ShoppingBag, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import NewsletterManager from "@/components/admin/NewsletterManager";
 import NewsManager from "@/components/admin/NewsManager";
@@ -38,7 +38,9 @@ import OrderLocationView from "@/components/admin/OrderLocationView";
 import BusinessLocationManager from "@/components/admin/BusinessLocationManager";
 import POSSystem from "@/components/admin/POSSystem";
 import SocialLinksManager from "@/components/admin/SocialLinksManager";
-import { Bar, BarChart, CartesianGrid, Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, Cell } from "recharts";
+import OverviewDashboard from "@/components/admin/OverviewDashboard";
+import HRDashboard from "@/components/admin/HRDashboard";
+import AccountingDashboard from "@/components/admin/AccountingDashboard";
 
 function playBeep() {
   try {
@@ -57,7 +59,7 @@ function playBeep() {
 }
 
 export default function Dashboard() {
-  const { user, isAdmin, isStaff, allUsers, updateUserRole, refreshAllUsers } = useHybridAuth();
+  const { user, isAdmin, isStaff, isAccountant, allUsers, updateUserRole, refreshAllUsers } = useHybridAuth();
   const [, setLocation] = useLocation();
   const { 
     orders, menu, updateOrderStatus, serverHealth, kpis
@@ -73,10 +75,10 @@ export default function Dashboard() {
   const [kpiRange, setKpiRange] = React.useState<"today" | "7d" | "30d" | "custom">("today");
   const [customStart, setCustomStart] = React.useState<string>("");
   const [customEnd, setCustomEnd] = React.useState<string>("");
-  const [serverHealthUpdatedAt, setServerHealthUpdatedAt] = React.useState<number | null>(null);
+  const [_serverHealthUpdatedAt, setServerHealthUpdatedAt] = React.useState<number | null>(null);
 
   const [posTopSelling, setPosTopSelling] = React.useState<any[]>([]);
-  const [posCategoryTrends, setPosCategoryTrends] = React.useState<any[]>([]);
+  const [_posCategoryTrends, setPosCategoryTrends] = React.useState<any[]>([]);
   const [posTrendsDaily2x, setPosTrendsDaily2x] = React.useState<Record<string, number>>({});
 
   const [drillOpen, setDrillOpen] = React.useState(false);
@@ -783,12 +785,24 @@ export default function Dashboard() {
             {isAdmin && (
               <CommandItem onSelect={() => { setActiveTab("menu"); setCommandOpen(false); toast({ title: "Tip", description: "Use Menu tab to add products." }); }}>
                 <Plus className="h-4 w-4" />
-                Add product
+                Add Product
+              </CommandItem>
+            )}
+            {(isAdmin || isStaff) && (
+              <CommandItem onSelect={() => { setActiveTab("orders"); setCommandOpen(false); toast({ title: "Tip", description: "Use Orders tab to create a new order." }); }}>
+                <Plus className="h-4 w-4" />
+                Create Order
+              </CommandItem>
+            )}
+            {isAdmin && (
+              <CommandItem onSelect={() => { setActiveTab("hr"); setCommandOpen(false); toast({ title: "Tip", description: "Use HR tab to manage payroll and payslips." }); }}>
+                <CreditCard className="h-4 w-4" />
+                Pay Supplier
               </CommandItem>
             )}
             <CommandItem onSelect={() => { setActiveTab("orders"); setCommandOpen(false); }}>
               <Search className="h-4 w-4" />
-              View today’s orders
+              View today's orders
             </CommandItem>
           </CommandGroup>
 
@@ -1365,18 +1379,25 @@ export default function Dashboard() {
                   <DropdownMenuItem onSelect={() => setActiveTab("news")}>News</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setActiveTab("newsletter")}>Newsletter</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setActiveTab("settings")}>Settings</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setActiveTab("users")}>Users</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setActiveTab("hr")}>HR</DropdownMenuItem>
+                  {(isAdmin || isAccountant) && <DropdownMenuItem onSelect={() => setActiveTab("accounting")}>Accounting</DropdownMenuItem>}
                   <DropdownMenuItem onSelect={() => setActiveTab("audit")}>Audit</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setActiveTab("user-audit")}>User Audit</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
 
-            {isAdmin && (
-              <TabsTrigger value="users" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
+            <TabsTrigger value="hr" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
+              <span className="inline-flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                HR
+              </span>
+            </TabsTrigger>
+            {(isAdmin || isAccountant) && (
+              <TabsTrigger value="accounting" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
                 <span className="inline-flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Users
+                  <DollarSign className="h-4 w-4" />
+                  Accounting
                 </span>
               </TabsTrigger>
             )}
@@ -1386,292 +1407,42 @@ export default function Dashboard() {
         </div>
 
         <TabsContent value="overview">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-1">
-              <div className="text-sm font-medium">Analytics range</div>
-              <div className="text-xs text-muted-foreground">
-                {kpiRange === "custom" && customStart && customEnd
-                  ? `${customStart} → ${customEnd}`
-                  : kpiRange === "today" ? "Today" : kpiRange === "7d" ? "Last 7 days" : "Last 30 days"}
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant={kpiRange === "today" ? "default" : "outline"} size="sm" onClick={() => setKpiRange("today")}>Today</Button>
-              <Button variant={kpiRange === "7d" ? "default" : "outline"} size="sm" onClick={() => setKpiRange("7d")}>7d</Button>
-              <Button variant={kpiRange === "30d" ? "default" : "outline"} size="sm" onClick={() => setKpiRange("30d")}>30d</Button>
-              <Button variant={kpiRange === "custom" ? "default" : "outline"} size="sm" onClick={() => setKpiRange("custom")}>Custom</Button>
-              {kpiRange === "custom" && (
-                <div className="flex flex-wrap gap-2">
-                  <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="h-9 w-[150px]" />
-                  <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="h-9 w-[150px]" />
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 mt-4">
-            <Badge variant="outline" className="gap-2">
-              Orders: {formatPriceKSHS(kpiRange === "today" ? todayOrderRevenue : rangeOrderRevenue)}
-            </Badge>
-            <Badge variant="outline" className="gap-2">
-              POS: {formatPriceKSHS(kpiRange === "today" ? posTodayRevenue : rangePosRevenue)}
-            </Badge>
-            <Badge variant="secondary" className="gap-2">
-              Total: {formatPriceKSHS(currentRangeRevenue)}
-            </Badge>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="border shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatPriceKSHS(
-                    (kpis?.totalRevenue && kpis.totalRevenue > 0)
-                      ? kpis.totalRevenue
-                      : (orders.reduce((sum, o) => sum + o.total, 0) + posTotalRevenue)
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <p className="text-xs text-muted-foreground">+20.1% from last month</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Today's Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatPriceKSHS(todayOrderRevenue + posTodayRevenue)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">Resets daily at midnight</p>
-              </CardContent>
-            </Card>
-            <Card className="border shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Server Health</CardTitle>
-                <div className={`w-3 h-3 rounded-full ${serverHealth && serverHealthUpdatedAt && Date.now() - serverHealthUpdatedAt < 60_000 ? 'bg-green-500' : 'bg-orange-500'}`}></div>
-              </CardHeader>
-              <CardContent>
-                {serverHealth ? (
-                  <div>
-                    <div className="text-sm">Memory: {(serverHealth.memory.rss / (1024*1024)).toFixed(1)} MB</div>
-                    <div className="text-sm">Load: {serverHealth.load[0].toFixed(2)}</div>
-                    <div className="text-sm">Uptime: {Math.floor(serverHealth.uptime/60)} mins</div>
-                    <div className="text-xs text-muted-foreground mt-2">
-                      Last update: {serverHealthUpdatedAt ? new Date(serverHealthUpdatedAt).toLocaleTimeString() : '—'}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">No data</div>
-                )}
-              </CardContent>
-            </Card>
-            <Card className="border shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
-                <ShoppingBag className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {orders.filter(o => o.status !== "Delivered").length}
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                  <p className="text-xs text-muted-foreground">Live updates</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{allUsers.length}</div>
-                <div className="flex items-center gap-2 mt-2">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <p className="text-xs text-muted-foreground">+12% this month</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-            <Card className="border shadow-sm lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-base">Recent Activity</CardTitle>
-                <CardDescription>Live feed from orders, POS, and audits</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {activity.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No activity yet.</div>
-                ) : (
-                  <div className="space-y-3">
-                    {activity.map((a) => (
-                      <div key={a.id} className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium">{a.label}</div>
-                          {a.meta && <div className="text-xs text-muted-foreground">{a.meta}</div>}
-                        </div>
-                        <div className="text-xs text-muted-foreground shrink-0">{new Date(a.ts).toLocaleTimeString()}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">Revenue Sparkline</CardTitle>
-                <CardDescription>{kpiRange === "today" ? "Today" : `Last ${rangeDays} days`}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {(() => {
-                  const startMs = rangeStart.getTime();
-                  const endMs = rangeEnd.getTime();
-                  const buckets: Record<string, number> = {};
-                  for (let i = 0; i < rangeDays; i++) {
-                    const d = new Date(rangeStart);
-                    d.setDate(d.getDate() + i);
-                    const key = toLocalDateKey(d);
-                    buckets[key] = 0;
-                  }
-                  (orders || []).forEach((o) => {
-                    if (o.status === "Cancelled") return;
-                    const d = new Date(o.date);
-                    if (isNaN(d.getTime())) return;
-                    if (d.getTime() < startMs) return;
-                    if (d.getTime() > endMs) return;
-                    const key = toLocalDateKey(d);
-                    if (!(key in buckets)) return;
-                    buckets[key] += o.total || 0;
-                  });
-
-                  Object.keys(buckets).forEach((key) => {
-                    buckets[key] += posDailyRevenue[key] || 0;
-                  });
-
-                  if (kpiRange === "today") {
-                    const todayKey = toLocalDateKey(rangeStart);
-                    if (todayKey in buckets) {
-                      buckets[todayKey] = todayOrderRevenue + posTodayRevenue;
-                    }
-                  }
-                  const points = Object.values(buckets);
-                  const max = Math.max(1, ...points);
-                  const keys = Object.keys(buckets);
-                  return (
-                    <div className="h-16 flex items-end gap-1">
-                      {points.map((v, idx) => {
-                        const key = keys[idx];
-                        return (
-                          <button
-                            key={key}
-                            className="flex-1 rounded-sm bg-primary/30 hover:bg-primary/40 focus:outline-none"
-                            style={{ height: `${Math.max(2, Math.round((v / max) * 64))}px` }}
-                            onClick={() => {
-                              setDrillDateKey(key);
-                              setDrillOpen(true);
-                            }}
-                            title={key}
-                          />
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">Top-selling products (POS)</CardTitle>
-                <CardDescription>Top 10 by revenue</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {(() => {
-                  const items = (posTopSelling || []).slice(0, 10).map((x: any) => {
-                    const id = String(x?._id || '');
-                    const product = (menu || []).find((m: any) => String(m.id) === id);
-                    return {
-                      id,
-                      name: product?.name || id.slice(-6) || 'Product',
-                      revenue: Number(x?.revenue) || 0,
-                      sold: Number(x?.sold) || 0,
-                    };
-                  });
-
-                  if (items.length === 0) return <div className="text-sm text-muted-foreground">No POS sales data.</div>;
-
-                  return (
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={items} margin={{ left: 8, right: 8 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} angle={-20} textAnchor="end" height={50} />
-                          <YAxis tick={{ fontSize: 12 }} />
-                          <RechartsTooltip />
-                          <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  );
-                })()}
-              </CardContent>
-            </Card>
-
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">Category breakdown (POS)</CardTitle>
-                <CardDescription>Revenue by category</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {(() => {
-                  const items = (posCategoryTrends || []).slice(0, 12).map((x: any) => ({
-                    category: String(x?._id || 'Unknown'),
-                    revenue: Number(x?.total) || 0,
-                    count: Number(x?.count) || 0,
-                  })).filter((x: any) => x.revenue > 0);
-
-                  if (items.length === 0) return <div className="text-sm text-muted-foreground">No category data.</div>;
-
-                  const colors = [
-                    'hsl(var(--primary))',
-                    'hsl(var(--secondary))',
-                    'hsl(280 70% 50%)',
-                    'hsl(160 70% 45%)',
-                    'hsl(30 90% 55%)',
-                    'hsl(210 80% 55%)',
-                  ];
-
-                  return (
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <RechartsTooltip />
-                          <Pie data={items} dataKey="revenue" nameKey="category" outerRadius={90}>
-                            {items.map((_, idx) => (
-                              <Cell key={idx} fill={colors[idx % colors.length]} />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  );
-                })()}
-              </CardContent>
-            </Card>
-          </div>
+          <OverviewDashboard
+            orders={orders}
+            menu={menu}
+            allUsers={allUsers}
+            activity={activity}
+            kpis={kpis}
+            serverHealth={serverHealth}
+            todayOrderRevenue={todayOrderRevenue}
+            posTodayRevenue={posTodayRevenue}
+            posTodayCount={posTodayCount}
+            posTotalRevenue={posTotalRevenue}
+            currentRangeRevenue={currentRangeRevenue}
+            revenueDeltaPct={revenueDeltaPct}
+            posDailyRevenue={posDailyRevenue}
+            posTopSelling={posTopSelling}
+            rangeDays={rangeDays}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            kpiRange={kpiRange}
+            setKpiRange={setKpiRange}
+            customStart={customStart}
+            customEnd={customEnd}
+            setCustomStart={setCustomStart}
+            setCustomEnd={setCustomEnd}
+            setActiveTab={setActiveTab}
+            onOrderClick={(order) => {
+              setSelectedOrder(order);
+              setOrderDetailOpen(true);
+            }}
+            onDrillDate={(dateKey) => {
+              setDrillDateKey(dateKey);
+              setDrillOpen(true);
+            }}
+            isTodayLocal={isTodayLocal}
+            toLocalDateKey={toLocalDateKey}
+          />
         </TabsContent>
 
         <TabsContent value="analytics">
@@ -1996,6 +1767,14 @@ export default function Dashboard() {
                 <UserAuditViewer />
               </CardContent>
             </Card>
+          </TabsContent>
+        )}
+        <TabsContent value="hr">
+          <HRDashboard />
+        </TabsContent>
+        {(isAdmin || isAccountant) && (
+          <TabsContent value="accounting">
+            <AccountingDashboard />
           </TabsContent>
         )}
       </Tabs>
