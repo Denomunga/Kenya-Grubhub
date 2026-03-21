@@ -17,7 +17,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   }
   
   const config: RequestInit = {
-    credentials: 'include', // keep if cookies are also used
+    //credentials: 'include', // keep if cookies are also used
     ...options,
     headers,
   };

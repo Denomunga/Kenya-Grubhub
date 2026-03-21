@@ -5,6 +5,8 @@ import { DashboardController } from './dashboardController';
 import { requireAuth } from '@shared/middleware/auth';
 import { requireRole } from '@shared/middleware/roles';
 import { generalLimiter, authLimiter } from '@shared/middleware/rateLimiter';
+import { checkJwt } from '@shared/middleware/auth0';
+
 
 const router = Router();
 
@@ -29,10 +31,20 @@ const handleValidationErrors = (req: Request, res: Response, next: Function) => 
  * POST /api/v1/accounting/init
  * Requires: Admin role
  */
+
+// Remove line 34 completely
+// router.post('/sync-auth0', checkJwt, async (req, res) => { ... });
+
+// Then for all protected accounting routes, replace requireAuth with checkJwt
+// Example:
+router.get('/stats', generalLimiter, checkJwt, requireRole(['admin', 'accounting_manager']), DashboardController.getStats);
+// etc.
+
+
 router.post(
   '/init',
   authLimiter,
-  requireAuth,
+   checkJwt,
   requireRole(['admin']),
   AccountingController.initializeAccounts
 );
@@ -48,7 +60,7 @@ router.post(
 router.get(
   '/accounts',
   generalLimiter,
-  requireAuth,
+  checkJwt,
   AccountingController.getAccounts
 );
 
@@ -143,7 +155,7 @@ router.get(
 router.post(
   '/invoices',
   authLimiter,
-  requireAuth,
+  checkJwt,
   requireRole(['admin', 'accounting_manager']),
   [
     body('clientName').trim().notEmpty().withMessage('Client name is required'),
