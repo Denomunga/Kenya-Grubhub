@@ -1,6 +1,7 @@
 import express from 'express';
 import { expressjwt } from 'express-jwt';
 import jwksRsa from 'jwks-rsa';
+import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 
 const router = express.Router();
@@ -75,6 +76,13 @@ router.post('/sync-auth0', checkJwt, async (req: any, res: express.Response) => 
       await user.save();
     }
     
+    // Issue a custom JWT so requireAuth middleware works for all API routes
+    const appToken = jwt.sign(
+      { id: user._id.toString(), email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '7d' }
+    );
+
     // Create session for Auth0 user
     req.session.userId = user._id.toString();
     
@@ -86,7 +94,8 @@ router.post('/sync-auth0', checkJwt, async (req: any, res: express.Response) => 
       }
       
       res.json({ 
-        success: true, 
+        success: true,
+        token: appToken,
         user: {
           id: user._id,
           email: user.email,

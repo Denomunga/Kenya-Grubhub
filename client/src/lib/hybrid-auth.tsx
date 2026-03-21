@@ -81,8 +81,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
             throw new Error('Failed to obtain access token');
           }
           
-          // Persist token so apiFetch can attach it to all requests
-          localStorage.setItem('accessToken', token);
+          // Auth0 token used only for sync call; app JWT stored after sync
           
           // Sync with your backend
           const response = await apiFetch('/api/auth/sync-auth0', {
@@ -106,6 +105,10 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
           }
 
           if (data.success) {
+            // Store the app JWT (signed with JWT_SECRET) for all API calls
+            if (data.token) {
+              localStorage.setItem('accessToken', data.token);
+            }
             setSyncedUser(data.user);
             toast({ 
               title: "Login Successful", 
@@ -135,23 +138,40 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
     syncAuth0User();
   }, [auth0Authenticated, auth0User, getAccessTokenSilently, toast, setLocation, syncedUser]);
 
-  // Keep access token refreshed in localStorage (Auth0 tokens expire)
+  // Keep app JWT refreshed (re-sync periodically to get a fresh custom token)
   useEffect(() => {
-    if (!auth0Authenticated || !syncedUser) return;
-    const refreshToken = async () => {
+    if (!auth0Authenticated || !syncedUser || !auth0User) return;
+    const refreshAppToken = async () => {
       try {
-        const token = await getAccessTokenSilently({
+        const auth0Token = await getAccessTokenSilently({
           authorizationParams: { audience: import.meta.env.VITE_AUTH0_AUDIENCE }
         });
-        if (token) localStorage.setItem('accessToken', token);
+        if (!auth0Token) return;
+        const res = await apiFetch('/api/auth/sync-auth0', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${auth0Token}`
+          },
+          body: JSON.stringify({
+            auth0Id: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            avatar: auth0User.picture
+          })
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+          localStorage.setItem('accessToken', data.token);
+        }
       } catch (err) {
         console.error('Token refresh failed:', err);
       }
     };
-    // Refresh every 5 minutes
-    const interval = setInterval(refreshToken, 5 * 60 * 1000);
+    // Refresh every 6 hours (custom JWT has 7d expiry)
+    const interval = setInterval(refreshAppToken, 6 * 60 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [auth0Authenticated, syncedUser, getAccessTokenSilently]);
+  }, [auth0Authenticated, syncedUser, auth0User, getAccessTokenSilently]);
 
   const loginWithGoogle = () => {
     loginWithRedirect({
@@ -278,6 +298,10 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (response.ok) {
+        // Store JWT for all API calls
+        if (data.token) {
+          localStorage.setItem('accessToken', data.token);
+        }
         // Set the synced user from response
         setSyncedUser(data.user);
         toast({ 
@@ -316,6 +340,10 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (response.ok) {
+        // Store JWT for all API calls
+        if (data.token) {
+          localStorage.setItem('accessToken', data.token);
+        }
         // Set the synced user from response
         setSyncedUser(data.user);
         toast({ 

@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import fs from "fs";
 import { resolve } from "node:path";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { randomBytes } from "crypto";
 import nodemailer from "nodemailer";
 import { body } from 'express-validator';
@@ -344,7 +345,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastSessionInvalidatedAt: user.lastSessionInvalidatedAt ? user.lastSessionInvalidatedAt.toISOString() : undefined,
           };
 
-          res.status(201).json({ user: userResponse });
+          // Issue JWT so Bearer token auth works for all API routes
+          const token = jwt.sign(
+            { id: user._id.toString(), email: user.email, role: user.role },
+            process.env.JWT_SECRET || 'fallback-secret',
+            { expiresIn: '7d' }
+          );
+
+          res.status(201).json({ user: userResponse, token });
         });
       } catch (error: any) {
         console.error("Register error:", error);
@@ -401,7 +409,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastSessionInvalidatedAt: user.lastSessionInvalidatedAt ? user.lastSessionInvalidatedAt.toISOString() : undefined,
           };
 
-          res.json({ user: userResponse });
+          // Issue JWT so Bearer token auth works for all API routes
+          const token = jwt.sign(
+            { id: user._id.toString(), email: user.email, role: user.role },
+            process.env.JWT_SECRET || 'fallback-secret',
+            { expiresIn: '7d' }
+          );
+
+          res.json({ user: userResponse, token });
         });
       } catch (error) {
         console.error("Login error:", error);
