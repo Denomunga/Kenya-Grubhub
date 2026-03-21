@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { body, query, param, validationResult } from 'express-validator';
-import { AccountingController } from './controller';
+import { AccountingController, ExpenseController, RecurringExpenseController } from './controller';
 import { DashboardController } from './dashboardController';
 import { requireAuth } from '@shared/middleware/auth';
 import { requireRole } from '@shared/middleware/roles';
@@ -151,6 +151,7 @@ router.get(
  * POST /api/v1/accounting/invoices
  */
 
+
 router.post(
   '/invoices',
   authLimiter,
@@ -165,6 +166,72 @@ router.post(
   ],
   handleValidationErrors,
   AccountingController.createInvoice   // ✅ Use AccountingController, not DashboardController
+);
+router.post(
+  '/invoices',
+  authLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  [
+    body('clientName').trim().notEmpty().withMessage('Client name is required'),
+    body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be a positive number'),
+    body('dueDate').isISO8601().withMessage('Invalid due date'),
+    body('description').optional().trim().isLength({ max: 500 }),
+    body('status').optional().isIn(['unpaid', 'paid', 'overdue', 'partial'])
+  ],
+  handleValidationErrors,
+  AccountingController.createInvoice   // ✅ Use AccountingController, not DashboardController
+);
+ 
+/**
+ * Create a new expense
+ * POST /api/v1/accounting/expenses
+ */
+router.post(
+  '/expenses',
+  authLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  [
+    body('expenseType').isIn(['rent', 'utilities', 'salaries', 'supplies', 'marketing', 'maintenance', 'insurance', 'taxes', 'other']).withMessage('Invalid expense type'),
+    body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be a positive number'),
+    body('description').trim().notEmpty().withMessage('Description is required'),
+    body('vendor').optional().trim(),
+    body('paymentMethod').isIn(['cash', 'bank_transfer', 'credit_card', 'check', 'other']).withMessage('Invalid payment method'),
+    body('dueDate').optional().isISO8601().withMessage('Invalid due date'),
+    body('category').optional().trim(),
+    body('accountCode').optional().trim()
+  ],
+  handleValidationErrors,
+  ExpenseController.createExpense
+);
+ 
+/**
+ * Create a new recurring expense
+ * POST /api/v1/accounting/recurring-expenses
+ */
+router.post(
+  '/recurring-expenses',
+  authLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  [
+    body('name').trim().notEmpty().withMessage('Name is required'),
+    body('expenseType').isIn(['rent', 'utilities', 'salaries', 'supplies', 'marketing', 'maintenance', 'insurance', 'taxes', 'other']).withMessage('Invalid expense type'),
+    body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be a positive number'),
+    body('frequency').isIn(['daily', 'weekly', 'monthly', 'quarterly', 'yearly']).withMessage('Invalid frequency'),
+    body('startDate').isISO8601().withMessage('Invalid start date'),
+    body('endDate').optional().isISO8601().withMessage('Invalid end date'),
+    body('description').optional().trim(),
+    body('vendor').optional().trim(),
+    body('paymentMethod').optional().isIn(['cash', 'bank_transfer', 'credit_card', 'check', 'other']),
+    body('category').optional().trim(),
+    body('accountCode').optional().trim(),
+    body('autoGenerate').optional().isBoolean(),
+    body('isActive').optional().isBoolean()
+  ],
+  handleValidationErrors,
+  RecurringExpenseController.createRecurringExpense
 );
 
 
@@ -269,3 +336,7 @@ router.get('/monthly', generalLimiter, requireAuth, requireRole(['admin', 'accou
 router.get('/cashflow', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), [query('days').optional().isInt({ min: 7, max: 90 })], handleValidationErrors, DashboardController.getCashFlow);
 
 export default router;
+
+
+
+
