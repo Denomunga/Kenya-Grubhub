@@ -151,7 +151,7 @@ function App() {
           domain={auth0Config.domain}
           clientId={auth0Config.clientId}
           authorizationParams={{
-            redirectUri: auth0Config.redirectUri,
+            redirect_uri: auth0Config.redirectUri,
             audience: auth0Config.audience,
             scope: auth0Config.scope
           }}

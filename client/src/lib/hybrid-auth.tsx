@@ -81,6 +81,9 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
             throw new Error('Failed to obtain access token');
           }
           
+          // Persist token so apiFetch can attach it to all requests
+          localStorage.setItem('accessToken', token);
+          
           // Sync with your backend
           const response = await apiFetch('/api/auth/sync-auth0', {
             method: 'POST',
@@ -132,6 +135,24 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
     syncAuth0User();
   }, [auth0Authenticated, auth0User, getAccessTokenSilently, toast, setLocation, syncedUser]);
 
+  // Keep access token refreshed in localStorage (Auth0 tokens expire)
+  useEffect(() => {
+    if (!auth0Authenticated || !syncedUser) return;
+    const refreshToken = async () => {
+      try {
+        const token = await getAccessTokenSilently({
+          authorizationParams: { audience: import.meta.env.VITE_AUTH0_AUDIENCE }
+        });
+        if (token) localStorage.setItem('accessToken', token);
+      } catch (err) {
+        console.error('Token refresh failed:', err);
+      }
+    };
+    // Refresh every 5 minutes
+    const interval = setInterval(refreshToken, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [auth0Authenticated, syncedUser, getAccessTokenSilently]);
+
   const loginWithGoogle = () => {
     loginWithRedirect({
       authorizationParams: {
@@ -162,6 +183,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
   const loading = auth0Authenticated && !syncedUser;
 
   const logout = async () => {
+    localStorage.removeItem('accessToken');
     await auth0Logout({ logoutParams: { returnTo: window.location.origin } });
     setSyncedUser(null);
     setAllUsers([]);
