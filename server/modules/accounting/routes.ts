@@ -134,6 +134,29 @@ router.get(
  *   totalAmount: number
  * }
  */
+
+/**
+ * Create a new invoice
+ * POST /api/v1/accounting/invoices
+ */
+
+router.post(
+  '/invoices',
+  authLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  [
+    body('clientName').trim().notEmpty().withMessage('Client name is required'),
+    body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be a positive number'),
+    body('dueDate').isISO8601().withMessage('Invalid due date'),
+    body('description').optional().trim().isLength({ max: 500 }),
+    body('status').optional().isIn(['unpaid', 'paid', 'overdue', 'partial'])
+  ],
+  handleValidationErrors,
+  AccountingController.createInvoice   // ✅ Use AccountingController, not DashboardController
+);
+
+
 router.post(
   '/transactions/purchase',
   authLimiter,
