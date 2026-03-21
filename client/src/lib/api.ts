@@ -6,22 +6,20 @@ export const API_BASE_URL = import.meta.env?.VITE_API_URL || 'https://kenya-grub
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
   
-  // Add CSRF token to headers
+  // Get token (adjust key as needed)
+  const token = localStorage.getItem('accessToken'); // or 'token', 'authToken', etc.
+  
   const headers = CSRFTokenManager.addTokenToHeaders(options.headers as Record<string, string> || {});
   
-  // Only set Content-Type for JSON requests (not for file uploads)
-  const contentType = options.body && typeof options.body === 'string' && options.body.startsWith('{') 
-    ? 'application/json' 
-    : undefined;
+  // Add Authorization header if token exists
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   
   const config: RequestInit = {
-    credentials: 'include',
+    credentials: 'include', // keep if cookies are also used
     ...options,
-    headers: {
-      ...headers,
-      ...(contentType && { 'Content-Type': contentType }),
-      ...options.headers,
-    },
+    headers,
   };
   
   return fetchWithRateLimit(url, config);
