@@ -223,10 +223,11 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Refresh users when admin user logs in
+  // Refresh users when admin user logs in (delay to ensure JWT is stored)
   useEffect(() => {
     if (syncedUser?.role === "admin") {
-      refreshAllUsers();
+      const timer = setTimeout(() => refreshAllUsers(), 100);
+      return () => clearTimeout(timer);
     }
   }, [syncedUser?.role]);
 
@@ -408,3 +409,5 @@ export function useHybridAuth() {
   }
   return context;
 }
+
+

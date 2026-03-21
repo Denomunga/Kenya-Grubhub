@@ -12,6 +12,23 @@ import contractsPayslipsRoutes from './routes-contracts-payslips';
 
 const router = Router();
 
+router.get(
+  '/jobs',
+  generalLimiter,
+  JobPostingController.getJobPostings
+);
+ 
+/**
+ * Get job posting by ID (public)
+ * GET /api/v1/hr/jobs/:id
+ */
+router.get(
+  '/jobs/:id',
+  generalLimiter,
+  JobPostingController.getJobPostingById
+);
+ 
+
 // Apply authentication to all routes
 router.use(requireAuth);
 

@@ -109,7 +109,7 @@ static async createInvoice(req: Request, res: Response) {
       description,
       status,
       paidAmount: 0,
-      createdBy: req.user._id,  // ensure req.user is present after requireAuth
+      createdBy: new mongoose.Types.ObjectId(req.user.id),  // convert string to ObjectId
       createdAt: new Date()
     });
     
