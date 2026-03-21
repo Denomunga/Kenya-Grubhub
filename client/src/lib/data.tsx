@@ -599,7 +599,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setNews;
       }
     })();
-  }, []);
+  }, [user]);
 
   // Socket.IO client for real-time updates
   useEffect(() => {

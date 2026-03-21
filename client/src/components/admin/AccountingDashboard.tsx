@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useHybridAuth } from '@/lib/hybrid-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -192,10 +193,11 @@ export default function AccountingDashboard() {
     status: 'unpaid',
   });
   const [submittingInvoice, setSubmittingInvoice] = useState(false);
+  const { user } = useHybridAuth();
 
   useEffect(() => {
-    fetchAccountingData();
-  }, []);
+    if (user) fetchAccountingData();
+  }, [user]);
 
   const fetchAccountingData = async () => {
     try {

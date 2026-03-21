@@ -176,8 +176,9 @@ export default function Dashboard() {
       }
     };
 
+    if (!user) return;
     loadPins();
-  }, []);
+  }, [user]);
 
   const savePins = React.useCallback(async (nextPins: PinnedAction[]) => {
     setPinLoading(true);
@@ -333,8 +334,9 @@ export default function Dashboard() {
       }
     };
 
+    if (!user) return;
     loadPosDailyRevenue();
-  }, [rangeDays]);
+  }, [user, rangeDays]);
 
   React.useEffect(() => {
     const loadPosOverviewAnalytics = async () => {
@@ -382,10 +384,11 @@ export default function Dashboard() {
       }
     };
 
+    if (!user) return;
     loadPosOverviewAnalytics();
     const interval = setInterval(loadPosOverviewAnalytics, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [rangeDays]);
+  }, [user, rangeDays]);
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -573,13 +576,14 @@ export default function Dashboard() {
       }
     };
 
+    if (!user) return; // Wait for auth before fetching
     fetchPOSRevenue();
     
     // Refresh POS revenue every 5 minutes to ensure current data
     const interval = setInterval(fetchPOSRevenue, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
   React.useEffect(() => {
     const handleNew = (e: any) => {

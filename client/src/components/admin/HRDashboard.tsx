@@ -234,8 +234,8 @@ export default function HRDashboard() {
   });
 
   useEffect(() => {
-    fetchHRData();
-  }, []);
+    if (user) fetchHRData();
+  }, [user]);
 
   useEffect(() => {
     if (user) {
