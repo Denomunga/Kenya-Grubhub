@@ -1,5 +1,4 @@
 import mongoose, { Schema, Document } from "mongoose";
-import { Employee } from "./models";
 
 /**
  * Contract Model
