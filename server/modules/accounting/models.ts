@@ -4,6 +4,48 @@ import mongoose, { Schema, Document } from "mongoose";
  * Chart of Accounts Model
  * Defines all accounts using standard accounting categories
  */
+
+
+
+export interface IInvoice extends Document {
+  invoiceNumber: string;
+  clientName: string;      // or supplierName if it's a purchase invoice
+  amount: number;
+  dueDate: Date;
+  description?: string;
+  status: 'unpaid' | 'paid' | 'overdue' | 'partial';
+  paidAmount: number;
+  createdBy: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const InvoiceSchema = new Schema<IInvoice>(
+  {
+    invoiceNumber: { type: String, required: true, unique: true },
+    clientName: { type: String, required: true },
+    amount: { type: Number, required: true, min: 0 },
+    dueDate: { type: Date, required: true },
+    description: { type: String },
+    status: {
+      type: String,
+      enum: ['unpaid', 'paid', 'overdue', 'partial'],
+      default: 'unpaid',
+    },
+    paidAmount: { type: Number, default: 0, min: 0 },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { timestamps: true }
+);
+
+InvoiceSchema.index({ invoiceNumber: 1 });
+InvoiceSchema.index({ clientName: 1 });
+InvoiceSchema.index({ dueDate: 1 });
+InvoiceSchema.index({ status: 1 });
+
+export const Invoice = mongoose.model<IInvoice>('Invoice', InvoiceSchema);
+
+
 export interface IAccount extends Document {
   code: string; // e.g., "1000" for assets, "2000" for liabilities
   name: string;

@@ -138,6 +138,16 @@ interface CashFlowData {
   balance: number;
 }
 
+const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+const [invoiceForm, setInvoiceForm] = useState({
+  clientName: '',
+  amount: '',
+  dueDate: '',
+  description: '',      // optional
+  status: 'unpaid',     // default status
+});
+const [submittingInvoice, setSubmittingInvoice] = useState(false);
+
 const EXPENSE_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280'];
 
 export default function AccountingDashboard() {
@@ -462,6 +472,57 @@ export default function AccountingDashboard() {
     });
     setRecurringExpenseDialogOpen(true);
   };
+
+
+const handleSubmitInvoice = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setSubmittingInvoice(true);
+  try {
+    const payload = {
+      clientName: invoiceForm.clientName,
+      amount: parseFloat(invoiceForm.amount),
+      dueDate: new Date(invoiceForm.dueDate).toISOString(),
+      description: invoiceForm.description,
+      status: invoiceForm.status,
+    };
+    const res = await apiFetch('/api/v1/accounting/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      toast({ title: 'Success', description: 'Invoice created successfully' });
+      setInvoiceDialogOpen(false);
+      // Reset form
+      setInvoiceForm({
+        clientName: '',
+        amount: '',
+        dueDate: '',
+        description: '',
+        status: 'unpaid',
+      });
+      // Refresh invoices (and possibly stats)
+      await fetchAccountingData();
+    } else {
+      const errorData = await res.json().catch(() => ({}));
+      toast({
+        title: 'Error',
+        description: errorData.message || 'Failed to create invoice',
+        variant: 'destructive',
+      });
+    }
+  } catch (error) {
+    console.error('Invoice creation error:', error);
+    toast({
+      title: 'Error',
+      description: 'Network error while creating invoice',
+      variant: 'destructive',
+    });
+  } finally {
+    setSubmittingInvoice(false);
+  }
+};
+
 
   const handleSubmitExpense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -867,6 +928,92 @@ export default function AccountingDashboard() {
           </form>
         </DialogContent>
       </Dialog>
+
+
+      <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle>Create New Invoice</DialogTitle>
+      <DialogDescription>Enter invoice details to send to client.</DialogDescription>
+    </DialogHeader>
+    <form onSubmit={handleSubmitInvoice} className="space-y-4">
+      {/* Client Name */}
+      <div>
+        <label className="text-sm font-medium">Client Name</label>
+        <Input
+          placeholder="Client or company name"
+          value={invoiceForm.clientName}
+          onChange={(e) => setInvoiceForm({ ...invoiceForm, clientName: e.target.value })}
+          required
+        />
+      </div>
+
+      {/* Amount */}
+      <div>
+        <label className="text-sm font-medium">Amount (KES)</label>
+        <Input
+          type="number"
+          step="0.01"
+          placeholder="0.00"
+          value={invoiceForm.amount}
+          onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
+          required
+        />
+      </div>
+
+      {/* Due Date */}
+      <div>
+        <label className="text-sm font-medium">Due Date</label>
+        <Input
+          type="date"
+          value={invoiceForm.dueDate}
+          onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
+          required
+        />
+      </div>
+
+      {/* Description (Optional) */}
+      <div>
+        <label className="text-sm font-medium">Description (Optional)</label>
+        <Input
+          placeholder="Service or product description"
+          value={invoiceForm.description}
+          onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })}
+        />
+      </div>
+
+      {/* Status dropdown (optional, default unpaid) */}
+      <div>
+        <label className="text-sm font-medium">Status</label>
+        <select
+          className="w-full h-9 px-3 border rounded-lg text-sm bg-background"
+          value={invoiceForm.status}
+          onChange={(e) => setInvoiceForm({ ...invoiceForm, status: e.target.value })}
+        >
+          <option value="unpaid">Unpaid</option>
+          <option value="paid">Paid</option>
+          <option value="overdue">Overdue</option>
+          <option value="partial">Partial</option>
+        </select>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-2 pt-4">
+        <Button
+          variant="outline"
+          type="button"
+          onClick={() => setInvoiceDialogOpen(false)}
+          disabled={submittingInvoice}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={submittingInvoice}>
+          {submittingInvoice ? 'Creating...' : 'Create Invoice'}
+        </Button>
+      </div>
+    </form>
+  </DialogContent>
+</Dialog>
 
       {/* Create Recurring Expense Dialog */}
       <Dialog open={recurringExpenseDialogOpen} onOpenChange={setRecurringExpenseDialogOpen}>
@@ -1297,8 +1444,12 @@ export default function AccountingDashboard() {
                 <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('excel')}>
                   <Download className="h-3.5 w-3.5" /> Export
                 </Button>
-                <Button size="sm" className="gap-1">
-                  <Plus className="h-3.5 w-3.5" /> New Invoice
+               <Button 
+                size="sm" 
+                className="gap-1" 
+                onClick={() => setInvoiceDialogOpen(true)}
+                >
+                <Plus className="h-3.5 w-3.5" /> New Invoice
                 </Button>
               </div>
             </div>

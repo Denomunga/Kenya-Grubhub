@@ -13,11 +13,18 @@ interface AuthRequest extends Request {
   };
 }
 
+
+
+
+
 export class DashboardController {
   /**
    * Get dashboard stats
    * GET /api/v1/accounting/stats
    */
+
+
+  
   static async getStats(_req: AuthRequest, res: Response) {
     try {
       const summary = await FinancialReportingService.getFinancialSummary();

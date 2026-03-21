@@ -225,6 +225,12 @@ export default function HRDashboard() {
     title: '',
     department: 'Kitchen',
     description: '',
+    status: 'open',
+        postedDate: new Date().toISOString(),
+        location: 'Nairobi',                // or add a location field to your form
+        employmentType: 'full_time',
+        requirements: [],
+        salaryRange: { min: 0, max: 0 },
   });
 
   useEffect(() => {
@@ -558,6 +564,12 @@ export default function HRDashboard() {
       title: '',
       department: 'Kitchen',
       description: '',
+      status: 'open',
+        postedDate: new Date().toISOString(),
+        location: 'Nairobi',                // or add a location field to your form
+        employmentType: 'full_time',
+        requirements: [],
+        salaryRange: { min: 0, max: 0 },
     });
     setCreateJobOpen(true);
   };

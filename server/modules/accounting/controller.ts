@@ -10,6 +10,7 @@ import {
   CreateJournalEntryData
 } from './service';
 import { IExpense, IRecurringExpense } from './models';
+import { Invoice } from './models';
 
 interface AuthRequest extends Request {
   user?: {
@@ -50,6 +51,24 @@ interface CreateRecurringExpenseData {
   userId: string;
 }
 
+async function generateInvoiceNumber(): Promise<string> {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const datePrefix = `${year}${month}${day}`;
+
+  // Count invoices created today
+  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+  const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+  const count = await Invoice.countDocuments({
+    createdAt: { $gte: startOfDay, $lte: endOfDay }
+  });
+
+  const sequence = String(count + 1).padStart(4, '0');
+  return `INV-${datePrefix}-${sequence}`;
+}
+
 export class AccountingController {
   /**
    * Initialize chart of accounts
@@ -70,6 +89,49 @@ export class AccountingController {
       });
     }
   }
+
+  
+
+
+  // In dashboardController.ts or accountingController.ts
+static async createInvoice(req: Request, res: Response) {
+  try {
+    const { clientName, amount, dueDate, description, status = 'unpaid' } = req.body;
+    
+    // Generate unique invoice number
+    const invoiceNumber = await generateInvoiceNumber();
+    
+    const invoice = new Invoice({
+      invoiceNumber,
+      clientName,
+      amount,
+      dueDate: new Date(dueDate),
+      description,
+      status,
+      paidAmount: 0,
+      createdBy: req.user._id,  // ensure req.user is present after requireAuth
+      createdAt: new Date()
+    });
+    
+    await invoice.save();
+    
+    // Optionally create a journal entry for accounts receivable
+    // await createJournalEntryForInvoice(invoice); // you can implement this later
+    
+    res.status(201).json({
+      success: true,
+      data: invoice
+    });
+  } catch (error) {
+    console.error('Error creating invoice:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create invoice',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
 
   /**
    * Get all accounts
