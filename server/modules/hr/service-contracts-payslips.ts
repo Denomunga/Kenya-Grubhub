@@ -85,6 +85,53 @@ export class ContractService {
 
     return { total, active, expired, byType };
   }
+
+  static async sendContractOffer(id: string, hrUserId: string) {
+    const contract = await Contract.findById(id);
+    if (!contract) {
+      throw new Error('Contract not found');
+    }
+
+    if (contract.status !== 'draft') {
+      throw new Error('Contract must be in draft status to send offer');
+    }
+
+    contract.status = 'offered';
+    contract.offeredAt = new Date();
+    contract.offeredBy = hrUserId as any;
+
+    await contract.save();
+    return contract;
+  }
+
+  static async signContract(id: string, employeeId: string) {
+    const contract = await Contract.findById(id);
+    if (!contract) {
+      throw new Error('Contract not found');
+    }
+
+    if (contract.status !== 'offered') {
+      throw new Error('Contract must be in offered status to sign');
+    }
+
+    if (contract.employeeId.toString() !== employeeId) {
+      throw new Error('Only the assigned employee can sign this contract');
+    }
+
+    contract.status = 'active';
+    contract.signedDate = new Date();
+    contract.signedBy = employeeId as any;
+    contract.startDate = new Date();
+
+    await contract.save();
+    return contract;
+  }
+
+  static async getEmployeeContracts(employeeId: string) {
+    return Contract.find({ employeeId, status: { $in: ['active', 'offered'] } })
+      .populate('signedBy', 'firstName lastName')
+      .sort({ createdAt: -1 });
+  }
 }
 
 /**
@@ -251,6 +298,17 @@ export class PayslipService {
     });
 
     return payslip.save();
+  }
+
+  static async getEmployeePayslips(employeeId: string) {
+    return Payslip.find({ employeeId })
+      .sort({ year: -1, month: -1 })
+      .select('-__v');
+  }
+
+  static async getEmployeePayslipById(payslipId: string, employeeId: string) {
+    return Payslip.findOne({ _id: payslipId, employeeId })
+      .populate('approvedBy', 'firstName lastName');
   }
 
   // Kenyan Tax Calculations

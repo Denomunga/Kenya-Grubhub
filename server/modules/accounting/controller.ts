@@ -509,6 +509,59 @@ export class ExpenseController {
   }
 
   /**
+   * Update expense status
+   * PUT /api/v1/accounting/expenses/:id/status
+   */
+  static async updateExpenseStatus(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+      }
+
+      const { id } = req.params;
+      const { status, notes } = req.body;
+
+      const updateData: Partial<IExpense> = { status };
+      if (notes) {
+        updateData.notes = notes;
+      }
+
+      if (status === 'approved' || status === 'paid') {
+        updateData.approvedBy = new mongoose.Types.ObjectId(req.user.id);
+        updateData.approvalDate = new Date();
+      }
+
+      if (status === 'paid') {
+        updateData.paymentDate = new Date();
+      }
+
+      const expense = await ExpenseService.updateExpense(id, updateData);
+
+      if (!expense) {
+        return res.status(404).json({
+          success: false,
+          error: 'Expense not found'
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: expense,
+        message: `Expense ${status} successfully`
+      });
+    } catch (error: any) {
+      console.error('Update expense status error:', error);
+      res.status(500).json({
+        success: false,
+        error: error?.message || 'Failed to update expense status'
+      });
+    }
+  }
+
+  /**
    * Approve expense
    * POST /api/v1/accounting/expenses/:id/approve
    */

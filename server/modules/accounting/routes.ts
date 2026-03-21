@@ -217,6 +217,164 @@ router.get(
 );
 
 // ============================================================
+// EXPENSE ENDPOINTS
+// ============================================================
+
+/**
+ * Create a new expense
+ * POST /api/v1/accounting/expenses
+ * Body: {
+ *   expenseType: string,
+ *   amount: number,
+ *   description: string,
+ *   vendor?: string,
+ *   paymentMethod: string,
+ *   dueDate?: ISO date string,
+ *   category?: string,
+ *   accountCode?: string,
+ *   recurringExpenseId?: string
+ * }
+ */
+router.post(
+  '/expenses',
+  authLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  [
+    body('expenseType').isIn(['rent', 'electricity', 'water', 'internet', 'insurance', 'maintenance', 'supplies', 'marketing', 'travel', 'professional_services', 'other']).withMessage('Invalid expense type'),
+    body('amount').isNumeric().withMessage('Amount must be a number'),
+    body('description').trim().isLength({ min: 3 }).withMessage('Description must be at least 3 characters'),
+    body('paymentMethod').isIn(['cash', 'bank_transfer', 'credit_card', 'cheque', 'mpesa']).withMessage('Invalid payment method'),
+    body('dueDate').optional().isISO8601().withMessage('Invalid due date'),
+    body('category').optional().trim().notEmpty().withMessage('Category cannot be empty'),
+    body('accountCode').optional().trim().notEmpty().withMessage('Account code cannot be empty'),
+    body('recurringExpenseId').optional().isMongoId().withMessage('Invalid recurring expense ID')
+  ],
+  handleValidationErrors,
+  AccountingController.createExpense
+);
+
+/**
+ * Get expenses with optional filtering
+ * GET /api/v1/accounting/expenses?status=pending&page=1&limit=50
+ */
+router.get(
+  '/expenses',
+  generalLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  [
+    query('status').optional().isIn(['pending', 'approved', 'paid', 'cancelled', 'overdue']).withMessage('Invalid status'),
+    query('expenseType').optional().isIn(['rent', 'electricity', 'water', 'internet', 'insurance', 'maintenance', 'supplies', 'marketing', 'travel', 'professional_services', 'other']).withMessage('Invalid expense type'),
+    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
+  ],
+  handleValidationErrors,
+  AccountingController.getExpenses
+);
+
+/**
+ * Update expense status
+ * PUT /api/v1/accounting/expenses/:id/status
+ * Body: { status: string, notes?: string }
+ */
+router.put(
+  '/expenses/:id/status',
+  authLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  [
+    param('id').isMongoId().withMessage('Invalid expense ID'),
+    body('status').isIn(['pending', 'approved', 'paid', 'cancelled', 'overdue']).withMessage('Invalid status'),
+    body('notes').optional().trim().notEmpty().withMessage('Notes cannot be empty')
+  ],
+  handleValidationErrors,
+  AccountingController.updateExpenseStatus
+);
+
+// ============================================================
+// RECURRING EXPENSE ENDPOINTS
+// ============================================================
+
+/**
+ * Create a new recurring expense
+ * POST /api/v1/accounting/recurring-expenses
+ * Body: {
+ *   expenseType: string,
+ *   amount: number,
+ *   description: string,
+ *   frequency: string,
+ *   startDate: ISO date string,
+ *   endDate?: ISO date string,
+ *   vendor?: string,
+ *   paymentMethod: string,
+ *   category?: string,
+ *   accountCode?: string,
+ *   autoGenerate?: boolean,
+ *   isActive?: boolean
+ * }
+ */
+router.post(
+  '/recurring-expenses',
+  authLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  [
+    body('expenseType').isIn(['rent', 'electricity', 'water', 'internet', 'insurance', 'maintenance', 'subscription', 'other']).withMessage('Invalid expense type'),
+    body('amount').isNumeric().withMessage('Amount must be a number'),
+    body('description').trim().isLength({ min: 3 }).withMessage('Description must be at least 3 characters'),
+    body('frequency').isIn(['monthly', 'quarterly', 'yearly']).withMessage('Invalid frequency'),
+    body('startDate').isISO8601().withMessage('Invalid start date'),
+    body('endDate').optional().isISO8601().withMessage('Invalid end date'),
+    body('paymentMethod').isIn(['cash', 'bank_transfer', 'credit_card', 'cheque', 'mpesa']).withMessage('Invalid payment method'),
+    body('category').optional().trim().notEmpty().withMessage('Category cannot be empty'),
+    body('accountCode').optional().trim().notEmpty().withMessage('Account code cannot be empty'),
+    body('autoGenerate').optional().isBoolean().withMessage('Auto generate must be a boolean'),
+    body('isActive').optional().isBoolean().withMessage('Is active must be a boolean')
+  ],
+  handleValidationErrors,
+  AccountingController.createRecurringExpense
+);
+
+/**
+ * Get recurring expenses
+ * GET /api/v1/accounting/recurring-expenses?page=1&limit=50
+ */
+router.get(
+  '/recurring-expenses',
+  generalLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  [
+    query('isActive').optional().isBoolean().withMessage('Is active must be a boolean'),
+    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
+  ],
+  handleValidationErrors,
+  AccountingController.getRecurringExpenses
+);
+
+/**
+ * Update recurring expense
+ * PUT /api/v1/accounting/recurring-expenses/:id
+ * Body: { isActive?: boolean, ...other fields }
+ */
+router.put(
+  '/recurring-expenses/:id',
+  authLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  [
+    param('id').isMongoId().withMessage('Invalid recurring expense ID'),
+    body('isActive').optional().isBoolean().withMessage('Is active must be a boolean'),
+    body('amount').optional().isNumeric().withMessage('Amount must be a number'),
+    body('description').optional().trim().isLength({ min: 3 }).withMessage('Description must be at least 3 characters')
+  ],
+  handleValidationErrors,
+  AccountingController.updateRecurringExpense
+);
+
+// ============================================================
 // DASHBOARD ENDPOINTS
 // ============================================================
 

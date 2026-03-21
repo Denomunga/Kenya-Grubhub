@@ -159,6 +159,81 @@ export class ContractController {
       });
     }
   }
+
+  static async sendContractOffer(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+      }
+
+      const { id } = req.params;
+      const contract = await ContractService.sendContractOffer(id, req.user.id);
+
+      res.status(200).json({
+        success: true,
+        data: contract,
+        message: 'Contract offer sent to employee'
+      });
+    } catch (error: any) {
+      console.error('Send contract offer error:', error);
+      res.status(500).json({
+        success: false,
+        error: error?.message || 'Failed to send contract offer'
+      });
+    }
+  }
+
+  static async signContract(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+      }
+
+      const { id } = req.params;
+      const contract = await ContractService.signContract(id, req.user.id);
+
+      res.status(200).json({
+        success: true,
+        data: contract,
+        message: 'Contract signed successfully'
+      });
+    } catch (error: any) {
+      console.error('Sign contract error:', error);
+      res.status(500).json({
+        success: false,
+        error: error?.message || 'Failed to sign contract'
+      });
+    }
+  }
+
+  static async getEmployeeContracts(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+      }
+
+      const contracts = await ContractService.getEmployeeContracts(req.user.id);
+      res.status(200).json({
+        success: true,
+        data: contracts
+      });
+    } catch (error: any) {
+      console.error('Get employee contracts error:', error);
+      res.status(500).json({
+        success: false,
+        error: error?.message || 'Failed to get employee contracts'
+      });
+    }
+  }
 }
 
 /**
@@ -435,6 +510,61 @@ export class PayslipController {
       res.status(500).json({
         success: false,
         error: error?.message || 'Failed to generate payslips'
+      });
+    }
+  }
+
+  static async getEmployeePayslips(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+      }
+
+      const payslips = await PayslipService.getEmployeePayslips(req.user.id);
+      res.status(200).json({
+        success: true,
+        data: payslips
+      });
+    } catch (error: any) {
+      console.error('Get employee payslips error:', error);
+      res.status(500).json({
+        success: false,
+        error: error?.message || 'Failed to get employee payslips'
+      });
+    }
+  }
+
+  static async getEmployeePayslipById(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+      }
+
+      const { id } = req.params;
+      const payslip = await PayslipService.getEmployeePayslipById(id, req.user.id);
+
+      if (!payslip) {
+        return res.status(404).json({
+          success: false,
+          error: 'Payslip not found or access denied'
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: payslip
+      });
+    } catch (error: any) {
+      console.error('Get employee payslip error:', error);
+      res.status(500).json({
+        success: false,
+        error: error?.message || 'Failed to get payslip'
       });
     }
   }

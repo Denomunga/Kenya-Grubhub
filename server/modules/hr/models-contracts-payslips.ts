@@ -15,8 +15,17 @@ export interface IContract extends Document {
   salary: number;
   currency: string;
   benefits: string[];
+  leaveEntitlements: {
+    annualLeave: number; // days per year
+    sickLeave: number; // days per year
+    maternityLeave: number; // days
+    paternityLeave: number; // days
+    compassionateLeave: number; // days
+  };
   terms: string;
-  status: 'active' | 'expired' | 'terminated' | 'renewed';
+  status: 'draft' | 'offered' | 'active' | 'expired' | 'terminated' | 'renewed';
+  offeredAt?: Date;
+  offeredBy?: mongoose.Types.ObjectId;
   signedDate?: Date;
   signedBy?: mongoose.Types.ObjectId;
   documentUrl?: string;
@@ -41,13 +50,22 @@ const ContractSchema = new Schema<IContract>(
     salary: { type: Number, required: true, min: 0 },
     currency: { type: String, required: true, default: 'KES' },
     benefits: [{ type: String }],
+    leaveEntitlements: {
+      annualLeave: { type: Number, default: 21 },
+      sickLeave: { type: Number, default: 10 },
+      maternityLeave: { type: Number, default: 90 },
+      paternityLeave: { type: Number, default: 14 },
+      compassionateLeave: { type: Number, default: 3 }
+    },
     terms: { type: String, required: true },
     status: {
       type: String,
       required: true,
-      enum: ['active', 'expired', 'terminated', 'renewed'],
-      default: 'active'
+      enum: ['draft', 'offered', 'active', 'expired', 'terminated', 'renewed'],
+      default: 'draft'
     },
+    offeredAt: Date,
+    offeredBy: { type: Schema.Types.ObjectId, ref: 'Employee' },
     signedDate: Date,
     signedBy: { type: Schema.Types.ObjectId, ref: 'Employee' },
     documentUrl: String,

@@ -154,6 +154,32 @@ export default function AccountingDashboard() {
   const [loading, setLoading] = useState(true);
   const [journalDialogOpen, setJournalDialogOpen] = useState(false);
   const [autoJournalSource, setAutoJournalSource] = useState<'orders' | 'procurement' | null>(null);
+  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [recurringExpenseDialogOpen, setRecurringExpenseDialogOpen] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({
+    expenseType: 'other',
+    amount: '',
+    description: '',
+    vendor: '',
+    paymentMethod: 'bank_transfer',
+    dueDate: '',
+    category: 'Operating Expenses',
+    accountCode: '5200',
+  });
+  const [recurringExpenseForm, setRecurringExpenseForm] = useState({
+    expenseType: 'rent',
+    amount: '',
+    description: '',
+    frequency: 'monthly',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
+    vendor: '',
+    paymentMethod: 'bank_transfer',
+    category: 'Operating Expenses',
+    accountCode: '5200',
+    autoGenerate: true,
+    isActive: true,
+  });
 
   useEffect(() => {
     fetchAccountingData();
@@ -402,6 +428,87 @@ export default function AccountingDashboard() {
       // Trigger PDF export via print
       window.print();
       toast({ title: 'PDF Export', description: 'Print dialog opened — save as PDF' });
+    }
+  };
+
+  const handleCreateExpense = () => {
+    setExpenseForm({
+      expenseType: 'other',
+      amount: '',
+      description: '',
+      vendor: '',
+      paymentMethod: 'bank_transfer',
+      dueDate: '',
+      category: 'Operating Expenses',
+      accountCode: '5200',
+    });
+    setExpenseDialogOpen(true);
+  };
+
+  const handleCreateRecurringExpense = () => {
+    setRecurringExpenseForm({
+      expenseType: 'rent',
+      amount: '',
+      description: '',
+      frequency: 'monthly',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: '',
+      vendor: '',
+      paymentMethod: 'bank_transfer',
+      category: 'Operating Expenses',
+      accountCode: '5200',
+      autoGenerate: true,
+      isActive: true,
+    });
+    setRecurringExpenseDialogOpen(true);
+  };
+
+  const handleSubmitExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await apiFetch('/api/v1/accounting/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...expenseForm,
+          amount: parseFloat(expenseForm.amount),
+          dueDate: expenseForm.dueDate ? new Date(expenseForm.dueDate).toISOString() : undefined,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Expense created successfully' });
+        setExpenseDialogOpen(false);
+        fetchAccountingData(); // Refresh data
+      } else {
+        toast({ title: 'Error', description: 'Failed to create expense', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to create expense', variant: 'destructive' });
+    }
+  };
+
+  const handleSubmitRecurringExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await apiFetch('/api/v1/accounting/recurring-expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...recurringExpenseForm,
+          amount: parseFloat(recurringExpenseForm.amount),
+          startDate: new Date(recurringExpenseForm.startDate).toISOString(),
+          endDate: recurringExpenseForm.endDate ? new Date(recurringExpenseForm.endDate).toISOString() : undefined,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Recurring expense created successfully' });
+        setRecurringExpenseDialogOpen(false);
+        fetchAccountingData(); // Refresh data
+      } else {
+        toast({ title: 'Error', description: 'Failed to create recurring expense', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to create recurring expense', variant: 'destructive' });
     }
   };
 
@@ -670,6 +777,217 @@ export default function AccountingDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Create Expense Dialog */}
+      <Dialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Expense</DialogTitle>
+            <DialogDescription>Record a business expense</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleSubmitExpense}>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Expense Type</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm"
+                  value={expenseForm.expenseType}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, expenseType: e.target.value })}
+                  required
+                >
+                  <option value="rent">Rent</option>
+                  <option value="electricity">Electricity</option>
+                  <option value="water">Water</option>
+                  <option value="internet">Internet</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="maintenance">Maintenance</option>
+                  <option value="supplies">Supplies</option>
+                  <option value="marketing">Marketing</option>
+                  <option value="travel">Travel</option>
+                  <option value="professional_services">Professional Services</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Amount (KES)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={expenseForm.amount}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description</label>
+              <Input
+                placeholder="Expense description"
+                value={expenseForm.description}
+                onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Vendor</label>
+                <Input
+                  placeholder="Vendor name"
+                  value={expenseForm.vendor}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, vendor: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Payment Method</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm"
+                  value={expenseForm.paymentMethod}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, paymentMethod: e.target.value })}
+                >
+                  <option value="cash">Cash</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="credit_card">Credit Card</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="mpesa">M-Pesa</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Due Date (Optional)</label>
+              <Input
+                type="date"
+                value={expenseForm.dueDate}
+                onChange={(e) => setExpenseForm({ ...expenseForm, dueDate: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" type="button" onClick={() => setExpenseDialogOpen(false)}>Cancel</Button>
+              <Button type="submit">Create Expense</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Recurring Expense Dialog */}
+      <Dialog open={recurringExpenseDialogOpen} onOpenChange={setRecurringExpenseDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Recurring Expense</DialogTitle>
+            <DialogDescription>Set up a recurring business expense like rent</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleSubmitRecurringExpense}>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Expense Type</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm"
+                  value={recurringExpenseForm.expenseType}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, expenseType: e.target.value })}
+                  required
+                >
+                  <option value="rent">Rent</option>
+                  <option value="electricity">Electricity</option>
+                  <option value="water">Water</option>
+                  <option value="internet">Internet</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="maintenance">Maintenance</option>
+                  <option value="subscription">Subscription</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Amount (KES)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={recurringExpenseForm.amount}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, amount: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description</label>
+              <Input
+                placeholder="Expense description"
+                value={recurringExpenseForm.description}
+                onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, description: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Frequency</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm"
+                  value={recurringExpenseForm.frequency}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, frequency: e.target.value })}
+                >
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Start Date</label>
+                <Input
+                  type="date"
+                  value={recurringExpenseForm.startDate}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, startDate: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Vendor</label>
+                <Input
+                  placeholder="Vendor name"
+                  value={recurringExpenseForm.vendor}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, vendor: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Payment Method</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm"
+                  value={recurringExpenseForm.paymentMethod}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, paymentMethod: e.target.value })}
+                >
+                  <option value="cash">Cash</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="credit_card">Credit Card</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="mpesa">M-Pesa</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">End Date (Optional)</label>
+              <Input
+                type="date"
+                value={recurringExpenseForm.endDate}
+                onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, endDate: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="autoGenerate"
+                checked={recurringExpenseForm.autoGenerate}
+                onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, autoGenerate: e.target.checked })}
+              />
+              <label htmlFor="autoGenerate" className="text-sm">Auto-generate expenses</label>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" type="button" onClick={() => setRecurringExpenseDialogOpen(false)}>Cancel</Button>
+              <Button type="submit">Create Recurring Expense</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* ═══════════════════════════════════════════════════════════════════
           TAB NAVIGATION
           ═══════════════════════════════════════════════════════════════════ */}
@@ -867,8 +1185,11 @@ export default function AccountingDashboard() {
                 <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('excel')}>
                   <Download className="h-3.5 w-3.5" /> Export
                 </Button>
-                <Button size="sm" className="gap-1">
-                  <Plus className="h-3.5 w-3.5" /> New
+                <Button size="sm" className="gap-1" onClick={handleCreateRecurringExpense}>
+                  <Plus className="h-3.5 w-3.5" /> Recurring
+                </Button>
+                <Button size="sm" className="gap-1" onClick={handleCreateExpense}>
+                  <Plus className="h-3.5 w-3.5" /> New Expense
                 </Button>
               </div>
             </div>

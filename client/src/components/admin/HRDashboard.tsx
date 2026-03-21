@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useHybridAuth } from '@/lib/hybrid-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -141,6 +142,13 @@ interface Contract {
   status: string;
   salary: number;
   currency: string;
+  leaveEntitlements?: {
+    annualLeave: number;
+    sickLeave: number;
+    maternityLeave: number;
+    paternityLeave: number;
+    compassionateLeave: number;
+  };
 }
 
 interface Payslip {
@@ -182,6 +190,7 @@ const DEPT_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec
 
 export default function HRDashboard() {
   const { toast } = useToast();
+  const { user } = useHybridAuth();
   const [stats, setStats] = useState<EmployeeStats | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [recentJobs, setRecentJobs] = useState<RecentJobPosting[]>([]);
@@ -189,16 +198,44 @@ export default function HRDashboard() {
   const [payrollOverview, setPayrollOverview] = useState<PayrollOverview | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [payslips, setPayslips] = useState<Payslip[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'recruitment' | 'contracts' | 'payslips'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'recruitment' | 'contracts' | 'payslips' | 'my-contracts' | 'my-payslips'>(
+    user?.role === 'admin' || user?.role === 'staff' ? 'overview' : 'my-contracts'
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [employeeFilter, setEmployeeFilter] = useState<'all' | 'active' | 'on_leave' | 'inactive' | 'terminated'>('all');
   const [loading, setLoading] = useState(true);
   const [payrollCalcOpen, setPayrollCalcOpen] = useState(false);
   const [payrollCalcResult, setPayrollCalcResult] = useState<PayrollCalcResult | null>(null);
+  const [createEmployeeOpen, setCreateEmployeeOpen] = useState(false);
+  const [createJobOpen, setCreateJobOpen] = useState(false);
+  const [contractOfferOpen, setContractOfferOpen] = useState(false);
+  const [contractSignOpen, setContractSignOpen] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [employeeForm, setEmployeeForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    department: 'Kitchen',
+    position: '',
+    employmentType: 'full_time',
+    salary: '',
+  });
+  const [jobForm, setJobForm] = useState({
+    title: '',
+    department: 'Kitchen',
+    description: '',
+  });
 
   useEffect(() => {
     fetchHRData();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      setActiveTab(user.role === 'admin' || user.role === 'staff' ? 'overview' : 'my-contracts');
+    }
+  }, [user]);
 
   const fetchHRData = async () => {
     try {
@@ -246,12 +283,30 @@ export default function HRDashboard() {
 
       if (contractsRes.ok) {
         const data = await contractsRes.json();
-        setContracts(data.data?.contracts || []);
+        if (user?.role === 'admin' || user?.role === 'staff') {
+          setContracts(data.data?.contracts || []);
+        } else {
+          // For employees, fetch their own contracts
+          const employeeContractsRes = await apiFetch('/api/v1/hr/contracts/employee/my');
+          if (employeeContractsRes.ok) {
+            const employeeData = await employeeContractsRes.json();
+            setContracts(employeeData.data || []);
+          }
+        }
       }
 
       if (payslipsRes.ok) {
         const data = await payslipsRes.json();
-        setPayslips(data.data?.payslips || []);
+        if (user?.role === 'admin' || user?.role === 'staff') {
+          setPayslips(data.data?.payslips || []);
+        } else {
+          // For employees, fetch their own payslips
+          const employeePayslipsRes = await apiFetch('/api/v1/hr/payslips/employee/my');
+          if (employeePayslipsRes.ok) {
+            const employeeData = await employeePayslipsRes.json();
+            setPayslips(employeeData.data || []);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to fetch HR data:', error);
@@ -482,6 +537,117 @@ export default function HRDashboard() {
     a.click();
     URL.revokeObjectURL(url);
     toast({ title: 'Exported', description: 'Employee list exported as CSV' });
+  };
+
+  const handleCreateEmployee = () => {
+    setEmployeeForm({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      department: 'Kitchen',
+      position: '',
+      employmentType: 'full_time',
+      salary: '',
+    });
+    setCreateEmployeeOpen(true);
+  };
+
+  const handleCreateJob = () => {
+    setJobForm({
+      title: '',
+      department: 'Kitchen',
+      description: '',
+    });
+    setCreateJobOpen(true);
+  };
+
+  const handleSubmitEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await apiFetch('/api/v1/hr/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...employeeForm,
+          salary: parseInt(employeeForm.salary),
+          hireDate: new Date().toISOString(),
+          status: 'active',
+          currency: 'KES',
+        }),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Employee created successfully' });
+        setCreateEmployeeOpen(false);
+        fetchHRData(); // Refresh data
+      } else {
+        toast({ title: 'Error', description: 'Failed to create employee', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to create employee', variant: 'destructive' });
+    }
+  };
+
+  const handleSubmitJob = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await apiFetch('/api/v1/hr/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jobForm),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Job posted successfully' });
+        setCreateJobOpen(false);
+        fetchHRData(); // Refresh data
+      } else {
+        toast({ title: 'Error', description: 'Failed to post job', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to post job', variant: 'destructive' });
+    }
+  };
+
+  const handleSendContractOffer = async () => {
+    if (!selectedContract) return;
+    
+    try {
+      const res = await apiFetch(`/api/v1/hr/contracts/${selectedContract._id}/send-offer`, {
+        method: 'POST',
+      });
+      
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Contract offer sent successfully' });
+        setContractOfferOpen(false);
+        setSelectedContract(null);
+        fetchHRData(); // Refresh data
+      } else {
+        toast({ title: 'Error', description: 'Failed to send contract offer', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to send contract offer', variant: 'destructive' });
+    }
+  };
+
+  const handleSignContract = async () => {
+    if (!selectedContract) return;
+    
+    try {
+      const res = await apiFetch(`/api/v1/hr/contracts/${selectedContract._id}/sign`, {
+        method: 'POST',
+      });
+      
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Contract signed successfully' });
+        setContractSignOpen(false);
+        setSelectedContract(null);
+        fetchHRData(); // Refresh data
+      } else {
+        toast({ title: 'Error', description: 'Failed to sign contract', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to sign contract', variant: 'destructive' });
+    }
   };
 
   // ─── Insights ───────────────────────────────────────────────────────────
@@ -732,28 +898,309 @@ export default function HRDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Create Employee Dialog */}
+      <Dialog open={createEmployeeOpen} onOpenChange={setCreateEmployeeOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Employee</DialogTitle>
+            <DialogDescription>Add a new employee to the system</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleSubmitEmployee}>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">First Name</label>
+                <Input
+                  placeholder="John"
+                  value={employeeForm.firstName}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, firstName: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Last Name</label>
+                <Input
+                  placeholder="Doe"
+                  value={employeeForm.lastName}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, lastName: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                placeholder="john@company.com"
+                value={employeeForm.email}
+                onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Phone</label>
+              <Input
+                placeholder="+254700000000"
+                value={employeeForm.phone}
+                onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Department</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm"
+                  value={employeeForm.department}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })}
+                >
+                  <option>Kitchen</option>
+                  <option>Service</option>
+                  <option>Delivery</option>
+                  <option>Management</option>
+                  <option>Admin</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Position</label>
+                <Input
+                  placeholder="Chef"
+                  value={employeeForm.position}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, position: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Employment Type</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm"
+                  value={employeeForm.employmentType}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, employmentType: e.target.value })}
+                >
+                  <option value="full_time">Full Time</option>
+                  <option value="part_time">Part Time</option>
+                  <option value="contract">Contract</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Salary (KES)</label>
+                <Input
+                  type="number"
+                  placeholder="50000"
+                  value={employeeForm.salary}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, salary: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" type="button" onClick={() => setCreateEmployeeOpen(false)}>Cancel</Button>
+              <Button type="submit">Create Employee</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Job Dialog */}
+      <Dialog open={createJobOpen} onOpenChange={setCreateJobOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Post New Job</DialogTitle>
+            <DialogDescription>Create a new job posting</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleSubmitJob}>
+            <div>
+              <label className="text-sm font-medium">Job Title</label>
+              <Input
+                placeholder="Line Cook"
+                value={jobForm.title}
+                onChange={(e) => setJobForm({ ...jobForm, title: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Department</label>
+              <select
+                className="w-full h-9 px-3 border rounded-lg text-sm"
+                value={jobForm.department}
+                onChange={(e) => setJobForm({ ...jobForm, department: e.target.value })}
+              >
+                <option>Kitchen</option>
+                <option>Service</option>
+                <option>Delivery</option>
+                <option>Management</option>
+                <option>Admin</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description</label>
+              <textarea
+                className="w-full h-20 px-3 py-2 border rounded-lg text-sm"
+                placeholder="Job description..."
+                value={jobForm.description}
+                onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })}
+                required
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" type="button" onClick={() => setCreateJobOpen(false)}>Cancel</Button>
+              <Button type="submit">Post Job</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Contract Offer Dialog */}
+      <Dialog open={contractOfferOpen} onOpenChange={setContractOfferOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Contract Offer</DialogTitle>
+            <DialogDescription>
+              Send contract offer to {selectedContract?.employeeId?.firstName} {selectedContract?.employeeId?.lastName}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedContract && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Contract ID:</span>
+                  <span className="font-mono">{selectedContract.contractId}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Position:</span>
+                  <span>{selectedContract.title}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Salary:</span>
+                  <span className="font-mono font-medium">{selectedContract.currency} {selectedContract.salary?.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Type:</span>
+                  <span className="capitalize">{selectedContract.contractType?.replace('_', ' ')}</span>
+                </div>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                This will send the contract offer to the employee for review and signing.
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setContractOfferOpen(false)}>Cancel</Button>
+                <Button onClick={handleSendContractOffer}>Send Offer</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Contract Signing Dialog */}
+      <Dialog open={contractSignOpen} onOpenChange={setContractSignOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Sign Employment Contract</DialogTitle>
+            <DialogDescription>
+              Review and sign your employment contract
+            </DialogDescription>
+          </DialogHeader>
+          {selectedContract && (
+            <div className="space-y-6">
+              {/* Contract Details */}
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Contract ID:</span>
+                  <span className="font-mono font-medium">{selectedContract.contractId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Position:</span>
+                  <span className="font-medium">{selectedContract.title}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Salary:</span>
+                  <span className="font-mono font-medium text-lg">{selectedContract.currency} {selectedContract.salary?.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Start Date:</span>
+                  <span>{new Date(selectedContract.startDate).toLocaleDateString()}</span>
+                </div>
+                {selectedContract.endDate && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">End Date:</span>
+                    <span>{new Date(selectedContract.endDate).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Leave Entitlements */}
+              {selectedContract.leaveEntitlements && (
+                <div className="p-4 border rounded-lg">
+                  <h4 className="font-medium mb-3">Leave Entitlements</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Annual Leave:</span>
+                      <span className="font-medium">{selectedContract.leaveEntitlements.annualLeave} days</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Sick Leave:</span>
+                      <span className="font-medium">{selectedContract.leaveEntitlements.sickLeave} days</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Maternity Leave:</span>
+                      <span className="font-medium">{selectedContract.leaveEntitlements.maternityLeave} days</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Paternity Leave:</span>
+                      <span className="font-medium">{selectedContract.leaveEntitlements.paternityLeave} days</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Compassionate Leave:</span>
+                      <span className="font-medium">{selectedContract.leaveEntitlements.compassionateLeave} days</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="text-sm text-muted-foreground">
+                By signing this contract, you agree to the terms and conditions outlined above.
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setContractSignOpen(false)}>Cancel</Button>
+                <Button onClick={handleSignContract} className="bg-emerald-600 hover:bg-emerald-700">
+                  Sign Contract
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* ═══════════════════════════════════════════════════════════════════
           TAB NAVIGATION
           ═══════════════════════════════════════════════════════════════════ */}
       <div className="flex gap-1 border-b">
-        {([
-          { key: 'overview', label: 'Overview', icon: Eye },
-          { key: 'employees', label: 'Employees', icon: Users },
-          { key: 'recruitment', label: 'Recruitment', icon: UserPlus },
-          { key: 'contracts', label: 'Contracts', icon: FileText },
-          { key: 'payslips', label: 'Payslips', icon: DollarSign },
-        ] as const).map(tab => (
-          <Button
-            key={tab.key}
-            variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
-            size="sm"
-            className="gap-1.5 rounded-b-none"
-          >
-            <tab.icon className="h-3.5 w-3.5" />
-            {tab.label}
-          </Button>
-        ))}
+        {(() => {
+          const tabs = user?.role === 'admin' || user?.role === 'staff' ? [
+            { key: 'overview' as const, label: 'Overview', icon: Eye },
+            { key: 'employees' as const, label: 'Employees', icon: Users },
+            { key: 'recruitment' as const, label: 'Recruitment', icon: UserPlus },
+            { key: 'contracts' as const, label: 'Contracts', icon: FileText },
+            { key: 'payslips' as const, label: 'Payslips', icon: DollarSign },
+          ] : [
+            { key: 'my-contracts' as const, label: 'My Contracts', icon: FileText },
+            { key: 'my-payslips' as const, label: 'My Payslips', icon: DollarSign },
+          ];
+          return tabs.map(tab => (
+            <Button
+              key={tab.key}
+              variant={activeTab === tab.key ? 'default' : 'ghost'}
+              onClick={() => setActiveTab(tab.key)}
+              size="sm"
+              className="gap-1.5 rounded-b-none"
+            >
+              <tab.icon className="h-3.5 w-3.5" />
+              {tab.label}
+            </Button>
+          ));
+        })()}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -1017,7 +1464,7 @@ export default function HRDashboard() {
                 <Button variant="outline" size="sm" className="gap-1" onClick={handleExportEmployees}>
                   <Download className="h-3.5 w-3.5" /> Export
                 </Button>
-                <Button size="sm" className="gap-1">
+                <Button size="sm" className="gap-1" onClick={handleCreateEmployee}>
                   <Plus className="h-3.5 w-3.5" /> Add Employee
                 </Button>
               </div>
@@ -1236,7 +1683,7 @@ export default function HRDashboard() {
                   <CardTitle className="text-base">Job Postings</CardTitle>
                   <CardDescription>Manage open positions</CardDescription>
                 </div>
-                <Button size="sm" className="gap-1">
+                <Button size="sm" className="gap-1" onClick={handleCreateJob}>
                   <Plus className="h-3.5 w-3.5" /> New Position
                 </Button>
               </div>
@@ -1318,6 +1765,7 @@ export default function HRDashboard() {
                     <TableHead>Remaining</TableHead>
                     <TableHead className="text-right">Salary</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1363,12 +1811,32 @@ export default function HRDashboard() {
                               {contract.status}
                             </Badge>
                           </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {contract.status === 'draft' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() => {
+                                    setSelectedContract(contract);
+                                    setContractOfferOpen(true);
+                                  }}
+                                >
+                                  Send Offer
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       );
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
                         No contracts found
                       </TableCell>
@@ -1457,6 +1925,185 @@ export default function HRDashboard() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                        No payslips found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          MY CONTRACTS TAB (Employee View)
+          ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'my-contracts' && (
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">My Employment Contracts</CardTitle>
+                <CardDescription>View and sign your employment contracts</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {contracts.length > 0 ? (
+                contracts.map(contract => (
+                  <Card key={contract._id} className="border">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-sm">{contract.title}</CardTitle>
+                          <CardDescription className="text-xs">
+                            Contract ID: {contract.contractId}
+                          </CardDescription>
+                        </div>
+                        <Badge variant="outline" className={`text-[10px] px-2 py-1 ${getStatusBadge(contract.status)}`}>
+                          {contract.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                        <div>
+                          <span className="text-muted-foreground">Salary:</span>
+                          <span className="font-mono font-medium ml-2">{contract.currency} {contract.salary?.toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Start Date:</span>
+                          <span className="ml-2">{new Date(contract.startDate).toLocaleDateString()}</span>
+                        </div>
+                        {contract.endDate && (
+                          <div>
+                            <span className="text-muted-foreground">End Date:</span>
+                            <span className="ml-2">{new Date(contract.endDate).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-muted-foreground">Type:</span>
+                          <span className="ml-2 capitalize">{contract.contractType?.replace('_', ' ')}</span>
+                        </div>
+                      </div>
+
+                      {contract.leaveEntitlements && (
+                        <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                          <h4 className="text-sm font-medium mb-2">Leave Entitlements</h4>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Annual Leave:</span>
+                              <span>{contract.leaveEntitlements.annualLeave} days</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Sick Leave:</span>
+                              <span>{contract.leaveEntitlements.sickLeave} days</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Maternity Leave:</span>
+                              <span>{contract.leaveEntitlements.maternityLeave} days</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Paternity Leave:</span>
+                              <span>{contract.leaveEntitlements.paternityLeave} days</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Compassionate Leave:</span>
+                              <span>{contract.leaveEntitlements.compassionateLeave} days</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex justify-end gap-2">
+                        {contract.status === 'offered' && (
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedContract(contract);
+                              setContractSignOpen(true);
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                          >
+                            Sign Contract
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          View Details
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p>No contracts found</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          MY PAYSLIPS TAB (Employee View)
+          ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'my-payslips' && (
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">My Payslips</CardTitle>
+                <CardDescription>View your salary slips and payment history</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Payslip ID</TableHead>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Pay Date</TableHead>
+                    <TableHead className="text-right">Net Pay</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payslips.length > 0 ? (
+                    payslips.map(payslip => (
+                      <TableRow key={payslip._id}>
+                        <TableCell className="font-mono text-xs">{payslip.payslipId}</TableCell>
+                        <TableCell className="text-xs">
+                          {new Date(payslip.payPeriod?.year, payslip.payPeriod?.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </TableCell>
+                        <TableCell className="text-xs">{new Date(payslip.payDate).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-right font-mono text-sm font-medium">
+                          {payslip.currency} {payslip.netPay?.toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(payslip.status)}`}>
+                            {getStatusIcon(payslip.status)}
+                            <span className="ml-1">{payslip.status}</span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-30" />
                         No payslips found
                       </TableCell>

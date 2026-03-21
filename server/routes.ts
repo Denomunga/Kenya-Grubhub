@@ -42,6 +42,8 @@ import adminNewsletterRouter from "./routes/admin-newsletter";
 import posRouter from "./routes/pos";
 import receiptRouter from "./routes/receipt";
 import mpesaRouter from "./routes/mpesa";
+import hrRouter from "./modules/hr";
+import accountingRouter from "./modules/accounting";
 import { 
   validateThreadAccess, 
   validateThreadParticipation, 
@@ -3288,6 +3290,9 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
   // Mount routers
   app.use("/api/auth0", auth0Router);
   app.use("/api/newsletter", newsletterRouter);
+
+  app.use("/api/v1/hr", hrRouter.routes);
+  app.use("/api/v1/accounting", accountingRouter.routes);
   // POS and Receipt routes are already mounted above with proper middleware
 
   // Test endpoint to verify routes are registering

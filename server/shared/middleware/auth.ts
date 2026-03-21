@@ -18,9 +18,31 @@ export interface JwtPayload {
   exp?: number;
 }
 
-/**
- * Middleware to require authentication
- */
+
+
+// ...existing code...
+
+export const requireRole = (allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user || !req.user.roles) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const userRoles = req.user.roles;
+    const hasRole = allowedRoles.some(role => userRoles.includes(role));
+    if (!hasRole) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    next();
+  };
+};
+
+// ...existing code...
+
+
+
+
+ // Middleware to require authentication
+ 
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;

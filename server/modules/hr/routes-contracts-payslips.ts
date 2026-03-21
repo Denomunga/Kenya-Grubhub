@@ -1,14 +1,24 @@
-import { Router } from 'express';
-import { body, param, query } from 'express-validator';
-import { validateRequest } from '../../middleware/validation';
-import { requireRole } from '../../middleware/auth';
-import { rateLimiter } from '../../middleware/rateLimiter';
+import { Router, Request, Response, NextFunction } from 'express';
+import { body, param, validationResult } from 'express-validator';
+import rateLimit from 'express-rate-limit';
+import { requireRole } from '../../shared/middleware/auth';
 import { ContractController, PayslipController } from './controller-contracts-payslips';
 
 const router = Router();
 
 // Rate limiter for general routes
-const generalLimiter = rateLimiter({ windowMs: 15 * 60 * 1000, max: 100 });
+const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
+
+
+
+// Define validateRequest if not in a separate file
+const validateRequest = (req: Request, res: Response, next: NextFunction) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  next();
+};
 
 /**
  * Contract Routes
@@ -19,6 +29,7 @@ router.get(
   '/contracts',
   generalLimiter,
   requireRole(['admin', 'hr_manager', 'manager', 'accountant']),
+   validateRequest,
   ContractController.getContracts
 );
 
@@ -27,8 +38,8 @@ router.get(
   '/contracts/:id',
   generalLimiter,
   requireRole(['admin', 'hr_manager', 'manager', 'accountant']),
+   validateRequest,
   param('id').isMongoId().withMessage('Valid contract ID required'),
-  validateRequest,
   ContractController.getContractById
 );
 
@@ -45,7 +56,7 @@ router.post(
     body('salary').isFloat({ min: 0 }).withMessage('Valid salary required'),
     body('terms').trim().notEmpty().withMessage('Contract terms required'),
   ],
-  validateRequest,
+   validateRequest,
   ContractController.createContract
 );
 
@@ -74,6 +85,7 @@ router.get(
   '/contracts/expiring/list',
   generalLimiter,
   requireRole(['admin', 'hr_manager', 'manager']),
+  validateRequest,
   ContractController.getExpiringContracts
 );
 
@@ -82,7 +94,37 @@ router.get(
   '/contracts/stats/overview',
   generalLimiter,
   requireRole(['admin', 'hr_manager', 'manager', 'accountant']),
+   validateRequest,
   ContractController.getContractStats
+);
+
+// Send contract offer to employee
+router.post(
+  '/contracts/:id/send-offer',
+  generalLimiter,
+  requireRole(['admin', 'hr_manager']),
+  param('id').isMongoId().withMessage('Valid contract ID required'),
+  validateRequest,
+  ContractController.sendContractOffer
+);
+
+// Employee sign contract
+router.post(
+  '/contracts/:id/sign',
+  generalLimiter,
+  requireRole(['employee']), // Allow employees to sign their own contracts
+  param('id').isMongoId().withMessage('Valid contract ID required'),
+  validateRequest,
+  ContractController.signContract
+);
+
+// Get employee's contracts (for employee portal)
+router.get(
+  '/contracts/employee/my',
+  generalLimiter,
+  requireRole(['employee']),
+   validateRequest,
+  ContractController.getEmployeeContracts
 );
 
 /**
@@ -94,6 +136,7 @@ router.get(
   '/payslips',
   generalLimiter,
   requireRole(['admin', 'hr_manager', 'accountant', 'payroll_manager']),
+  validateRequest,
   PayslipController.getPayslips
 );
 
@@ -177,6 +220,7 @@ router.get(
   '/payslips/stats/overview',
   generalLimiter,
   requireRole(['admin', 'hr_manager', 'accountant', 'payroll_manager']),
+  validateRequest,
   PayslipController.getPayslipStats
 );
 
@@ -206,6 +250,25 @@ router.post(
   ],
   validateRequest,
   PayslipController.generateBulkPayslips
+);
+
+// Get employee's payslips (for employee portal)
+router.get(
+  '/payslips/employee/my',
+  generalLimiter,
+  requireRole(['employee']),
+   validateRequest,
+  PayslipController.getEmployeePayslips
+);
+
+// Get specific payslip for employee
+router.get(
+  '/payslips/employee/my/:id',
+  generalLimiter,
+  requireRole(['employee']),
+  param('id').isMongoId().withMessage('Valid payslip ID required'),
+  validateRequest,
+  PayslipController.getEmployeePayslipById
 );
 
 export default router;
