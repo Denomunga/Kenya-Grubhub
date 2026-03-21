@@ -138,15 +138,7 @@ interface CashFlowData {
   balance: number;
 }
 
-const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
-const [invoiceForm, setInvoiceForm] = useState({
-  clientName: '',
-  amount: '',
-  dueDate: '',
-  description: '',      // optional
-  status: 'unpaid',     // default status
-});
-const [submittingInvoice, setSubmittingInvoice] = useState(false);
+
 
 const EXPENSE_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280'];
 
@@ -190,6 +182,16 @@ export default function AccountingDashboard() {
     autoGenerate: true,
     isActive: true,
   });
+   // ✅ ADD THESE THREE HERE (inside the component)
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({
+    clientName: '',
+    amount: '',
+    dueDate: '',
+    description: '',
+    status: 'unpaid',
+  });
+  const [submittingInvoice, setSubmittingInvoice] = useState(false);
 
   useEffect(() => {
     fetchAccountingData();
