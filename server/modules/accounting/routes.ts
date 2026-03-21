@@ -5,7 +5,6 @@ import { DashboardController } from './dashboardController';
 import { requireAuth } from '@shared/middleware/auth';
 import { requireRole } from '@shared/middleware/roles';
 import { generalLimiter, authLimiter } from '@shared/middleware/rateLimiter';
-import { checkJwt } from '@shared/middleware/auth0';
 
 
 const router = Router();
@@ -37,14 +36,14 @@ const handleValidationErrors = (req: Request, res: Response, next: Function) => 
 
 // Then for all protected accounting routes, replace requireAuth with checkJwt
 // Example:
-router.get('/stats', generalLimiter, checkJwt, requireRole(['admin', 'accounting_manager']), DashboardController.getStats);
+router.get('/stats', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), DashboardController.getStats);
 // etc.
 
 
 router.post(
   '/init',
   authLimiter,
-   checkJwt,
+  requireAuth,
   requireRole(['admin']),
   AccountingController.initializeAccounts
 );
@@ -60,7 +59,7 @@ router.post(
 router.get(
   '/accounts',
   generalLimiter,
-  checkJwt,
+  requireAuth,
   AccountingController.getAccounts
 );
 
@@ -155,7 +154,7 @@ router.get(
 router.post(
   '/invoices',
   authLimiter,
-  checkJwt,
+  requireAuth,
   requireRole(['admin', 'accounting_manager']),
   [
     body('clientName').trim().notEmpty().withMessage('Client name is required'),
