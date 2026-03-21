@@ -3,7 +3,7 @@ import {
   FinancialReportingService,
   ExpenseService
 } from './service';
-import { Transaction } from './models';
+import { Transaction, Invoice } from './models';
 
 interface AuthRequest extends Request {
   user?: {
@@ -102,17 +102,17 @@ export class DashboardController {
     try {
       const { status } = req.query;
 
-      const query: any = { transactionType: { $in: ['sale', 'purchase'] } };
+      const query: any = {};
       if (status) query.status = status;
 
-      const invoices = await Transaction
+      const invoices = await Invoice
         .find(query)
-        .sort({ transactionDate: -1 })
+        .sort({ createdAt: -1 })
         .lean();
 
       res.status(200).json({
         success: true,
-        data: invoices
+        data: { invoices }
       });
     } catch (error: any) {
       console.error('Get invoices error:', error);

@@ -14,6 +14,7 @@ const router = Router();
 
 router.get(
   '/jobs',
+  requireAuth,
   generalLimiter,
   JobPostingController.getJobPostings
 );
@@ -24,6 +25,7 @@ router.get(
  */
 router.get(
   '/jobs/:id',
+  requireAuth,
   generalLimiter,
   JobPostingController.getJobPostingById
 );
@@ -46,6 +48,7 @@ router.use(contractsPayslipsRoutes);
 router.get(
   '/employees',
   generalLimiter,
+  requireAuth,
   requireRole(['admin', 'hr_manager', 'manager']),
   EmployeeController.getEmployees
 );
@@ -114,6 +117,7 @@ router.delete(
  */
 router.get(
   '/jobs',
+  requireAuth,
   generalLimiter,
   JobPostingController.getJobPostings
 );
@@ -124,6 +128,7 @@ router.get(
  */
 router.get(
   '/jobs/:id',
+  requireAuth,
   generalLimiter,
   JobPostingController.getJobPostingById
 );
@@ -135,6 +140,7 @@ router.get(
 router.post(
   '/jobs',
   authLimiter,
+  requireAuth,
   requireRole(['admin', 'hr_manager']),
   JobPostingController.createJobPosting
 );
@@ -146,6 +152,7 @@ router.post(
 router.put(
   '/jobs/:id',
   authLimiter,
+  requireAuth,
   requireRole(['admin', 'hr_manager']),
   JobPostingController.updateJobPosting
 );
@@ -157,6 +164,7 @@ router.put(
 router.put(
   '/jobs/:id/close',
   authLimiter,
+  requireAuth,
   requireRole(['admin', 'hr_manager']),
   JobPostingController.closeJobPosting
 );
@@ -172,6 +180,7 @@ router.put(
 router.get(
   '/applications',
   generalLimiter,
+  requireAuth,
   requireRole(['admin', 'hr_manager']),
   JobApplicationController.getJobApplications
 );
@@ -182,6 +191,7 @@ router.get(
  */
 router.get(
   '/applications/:id',
+  requireAuth,
   generalLimiter,
   requireRole(['admin', 'hr_manager']),
   JobApplicationController.getJobApplicationById
@@ -193,6 +203,7 @@ router.get(
  */
 router.post(
   '/jobs/:jobId/apply',
+  requireAuth,
   generalLimiter,
   JobApplicationController.applyForJob
 );
@@ -203,6 +214,7 @@ router.post(
  */
 router.put(
   '/applications/:id/status',
+  requireAuth,
   authLimiter,
   requireRole(['admin', 'hr_manager']),
   JobApplicationController.updateApplicationStatus
