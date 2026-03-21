@@ -231,6 +231,7 @@ export default function HRDashboard() {
         employmentType: 'full_time',
         requirements: [],
         salaryRange: { min: 0, max: 0 },
+        closingDate: '',
   });
 
   useEffect(() => {
@@ -570,6 +571,7 @@ export default function HRDashboard() {
         employmentType: 'full_time',
         requirements: [],
         salaryRange: { min: 0, max: 0 },
+        closingDate: '',
     });
     setCreateJobOpen(true);
   };
@@ -1052,6 +1054,15 @@ export default function HRDashboard() {
                 placeholder="Job description..."
                 value={jobForm.description}
                 onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Closing Date</label>
+              <Input
+                type="date"
+                value={jobForm.closingDate ? new Date(jobForm.closingDate).toISOString().split('T')[0] : ''}
+                onChange={(e) => setJobForm({ ...jobForm, closingDate: e.target.value })}
                 required
               />
             </div>
