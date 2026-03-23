@@ -139,9 +139,13 @@ interface Contract {
   title: string;
   startDate: string;
   endDate?: string;
+  renewalDate?: string;
   status: string;
   salary: number;
   currency: string;
+  benefits?: string[];
+  terms?: string;
+  notes?: string;
   leaveEntitlements?: {
     annualLeave: number;
     sickLeave: number;
@@ -165,10 +169,19 @@ interface Payslip {
     month: number;
     year: number;
   };
+  basicSalary: number;
+  totalEarnings: number;
+  totalDeductions: number;
+  paye: number;
+  nssf: number;
+  nhif: number;
+  overtimePay: number;
   netPay: number;
   currency: string;
   status: string;
   payDate: string;
+  paymentMethod?: string;
+  notes?: string;
 }
 
 interface ActivityLog {
@@ -213,6 +226,16 @@ export default function HRDashboard() {
   const [reviewAppOpen, setReviewAppOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<RecentApplication | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [createContractOpen, setCreateContractOpen] = useState(false);
+  const [editContractOpen, setEditContractOpen] = useState(false);
+  const [selectedEditContract, setSelectedEditContract] = useState<Contract | null>(null);
+  const [contractForm, setContractForm] = useState({
+    employeeId: '', contractType: 'permanent', title: '', startDate: '', endDate: '', salary: '', terms: 'Standard employment terms per Kenyan Employment Act 2007.', notes: '',
+  });
+  const [editPayslipOpen, setEditPayslipOpen] = useState(false);
+  const [viewPayslipOpen, setViewPayslipOpen] = useState(false);
+  const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
+  const [payslipEditForm, setPayslipEditForm] = useState({ basicSalary: '', overtimePay: '', notes: '' });
   const [contractOfferOpen, setContractOfferOpen] = useState(false);
   const [contractSignOpen, setContractSignOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
@@ -584,21 +607,59 @@ export default function HRDashboard() {
   const handleSubmitEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const salary = parseInt(employeeForm.salary);
       const res = await apiFetch('/api/v1/hr/employees', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...employeeForm,
-          salary: parseInt(employeeForm.salary),
+          salary,
           hireDate: new Date().toISOString(),
           status: 'active',
           currency: 'KES',
         }),
       });
       if (res.ok) {
+        const empData = await res.json();
+        const newEmpId = empData.data?._id || empData._id;
         toast({ title: 'Success', description: 'Employee created successfully' });
         setCreateEmployeeOpen(false);
-        fetchHRData(); // Refresh data
+
+        // Auto-create contract for the new employee
+        if (newEmpId) {
+          try {
+            await apiFetch('/api/v1/hr/contracts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                employeeId: newEmpId,
+                contractType: employeeForm.employmentType === 'contract' ? 'fixed_term' : 'permanent',
+                title: `${employeeForm.position} - Employment Contract`,
+                startDate: new Date().toISOString(),
+                salary,
+                terms: 'Standard employment terms per Kenyan Employment Act 2007. Subject to company policies and procedures.',
+              }),
+            });
+            toast({ title: 'Contract Created', description: 'Employment contract auto-generated' });
+          } catch {
+            console.error('Auto-create contract failed');
+          }
+
+          // Auto-generate payslip for current month
+          try {
+            const now = new Date();
+            await apiFetch(`/api/v1/hr/payslips/generate/${newEmpId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ month: now.getMonth() + 1, year: now.getFullYear() }),
+            });
+            toast({ title: 'Payslip Generated', description: 'First payslip auto-generated for current month' });
+          } catch {
+            console.error('Auto-generate payslip failed');
+          }
+        }
+
+        fetchHRData();
       } else {
         toast({ title: 'Error', description: 'Failed to create employee', variant: 'destructive' });
       }
@@ -715,6 +776,203 @@ export default function HRDashboard() {
       toast({ title: 'Error', description: 'Failed to update application status', variant: 'destructive' });
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  // ─── Contract Handlers ─────────────────────────────────────────────
+  const handleOpenCreateContract = () => {
+    setContractForm({ employeeId: '', contractType: 'permanent', title: '', startDate: new Date().toISOString().split('T')[0], endDate: '', salary: '', terms: 'Standard employment terms per Kenyan Employment Act 2007.', notes: '' });
+    setCreateContractOpen(true);
+  };
+
+  const handleSubmitContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await apiFetch('/api/v1/hr/contracts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...contractForm,
+          salary: parseFloat(contractForm.salary),
+          endDate: contractForm.endDate || undefined,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Contract created successfully' });
+        setCreateContractOpen(false);
+        fetchHRData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({ title: 'Error', description: err.error || 'Failed to create contract', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to create contract', variant: 'destructive' });
+    }
+  };
+
+  const handleOpenEditContract = (contract: Contract) => {
+    setSelectedEditContract(contract);
+    setContractForm({
+      employeeId: contract.employeeId?._id || '',
+      contractType: contract.contractType,
+      title: contract.title,
+      startDate: contract.startDate ? new Date(contract.startDate).toISOString().split('T')[0] : '',
+      endDate: contract.endDate ? new Date(contract.endDate).toISOString().split('T')[0] : '',
+      salary: String(contract.salary),
+      terms: contract.terms || '',
+      notes: contract.notes || '',
+    });
+    setEditContractOpen(true);
+  };
+
+  const handleSubmitEditContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEditContract) return;
+    try {
+      const res = await apiFetch(`/api/v1/hr/contracts/${selectedEditContract._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contractType: contractForm.contractType,
+          title: contractForm.title,
+          startDate: contractForm.startDate,
+          endDate: contractForm.endDate || undefined,
+          salary: parseFloat(contractForm.salary),
+          terms: contractForm.terms,
+          notes: contractForm.notes,
+          status: selectedEditContract.status,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Contract updated successfully' });
+        setEditContractOpen(false);
+        setSelectedEditContract(null);
+        fetchHRData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({ title: 'Error', description: err.error || 'Failed to update contract', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update contract', variant: 'destructive' });
+    }
+  };
+
+  const handleUpdateContractStatus = async (contract: Contract, newStatus: string) => {
+    try {
+      const res = await apiFetch(`/api/v1/hr/contracts/${contract._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: `Contract status updated to ${newStatus}` });
+        fetchHRData();
+      } else {
+        toast({ title: 'Error', description: 'Failed to update contract status', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update contract status', variant: 'destructive' });
+    }
+  };
+
+  // ─── Payslip Handlers ─────────────────────────────────────────────
+  const handleViewPayslip = (payslip: Payslip) => {
+    setSelectedPayslip(payslip);
+    setViewPayslipOpen(true);
+  };
+
+  const handleOpenEditPayslip = (payslip: Payslip) => {
+    setSelectedPayslip(payslip);
+    setPayslipEditForm({
+      basicSalary: String(payslip.basicSalary || ''),
+      overtimePay: String(payslip.overtimePay || 0),
+      notes: payslip.notes || '',
+    });
+    setEditPayslipOpen(true);
+  };
+
+  const handleSubmitEditPayslip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPayslip) return;
+    try {
+      const basicSalary = parseFloat(payslipEditForm.basicSalary);
+      const overtimePay = parseFloat(payslipEditForm.overtimePay) || 0;
+      const res = await apiFetch(`/api/v1/hr/payslips/${selectedPayslip._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          basicSalary,
+          overtimePay,
+          notes: payslipEditForm.notes,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Payslip updated successfully' });
+        setEditPayslipOpen(false);
+        setSelectedPayslip(null);
+        fetchHRData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({ title: 'Error', description: err.error || 'Failed to update payslip', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update payslip', variant: 'destructive' });
+    }
+  };
+
+  const handleApprovePayslip = async (payslip: Payslip) => {
+    try {
+      const res = await apiFetch(`/api/v1/hr/payslips/${payslip._id}/approve`, { method: 'POST' });
+      if (res.ok) {
+        toast({ title: 'Approved', description: `Payslip ${payslip.payslipId} approved` });
+        fetchHRData();
+      } else {
+        toast({ title: 'Error', description: 'Failed to approve payslip', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to approve payslip', variant: 'destructive' });
+    }
+  };
+
+  const handleMarkPayslipPaid = async (payslip: Payslip) => {
+    try {
+      const res = await apiFetch(`/api/v1/hr/payslips/${payslip._id}/pay`, { method: 'POST' });
+      if (res.ok) {
+        toast({ title: 'Paid', description: `Payslip ${payslip.payslipId} marked as paid` });
+        fetchHRData();
+      } else {
+        toast({ title: 'Error', description: 'Failed to mark payslip as paid', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to mark payslip as paid', variant: 'destructive' });
+    }
+  };
+
+  const handleGenerateBulkPayslips = async () => {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    const empIds = employees.filter(e => e.status === 'active').map(e => e._id);
+    if (empIds.length === 0) {
+      toast({ title: 'Info', description: 'No active employees to generate payslips for' });
+      return;
+    }
+    try {
+      const res = await apiFetch('/api/v1/hr/payslips/generate/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month, year, employeeIds: empIds }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast({ title: 'Generated', description: `${data.data?.created || 0} payslips created, ${data.data?.failed || 0} failed` });
+        fetchHRData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({ title: 'Error', description: err.error || 'Failed to generate payslips', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to generate payslips', variant: 'destructive' });
     }
   };
 
@@ -1058,17 +1316,24 @@ export default function HRDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">Department</label>
-                <select
-                  className="w-full h-9 px-3 border rounded-lg text-sm"
+                <Input
+                  list="dept-suggestions"
+                  placeholder="Type or select department"
                   value={employeeForm.department}
                   onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })}
-                >
-                  <option>Kitchen</option>
-                  <option>Service</option>
-                  <option>Delivery</option>
-                  <option>Management</option>
-                  <option>Admin</option>
-                </select>
+                />
+                <datalist id="dept-suggestions">
+                  <option value="Kitchen" />
+                  <option value="Service" />
+                  <option value="Delivery" />
+                  <option value="Management" />
+                  <option value="Admin" />
+                  <option value="Finance" />
+                  <option value="Marketing" />
+                  <option value="Operations" />
+                  <option value="IT" />
+                  <option value="Customer Support" />
+                </datalist>
               </div>
               <div>
                 <label className="text-sm font-medium">Position</label>
@@ -1084,7 +1349,7 @@ export default function HRDashboard() {
               <div>
                 <label className="text-sm font-medium">Employment Type</label>
                 <select
-                  className="w-full h-9 px-3 border rounded-lg text-sm"
+                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
                   value={employeeForm.employmentType}
                   onChange={(e) => setEmployeeForm({ ...employeeForm, employmentType: e.target.value })}
                 >
@@ -1131,22 +1396,29 @@ export default function HRDashboard() {
             </div>
             <div>
               <label className="text-sm font-medium">Department</label>
-              <select
-                className="w-full h-9 px-3 border rounded-lg text-sm"
+              <Input
+                list="create-job-dept-suggestions"
+                placeholder="Type or select department"
                 value={jobForm.department}
                 onChange={(e) => setJobForm({ ...jobForm, department: e.target.value })}
-              >
-                <option>Kitchen</option>
-                <option>Service</option>
-                <option>Delivery</option>
-                <option>Management</option>
-                <option>Admin</option>
-              </select>
+              />
+              <datalist id="create-job-dept-suggestions">
+                <option value="Kitchen" />
+                <option value="Service" />
+                <option value="Delivery" />
+                <option value="Management" />
+                <option value="Admin" />
+                <option value="Finance" />
+                <option value="Marketing" />
+                <option value="Operations" />
+                <option value="IT" />
+                <option value="Customer Support" />
+              </datalist>
             </div>
             <div>
               <label className="text-sm font-medium">Description</label>
               <textarea
-                className="w-full h-20 px-3 py-2 border rounded-lg text-sm"
+                className="w-full h-20 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
                 placeholder="Job description..."
                 value={jobForm.description}
                 onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })}
@@ -1189,22 +1461,29 @@ export default function HRDashboard() {
             </div>
             <div>
               <label className="text-sm font-medium">Department</label>
-              <select
-                className="w-full h-9 px-3 border rounded-lg text-sm"
+              <Input
+                list="job-dept-suggestions"
+                placeholder="Type or select department"
                 value={jobForm.department}
                 onChange={(e) => setJobForm({ ...jobForm, department: e.target.value })}
-              >
-                <option>Kitchen</option>
-                <option>Service</option>
-                <option>Delivery</option>
-                <option>Management</option>
-                <option>Admin</option>
-              </select>
+              />
+              <datalist id="job-dept-suggestions">
+                <option value="Kitchen" />
+                <option value="Service" />
+                <option value="Delivery" />
+                <option value="Management" />
+                <option value="Admin" />
+                <option value="Finance" />
+                <option value="Marketing" />
+                <option value="Operations" />
+                <option value="IT" />
+                <option value="Customer Support" />
+              </datalist>
             </div>
             <div>
               <label className="text-sm font-medium">Description</label>
               <textarea
-                className="w-full h-20 px-3 py-2 border rounded-lg text-sm"
+                className="w-full h-20 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
                 placeholder="Job description..."
                 value={jobForm.description}
                 onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })}
@@ -1214,7 +1493,7 @@ export default function HRDashboard() {
             <div>
               <label className="text-sm font-medium">Status</label>
               <select
-                className="w-full h-9 px-3 border rounded-lg text-sm"
+                className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
                 value={jobForm.status}
                 onChange={(e) => setJobForm({ ...jobForm, status: e.target.value })}
               >
@@ -1336,6 +1615,299 @@ export default function HRDashboard() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Contract Dialog */}
+      <Dialog open={createContractOpen} onOpenChange={setCreateContractOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Contract</DialogTitle>
+            <DialogDescription>Create an employment contract</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={handleSubmitContract}>
+            <div>
+              <label className="text-sm font-medium">Employee</label>
+              <select
+                className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
+                value={contractForm.employeeId}
+                onChange={(e) => setContractForm({ ...contractForm, employeeId: e.target.value })}
+                required
+              >
+                <option value="">Select employee...</option>
+                {employees.map(emp => (
+                  <option key={emp._id} value={emp._id}>{emp.firstName} {emp.lastName} - {emp.position}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium">Contract Type</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
+                  value={contractForm.contractType}
+                  onChange={(e) => setContractForm({ ...contractForm, contractType: e.target.value })}
+                >
+                  <option value="permanent">Permanent</option>
+                  <option value="fixed_term">Fixed Term</option>
+                  <option value="casual">Casual</option>
+                  <option value="consultancy">Consultancy</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Salary (KES)</label>
+                <Input
+                  type="number"
+                  placeholder="50000"
+                  value={contractForm.salary}
+                  onChange={(e) => setContractForm({ ...contractForm, salary: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                placeholder="Software Engineer - Employment Contract"
+                value={contractForm.title}
+                onChange={(e) => setContractForm({ ...contractForm, title: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium">Start Date</label>
+                <Input type="date" value={contractForm.startDate} onChange={(e) => setContractForm({ ...contractForm, startDate: e.target.value })} required />
+              </div>
+              <div>
+                <label className="text-sm font-medium">End Date</label>
+                <Input type="date" value={contractForm.endDate} onChange={(e) => setContractForm({ ...contractForm, endDate: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Terms</label>
+              <textarea
+                className="w-full h-16 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
+                value={contractForm.terms}
+                onChange={(e) => setContractForm({ ...contractForm, terms: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Notes</label>
+              <Input
+                placeholder="Additional notes..."
+                value={contractForm.notes}
+                onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" type="button" onClick={() => setCreateContractOpen(false)}>Cancel</Button>
+              <Button type="submit">Create Contract</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Contract Dialog */}
+      <Dialog open={editContractOpen} onOpenChange={setEditContractOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Contract</DialogTitle>
+            <DialogDescription>
+              {selectedEditContract?.employeeId?.firstName} {selectedEditContract?.employeeId?.lastName} — {selectedEditContract?.contractId}
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={handleSubmitEditContract}>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium">Contract Type</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
+                  value={contractForm.contractType}
+                  onChange={(e) => setContractForm({ ...contractForm, contractType: e.target.value })}
+                >
+                  <option value="permanent">Permanent</option>
+                  <option value="fixed_term">Fixed Term</option>
+                  <option value="casual">Casual</option>
+                  <option value="consultancy">Consultancy</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Salary (KES)</label>
+                <Input
+                  type="number"
+                  value={contractForm.salary}
+                  onChange={(e) => setContractForm({ ...contractForm, salary: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                value={contractForm.title}
+                onChange={(e) => setContractForm({ ...contractForm, title: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium">Start Date</label>
+                <Input type="date" value={contractForm.startDate} onChange={(e) => setContractForm({ ...contractForm, startDate: e.target.value })} required />
+              </div>
+              <div>
+                <label className="text-sm font-medium">End Date</label>
+                <Input type="date" value={contractForm.endDate} onChange={(e) => setContractForm({ ...contractForm, endDate: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Status</label>
+              <select
+                className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
+                value={selectedEditContract?.status || 'draft'}
+                onChange={(e) => setSelectedEditContract(prev => prev ? { ...prev, status: e.target.value } : prev)}
+              >
+                <option value="draft">Draft</option>
+                <option value="offered">Offered</option>
+                <option value="active">Active</option>
+                <option value="expired">Expired</option>
+                <option value="terminated">Terminated</option>
+                <option value="renewed">Renewed</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Terms</label>
+              <textarea
+                className="w-full h-16 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
+                value={contractForm.terms}
+                onChange={(e) => setContractForm({ ...contractForm, terms: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Notes (promotion, demotion, etc.)</label>
+              <Input
+                placeholder="Reason for update..."
+                value={contractForm.notes}
+                onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" type="button" onClick={() => setEditContractOpen(false)}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Payslip Dialog */}
+      <Dialog open={viewPayslipOpen} onOpenChange={setViewPayslipOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Payslip Details</DialogTitle>
+            <DialogDescription>{selectedPayslip?.payslipId}</DialogDescription>
+          </DialogHeader>
+          {selectedPayslip && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-muted-foreground">Employee</span>
+                  <p className="font-medium">{selectedPayslip.employeeId?.firstName} {selectedPayslip.employeeId?.lastName}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Department</span>
+                  <p>{selectedPayslip.employeeId?.department}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Pay Period</span>
+                  <p>{new Date(selectedPayslip.payPeriod?.year, selectedPayslip.payPeriod?.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Pay Date</span>
+                  <p>{new Date(selectedPayslip.payDate).toLocaleDateString()}</p>
+                </div>
+              </div>
+              <div className="border-t pt-2 space-y-1">
+                <div className="flex justify-between"><span>Basic Salary</span><span className="font-mono">{selectedPayslip.currency} {selectedPayslip.basicSalary?.toLocaleString()}</span></div>
+                {selectedPayslip.overtimePay > 0 && (
+                  <div className="flex justify-between"><span>Overtime Pay</span><span className="font-mono">{selectedPayslip.currency} {selectedPayslip.overtimePay?.toLocaleString()}</span></div>
+                )}
+                <div className="flex justify-between font-medium border-t pt-1"><span>Total Earnings</span><span className="font-mono">{selectedPayslip.currency} {selectedPayslip.totalEarnings?.toLocaleString()}</span></div>
+              </div>
+              <div className="border-t pt-2 space-y-1 text-red-600">
+                <div className="flex justify-between"><span>PAYE</span><span className="font-mono">- {selectedPayslip.paye?.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span>NSSF</span><span className="font-mono">- {selectedPayslip.nssf?.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span>NHIF</span><span className="font-mono">- {selectedPayslip.nhif?.toLocaleString()}</span></div>
+                <div className="flex justify-between font-medium border-t pt-1"><span>Total Deductions</span><span className="font-mono">- {selectedPayslip.totalDeductions?.toLocaleString()}</span></div>
+              </div>
+              <div className="border-t pt-2">
+                <div className="flex justify-between text-base font-bold">
+                  <span>Net Pay</span>
+                  <span className="text-green-700">{selectedPayslip.currency} {selectedPayslip.netPay?.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <Badge variant="outline" className={getStatusBadge(selectedPayslip.status)}>
+                  {selectedPayslip.status}
+                </Badge>
+                <div className="flex gap-1">
+                  {selectedPayslip.status === 'draft' && (
+                    <Button size="sm" variant="outline" onClick={() => { setViewPayslipOpen(false); handleOpenEditPayslip(selectedPayslip); }}>Edit</Button>
+                  )}
+                  {selectedPayslip.status === 'draft' && (
+                    <Button size="sm" onClick={() => { handleApprovePayslip(selectedPayslip); setViewPayslipOpen(false); }}>Approve</Button>
+                  )}
+                  {selectedPayslip.status === 'approved' && (
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => { handleMarkPayslipPaid(selectedPayslip); setViewPayslipOpen(false); }}>Mark Paid</Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Payslip Dialog */}
+      <Dialog open={editPayslipOpen} onOpenChange={setEditPayslipOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Payslip</DialogTitle>
+            <DialogDescription>
+              {selectedPayslip?.employeeId?.firstName} {selectedPayslip?.employeeId?.lastName} — {selectedPayslip?.payslipId}
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={handleSubmitEditPayslip}>
+            <div>
+              <label className="text-sm font-medium">Basic Salary (KES)</label>
+              <Input
+                type="number"
+                value={payslipEditForm.basicSalary}
+                onChange={(e) => setPayslipEditForm({ ...payslipEditForm, basicSalary: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Overtime Pay (KES)</label>
+              <Input
+                type="number"
+                value={payslipEditForm.overtimePay}
+                onChange={(e) => setPayslipEditForm({ ...payslipEditForm, overtimePay: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Notes</label>
+              <Input
+                placeholder="Adjustments, corrections..."
+                value={payslipEditForm.notes}
+                onChange={(e) => setPayslipEditForm({ ...payslipEditForm, notes: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" type="button" onClick={() => setEditPayslipOpen(false)}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -2084,7 +2656,7 @@ export default function HRDashboard() {
                 <CardTitle className="text-base">Employee Contracts</CardTitle>
                 <CardDescription>Contract management and renewals</CardDescription>
               </div>
-              <Button size="sm" className="gap-1">
+              <Button size="sm" className="gap-1" onClick={handleOpenCreateContract}>
                 <Plus className="h-3.5 w-3.5" /> New Contract
               </Button>
             </div>
@@ -2164,7 +2736,27 @@ export default function HRDashboard() {
                                   Send Offer
                                 </Button>
                               )}
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              {contract.status === 'active' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                  onClick={() => handleUpdateContractStatus(contract, 'terminated')}
+                                >
+                                  Terminate
+                                </Button>
+                              )}
+                              {(contract.status === 'expired' || contract.status === 'terminated') && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  onClick={() => handleUpdateContractStatus(contract, 'renewed')}
+                                >
+                                  Renew
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="Edit" onClick={() => handleOpenEditContract(contract)}>
                                 <Eye className="h-3 w-3" />
                               </Button>
                             </div>
@@ -2199,11 +2791,8 @@ export default function HRDashboard() {
                 <CardDescription>Payroll processing and payment tracking</CardDescription>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="gap-1">
+                <Button variant="outline" size="sm" className="gap-1" onClick={handleGenerateBulkPayslips}>
                   <Calendar className="h-3.5 w-3.5" /> Generate Bulk
-                </Button>
-                <Button size="sm" className="gap-1">
-                  <Plus className="h-3.5 w-3.5" /> New Payslip
                 </Button>
               </div>
             </div>
@@ -2248,12 +2837,22 @@ export default function HRDashboard() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-0.5">
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="View">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="View" onClick={() => handleViewPayslip(payslip)}>
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
-                            {(payslip.status === 'draft' || payslip.status === 'pending') && (
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Approve">
+                            {payslip.status === 'draft' && (
+                              <Button variant="ghost" size="sm" className="h-7 px-1 text-[10px]" title="Edit" onClick={() => handleOpenEditPayslip(payslip)}>
+                                Edit
+                              </Button>
+                            )}
+                            {payslip.status === 'draft' && (
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Approve" onClick={() => handleApprovePayslip(payslip)}>
                                 <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                              </Button>
+                            )}
+                            {payslip.status === 'approved' && (
+                              <Button variant="outline" size="sm" className="h-7 px-2 text-[10px] text-green-700 border-green-200" onClick={() => handleMarkPayslipPaid(payslip)}>
+                                Mark Paid
                               </Button>
                             )}
                           </div>

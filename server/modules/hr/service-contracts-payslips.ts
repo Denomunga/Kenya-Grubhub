@@ -53,8 +53,31 @@ export class ContractService {
   }
 
   static async updateContract(id: string, data: Partial<IContract>) {
-    return Contract.findByIdAndUpdate(id, data, { new: true, runValidators: true })
+    const oldContract = await Contract.findById(id);
+    const updated = await Contract.findByIdAndUpdate(id, data, { new: true, runValidators: true })
       .populate('employeeId', 'firstName lastName email department position');
+
+    // Sync salary to draft payslips if salary changed
+    if (updated && data.salary && oldContract && data.salary !== oldContract.salary) {
+      const employeeId = (updated.employeeId as any)?._id || updated.employeeId;
+      const draftPayslips = await Payslip.find({ employeeId, status: 'draft' });
+      for (const ps of draftPayslips) {
+        const basicSalary = data.salary;
+        const paye = PayslipService.calculatePAYE(basicSalary);
+        const nssf = PayslipService.calculateNSSF(basicSalary);
+        const nhif = PayslipService.calculateNHIF(basicSalary);
+        const totalEarnings = basicSalary + (ps.overtimePay || 0);
+        const totalDeductions = paye + nssf + nhif;
+        const netPay = totalEarnings - totalDeductions;
+        await Payslip.findByIdAndUpdate(ps._id, {
+          basicSalary, totalEarnings, paye, nssf, nhif, totalDeductions, netPay
+        });
+      }
+      // Also update Employee salary record
+      await EmployeeModel.findByIdAndUpdate(employeeId, { salary: data.salary });
+    }
+
+    return updated;
   }
 
   static async deleteContract(id: string) {
@@ -185,6 +208,24 @@ export class PayslipService {
   }
 
   static async updatePayslip(id: string, data: Partial<IPayslip>) {
+    // Recalculate deductions if basicSalary changed
+    if (data.basicSalary !== undefined) {
+      const existing = await Payslip.findById(id);
+      if (existing) {
+        const basicSalary = data.basicSalary;
+        const overtimePay = data.overtimePay !== undefined ? data.overtimePay : (existing.overtimePay || 0);
+        const paye = PayslipService.calculatePAYE(basicSalary);
+        const nssf = PayslipService.calculateNSSF(basicSalary);
+        const nhif = PayslipService.calculateNHIF(basicSalary);
+        const allowancesTotal = existing.allowances?.reduce((s: number, a: any) => s + a.amount, 0) || 0;
+        const bonusesTotal = existing.bonuses?.reduce((s: number, b: any) => s + b.amount, 0) || 0;
+        const otherDeductionsTotal = existing.otherDeductions?.reduce((s: number, d: any) => s + d.amount, 0) || 0;
+        const totalEarnings = basicSalary + allowancesTotal + bonusesTotal + overtimePay;
+        const totalDeductions = paye + nssf + nhif + otherDeductionsTotal;
+        const netPay = totalEarnings - totalDeductions;
+        Object.assign(data, { paye, nssf, nhif, totalEarnings, totalDeductions, netPay, overtimePay });
+      }
+    }
     return Payslip.findByIdAndUpdate(id, data, { new: true, runValidators: true })
       .populate('employeeId', 'firstName lastName email department position');
   }
@@ -312,7 +353,7 @@ export class PayslipService {
   }
 
   // Kenyan Tax Calculations
-  private static calculatePAYE(salary: number): number {
+  static calculatePAYE(salary: number): number {
     // Kenya PAYE rates 2024
     const annualSalary = salary * 12;
     const personalRelief = 2400 * 12; // Monthly personal relief
@@ -333,14 +374,14 @@ export class PayslipService {
     return Math.max(0, Math.round(paye / 12));
   }
 
-  private static calculateNSSF(salary: number): number {
+  static calculateNSSF(salary: number): number {
     // NSSF Tier I - 6% of pensionable earnings, max 2160
     const rate = 0.06;
     const maxContribution = 2160;
     return Math.min(Math.round(salary * rate), maxContribution);
   }
 
-  private static calculateNHIF(salary: number): number {
+  static calculateNHIF(salary: number): number {
     // NHIF rates 2024 (simplified)
     if (salary <= 5999) return 150;
     if (salary <= 7999) return 300;
