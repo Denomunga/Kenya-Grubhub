@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import nodemailer from 'nodemailer';
 import {
   EmployeeService,
   JobPostingService,
@@ -194,7 +195,7 @@ export class JobPostingController {
 
       res.status(200).json({
         success: true,
-        data: result.jobs,
+        data: { jobs: result.jobs },
         pagination: result.pagination
       });
     } catch (error: any) {
@@ -327,7 +328,7 @@ export class JobApplicationController {
 
       res.status(200).json({
         success: true,
-        data: result.applications,
+        data: { applications: result.applications },
         pagination: result.pagination
       });
     } catch (error: any) {
@@ -407,6 +408,54 @@ export class JobApplicationController {
         req.user.id,
         reviewNotes
       );
+
+      // Send notifications based on new status (fire-and-forget)
+      try {
+        const appData = application as any;
+        const applicantEmail = appData?.applicantEmail;
+        const applicantName = appData?.applicantName || 'Applicant';
+        const applicantPhone = appData?.applicantPhone;
+        const jobTitle = appData?.jobId?.title || 'the position';
+
+        // Email notification when moved to Interview
+        if (status === 'interviewed' && applicantEmail) {
+          const smtpHost = process.env.SMTP_HOST;
+          if (smtpHost) {
+            const transporter = nodemailer.createTransport({
+              host: smtpHost,
+              port: Number(process.env.SMTP_PORT || 587),
+              secure: !!process.env.SMTP_SECURE,
+              auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+            });
+            await transporter.sendMail({
+              from: process.env.SMTP_FROM || 'no-reply@kenyanbistro.local',
+              to: applicantEmail,
+              subject: 'Interview Invitation - ' + jobTitle,
+              html: '<h2>Congratulations, ' + applicantName + '!</h2>'
+                + '<p>We are pleased to inform you that you have been shortlisted for an interview for the position of <strong>' + jobTitle + '</strong>.</p>'
+                + '<p>Our HR team will contact you shortly with the interview details including date, time, and venue.</p>'
+                + '<p>Please ensure your contact details are up to date.</p>'
+                + '<br><p>Best regards,<br>Kenya GrubHub HR Team</p>',
+            });
+            console.log('Interview email sent to:', applicantEmail);
+          } else {
+            console.log('SMTP not configured. Interview notification for:', applicantEmail);
+          }
+        }
+
+        // SMS notification when Hired
+        if (status === 'hired' && applicantPhone) {
+          const smsMessage = 'Congratulations ' + applicantName + '! You have been hired for ' + jobTitle + ' at Kenya GrubHub. Our HR team will contact you with onboarding details. Welcome aboard!';
+          // Log SMS for now - integrate with Africa's Talking or Twilio when ready
+          console.log('HIRE SMS to '+applicantPhone+': '+smsMessage);
+          // TODO: Integrate with SMS provider
+          // Example with Africa's Talking:
+          // const AfricasTalking = require('africastalking')({ apiKey: process.env.AT_API_KEY, username: process.env.AT_USERNAME });
+          // await AfricasTalking.SMS.send({ to: [applicantPhone], message: smsMessage });
+        }
+      } catch (notifError) {
+        console.error('Notification error (non-blocking):', notifError);
+      }
 
       res.status(200).json({
         success: true,

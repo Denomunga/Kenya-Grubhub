@@ -14,7 +14,6 @@ const router = Router();
 
 router.get(
   '/jobs',
-  requireAuth,
   generalLimiter,
   JobPostingController.getJobPostings
 );
@@ -25,7 +24,6 @@ router.get(
  */
 router.get(
   '/jobs/:id',
-  requireAuth,
   generalLimiter,
   JobPostingController.getJobPostingById
 );
@@ -117,7 +115,6 @@ router.delete(
  */
 router.get(
   '/jobs',
-  requireAuth,
   generalLimiter,
   JobPostingController.getJobPostings
 );
@@ -128,7 +125,6 @@ router.get(
  */
 router.get(
   '/jobs/:id',
-  requireAuth,
   generalLimiter,
   JobPostingController.getJobPostingById
 );

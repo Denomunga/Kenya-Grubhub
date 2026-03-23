@@ -1113,6 +1113,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Resume/CV upload for job applications (any authenticated user)
+  const resumeUpload = multer({
+    storage: multerStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+    fileFilter: (_req: any, file: any, cb: any) => {
+      const allowed = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "image/jpeg",
+        "image/png",
+      ];
+      if (!allowed.includes(file.mimetype)) {
+        cb(new Error("Only PDF, DOC, DOCX, JPG, PNG files are allowed"));
+        return;
+      }
+      cb(null, true);
+    }
+  });
+
+  app.post("/api/uploads/resume", requireAuth, uploadLimiter, resumeUpload.single("resume"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const host = req.get("host") || "localhost:5000";
+      const proto = "https";
+      const fileUrl = `${proto}://${host}/uploads/${req.file.filename}`;
+      res.status(201).json({ url: fileUrl, filename: req.file.originalname });
+    } catch (err) {
+      console.error("Resume upload error:", err);
+      res.status(500).json({ message: "Failed to upload resume" });
+    }
+  });
+
   // Product reviews
   // Get reviews for a product
   app.get("/api/products/:productId/reviews", async (req: Request, res: Response) => {

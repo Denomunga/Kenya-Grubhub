@@ -81,6 +81,9 @@ export default function JobApplicationPage() {
   });
 
   const [skillsInput, setSkillsInput] = useState('');
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
     fetchOpenJobs();
@@ -125,6 +128,62 @@ export default function JobApplicationPage() {
     setFormData(prev => ({ ...prev, skills: skillsArray }));
   };
 
+  const handleResumeFile = (file: File) => {
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Only PDF, DOC, DOCX, JPG, or PNG files are allowed');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB');
+      return;
+    }
+    setResumeFile(file);
+    setError(null);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files?.[0]) {
+      handleResumeFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      handleResumeFile(e.target.files[0]);
+    }
+  };
+
+  const uploadResume = async (): Promise<string | null> => {
+    if (!resumeFile) return formData.resumeUrl || null;
+    setUploadingResume(true);
+    try {
+      const fd = new FormData();
+      fd.append('resume', resumeFile);
+      const res = await apiFetch('/api/uploads/resume', {
+        method: 'POST',
+        body: fd,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.url;
+      }
+      return null;
+    } catch {
+      return null;
+    } finally {
+      setUploadingResume(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -142,12 +201,24 @@ export default function JobApplicationPage() {
     setError(null);
 
     try {
+      // Upload resume file first if selected
+      let resumeUrl = formData.resumeUrl;
+      if (resumeFile) {
+        const uploadedUrl = await uploadResume();
+        if (!uploadedUrl) {
+          setError('Failed to upload resume. Please try again.');
+          setSubmitting(false);
+          return;
+        }
+        resumeUrl = uploadedUrl;
+      }
+
       const res = await apiFetch(`/api/v1/hr/jobs/${selectedJob._id}/apply`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, resumeUrl }),
       });
 
       const data = await res.json();
@@ -491,16 +562,49 @@ export default function JobApplicationPage() {
                         </div>
                         
                         <div>
-                          <Label htmlFor="resumeUrl">Resume/CV URL</Label>
-                          <Input
-                            id="resumeUrl"
-                            name="resumeUrl"
-                            type="url"
-                            placeholder="Link to your resume (Google Drive, Dropbox, etc.)"
-                            value={formData.resumeUrl}
-                            onChange={handleInputChange}
-                            disabled={!isAuthenticated}
-                          />
+                          <Label>Resume/CV</Label>
+                          <div
+                            className={`relative border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${
+                              dragOver
+                                ? 'border-primary bg-primary/5'
+                                : resumeFile
+                                ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
+                                : 'border-muted-foreground/30 hover:border-primary/50'
+                            } ${!isAuthenticated ? 'opacity-50 pointer-events-none' : ''}`}
+                            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                            onDragLeave={() => setDragOver(false)}
+                            onDrop={handleDrop}
+                            onClick={() => document.getElementById('resumeFileInput')?.click()}
+                          >
+                            <input
+                              id="resumeFileInput"
+                              type="file"
+                              className="hidden"
+                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                              onChange={handleFileSelect}
+                              disabled={!isAuthenticated}
+                            />
+                            {resumeFile ? (
+                              <div className="flex items-center justify-center gap-2 text-sm text-green-700 dark:text-green-400">
+                                <CheckCircle className="h-4 w-4" />
+                                <span className="font-medium">{resumeFile.name}</span>
+                                <span className="text-muted-foreground">({(resumeFile.size / 1024).toFixed(0)} KB)</span>
+                                <button
+                                  type="button"
+                                  className="ml-2 text-red-500 hover:text-red-700"
+                                  onClick={(e) => { e.stopPropagation(); setResumeFile(null); }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">
+                                <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p className="font-medium">Drag & drop your resume here</p>
+                                <p className="text-xs mt-1">or click to browse • PDF, DOC, DOCX, JPG, PNG (max 10MB)</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         
                         <div>

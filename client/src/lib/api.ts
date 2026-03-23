@@ -15,6 +15,11 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+
+  // When sending FormData, remove Content-Type so browser sets multipart boundary
+  if (options.body instanceof FormData) {
+    delete headers['Content-Type'];
+  }
   
   const config: RequestInit = {
     //credentials: 'include', // keep if cookies are also used

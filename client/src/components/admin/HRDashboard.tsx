@@ -208,6 +208,11 @@ export default function HRDashboard() {
   const [payrollCalcResult, setPayrollCalcResult] = useState<PayrollCalcResult | null>(null);
   const [createEmployeeOpen, setCreateEmployeeOpen] = useState(false);
   const [createJobOpen, setCreateJobOpen] = useState(false);
+  const [editJobOpen, setEditJobOpen] = useState(false);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
+  const [reviewAppOpen, setReviewAppOpen] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<RecentApplication | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [contractOfferOpen, setContractOfferOpen] = useState(false);
   const [contractSignOpen, setContractSignOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
@@ -619,6 +624,97 @@ export default function HRDashboard() {
       }
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to post job', variant: 'destructive' });
+    }
+  };
+
+  const handleEditJob = (job: RecentJobPosting) => {
+    setEditingJobId(job._id);
+    setJobForm({
+      title: job.title,
+      department: job.department,
+      description: '',
+      status: job.status,
+      postedDate: job.postedDate,
+      location: 'Nairobi',
+      employmentType: 'full_time',
+      requirements: [],
+      salaryRange: { min: 0, max: 0 },
+      closingDate: '',
+    });
+    // Fetch full job details to populate the form
+    apiFetch(`/api/v1/hr/jobs/${job._id}`).then(async (res) => {
+      if (res.ok) {
+        const data = await res.json();
+        const fullJob = data.data;
+        if (fullJob) {
+          setJobForm({
+            title: fullJob.title || job.title,
+            department: fullJob.department || job.department,
+            description: fullJob.description || '',
+            status: fullJob.status || job.status,
+            postedDate: fullJob.postedDate || job.postedDate,
+            location: fullJob.location || 'Nairobi',
+            employmentType: fullJob.employmentType || 'full_time',
+            requirements: fullJob.requirements || [],
+            salaryRange: fullJob.salaryRange || { min: 0, max: 0 },
+            closingDate: fullJob.closingDate ? new Date(fullJob.closingDate).toISOString().split('T')[0] : '',
+          });
+        }
+      }
+    });
+    setEditJobOpen(true);
+  };
+
+  const handleSubmitEditJob = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingJobId) return;
+    try {
+      const res = await apiFetch(`/api/v1/hr/jobs/${editingJobId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jobForm),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Job updated successfully' });
+        setEditJobOpen(false);
+        setEditingJobId(null);
+        fetchHRData();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast({ title: 'Error', description: errorData.message || 'Failed to update job', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update job', variant: 'destructive' });
+    }
+  };
+
+  const handleReviewApp = (app: RecentApplication) => {
+    setSelectedApp(app);
+    setReviewAppOpen(true);
+  };
+
+  const handleUpdateAppStatus = async (newStatus: string) => {
+    if (!selectedApp) return;
+    setUpdatingStatus(true);
+    try {
+      const res = await apiFetch(`/api/v1/hr/applications/${selectedApp._id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: `Application status updated to ${newStatus.replace('_', ' ')}` });
+        setReviewAppOpen(false);
+        setSelectedApp(null);
+        fetchHRData();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast({ title: 'Error', description: errorData.message || 'Failed to update status', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update application status', variant: 'destructive' });
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -1074,6 +1170,175 @@ export default function HRDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Job Dialog */}
+      <Dialog open={editJobOpen} onOpenChange={setEditJobOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Job Posting</DialogTitle>
+            <DialogDescription>Update job posting details</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleSubmitEditJob}>
+            <div>
+              <label className="text-sm font-medium">Job Title</label>
+              <Input
+                placeholder="Line Cook"
+                value={jobForm.title}
+                onChange={(e) => setJobForm({ ...jobForm, title: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Department</label>
+              <select
+                className="w-full h-9 px-3 border rounded-lg text-sm"
+                value={jobForm.department}
+                onChange={(e) => setJobForm({ ...jobForm, department: e.target.value })}
+              >
+                <option>Kitchen</option>
+                <option>Service</option>
+                <option>Delivery</option>
+                <option>Management</option>
+                <option>Admin</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description</label>
+              <textarea
+                className="w-full h-20 px-3 py-2 border rounded-lg text-sm"
+                placeholder="Job description..."
+                value={jobForm.description}
+                onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Status</label>
+              <select
+                className="w-full h-9 px-3 border rounded-lg text-sm"
+                value={jobForm.status}
+                onChange={(e) => setJobForm({ ...jobForm, status: e.target.value })}
+              >
+                <option value="open">Open</option>
+                <option value="closed">Closed</option>
+                <option value="on_hold">On Hold</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Closing Date</label>
+              <Input
+                type="date"
+                value={jobForm.closingDate ? new Date(jobForm.closingDate).toISOString().split('T')[0] : ''}
+                onChange={(e) => setJobForm({ ...jobForm, closingDate: e.target.value })}
+                required
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" type="button" onClick={() => setEditJobOpen(false)}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Application Review Dialog */}
+      <Dialog open={reviewAppOpen} onOpenChange={setReviewAppOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Review Application</DialogTitle>
+            <DialogDescription>Update candidate pipeline status</DialogDescription>
+          </DialogHeader>
+          {selectedApp && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Application ID</span>
+                  <p className="font-mono text-xs">{selectedApp.applicationId}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Applied</span>
+                  <p>{new Date(selectedApp.appliedDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Candidate</span>
+                  <p className="font-medium">{selectedApp.applicantName}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Position</span>
+                  <p>{selectedApp.title}</p>
+                </div>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Current Status</span>
+                <div className="mt-1">
+                  <Badge variant="outline" className={`${getStatusBadge(selectedApp.status)}`}>
+                    {getStatusIcon(selectedApp.status)}
+                    <span className="ml-1 capitalize">{selectedApp.status.replace('_', ' ')}</span>
+                  </Badge>
+                </div>
+              </div>
+              <div>
+                <span className="text-sm font-medium">Move to Stage</span>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <Button
+                    size="sm"
+                    variant={selectedApp.status === 'pending' ? 'default' : 'outline'}
+                    disabled={updatingStatus || selectedApp.status === 'pending'}
+                    onClick={() => handleUpdateAppStatus('pending')}
+                  >
+                    Applied
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={selectedApp.status === 'under_review' ? 'default' : 'outline'}
+                    disabled={updatingStatus || selectedApp.status === 'under_review'}
+                    onClick={() => handleUpdateAppStatus('under_review')}
+                  >
+                    Shortlisted
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={selectedApp.status === 'interviewed' ? 'default' : 'outline'}
+                    disabled={updatingStatus || selectedApp.status === 'interviewed'}
+                    onClick={() => handleUpdateAppStatus('interviewed')}
+                  >
+                    Interview
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={selectedApp.status === 'offered' ? 'default' : 'outline'}
+                    disabled={updatingStatus || selectedApp.status === 'offered'}
+                    onClick={() => handleUpdateAppStatus('offered')}
+                  >
+                    Offered
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={selectedApp.status === 'hired' ? 'default' : 'outline'}
+                    className={selectedApp.status !== 'hired' ? 'border-green-300 text-green-700 hover:bg-green-50' : ''}
+                    disabled={updatingStatus || selectedApp.status === 'hired'}
+                    onClick={() => handleUpdateAppStatus('hired')}
+                  >
+                    Hired
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={selectedApp.status === 'rejected' ? 'default' : 'outline'}
+                    className={selectedApp.status !== 'rejected' ? 'border-red-300 text-red-700 hover:bg-red-50' : ''}
+                    disabled={updatingStatus || selectedApp.status === 'rejected'}
+                    onClick={() => handleUpdateAppStatus('rejected')}
+                  >
+                    Rejected
+                  </Button>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button variant="outline" onClick={() => setReviewAppOpen(false)}>Close</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Contract Offer Dialog */}
       <Dialog open={contractOfferOpen} onOpenChange={setContractOfferOpen}>
         <DialogContent className="max-w-md">
@@ -1436,6 +1701,7 @@ export default function HRDashboard() {
                       <TableHead>Applications</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Posted</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1457,11 +1723,16 @@ export default function HRDashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">{new Date(job.postedDate).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleEditJob(job)}>
+                              Edit
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-sm">No job postings</TableCell>
+                        <TableCell colSpan={7} className="text-center py-6 text-muted-foreground text-sm">No job postings</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -1611,7 +1882,7 @@ export default function HRDashboard() {
                   <CardTitle className="text-base">Recruitment Pipeline</CardTitle>
                   <CardDescription>Track candidates through hiring stages</CardDescription>
                 </div>
-                <Button size="sm" className="gap-1">
+                <Button size="sm" className="gap-1" onClick={handleCreateJob}>
                   <Plus className="h-3.5 w-3.5" /> Post Job
                 </Button>
               </div>
@@ -1644,56 +1915,94 @@ export default function HRDashboard() {
             </CardContent>
           </Card>
 
-          {/* Applications Table */}
+          {/* Kanban Pipeline Board */}
           <Card className="border shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">All Applications</CardTitle>
-              <CardDescription>Candidate tracking and status management</CardDescription>
+              <CardTitle className="text-base">Pipeline Board</CardTitle>
+              <CardDescription>Drag candidates between stages to update their status</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Application ID</TableHead>
-                      <TableHead>Applicant</TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead>Pipeline Stage</TableHead>
-                      <TableHead>Applied</TableHead>
-                      <TableHead className="w-16">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentApplications.length > 0 ? (
-                      recentApplications.map(app => (
-                        <TableRow key={app._id}>
-                          <TableCell className="font-mono text-xs">{app.applicationId}</TableCell>
-                          <TableCell className="text-sm font-medium">{app.applicantName}</TableCell>
-                          <TableCell className="text-sm">{app.title}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(app.status)}`}>
-                              {getStatusIcon(app.status)}
-                              <span className="ml-1 capitalize">{app.status.replace('_', ' ')}</span>
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{new Date(app.appliedDate).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Review">
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          <UserPlus className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                          No applications yet
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+              <div className="flex gap-3 overflow-x-auto pb-2" style={{ minHeight: 300 }}>
+                {[
+                  { key: 'pending', label: 'Applied', color: 'bg-gray-100 border-gray-300', headerColor: 'bg-gray-200 text-gray-700' },
+                  { key: 'under_review', label: 'Shortlisted', color: 'bg-blue-50 border-blue-300', headerColor: 'bg-blue-100 text-blue-700' },
+                  { key: 'interviewed', label: 'Interview', color: 'bg-yellow-50 border-yellow-300', headerColor: 'bg-yellow-100 text-yellow-700' },
+                  { key: 'offered', label: 'Offered', color: 'bg-purple-50 border-purple-300', headerColor: 'bg-purple-100 text-purple-700' },
+                  { key: 'hired', label: 'Hired', color: 'bg-green-50 border-green-300', headerColor: 'bg-green-100 text-green-700' },
+                  { key: 'rejected', label: 'Rejected', color: 'bg-red-50 border-red-300', headerColor: 'bg-red-100 text-red-700' },
+                ].map(col => {
+                  const apps = recentApplications.filter(a => a.status === col.key || (col.key === 'hired' && a.status === 'hired'));
+                  return (
+                    <div
+                      key={col.key}
+                      className={`flex-1 min-w-[180px] max-w-[220px] rounded-lg border ${col.color} flex flex-col`}
+                      onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-primary'); }}
+                      onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2', 'ring-primary'); }}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove('ring-2', 'ring-primary');
+                        const appId = e.dataTransfer.getData('applicationId');
+                        const app = recentApplications.find(a => a._id === appId);
+                        if (app && app.status !== col.key) {
+                          try {
+                            const res = await apiFetch(`/api/v1/hr/applications/${app._id}/status`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ status: col.key }),
+                            });
+                            if (res.ok) {
+                              toast({ title: 'Moved', description: `${app.applicantName} → ${col.label}` });
+                              fetchHRData();
+                            } else {
+                              toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
+                            }
+                          } catch {
+                            toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
+                          }
+                        }
+                      }}
+                    >
+                      <div className={`px-3 py-2 rounded-t-lg ${col.headerColor} font-semibold text-xs flex items-center justify-between`}>
+                        <span>{col.label}</span>
+                        <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                          {apps.length}
+                        </Badge>
+                      </div>
+                      <div className="p-2 flex-1 space-y-2 min-h-[200px]">
+                        {apps.length === 0 ? (
+                          <div className="text-[10px] text-muted-foreground text-center py-8 opacity-50">
+                            Drop here
+                          </div>
+                        ) : (
+                          apps.map(app => (
+                            <div
+                              key={app._id}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('applicationId', app._id);
+                                e.currentTarget.classList.add('opacity-50');
+                              }}
+                              onDragEnd={(e) => {
+                                e.currentTarget.classList.remove('opacity-50');
+                              }}
+                              className="bg-white rounded-md border shadow-sm p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
+                              onClick={() => handleReviewApp(app)}
+                            >
+                              <p className="text-sm font-medium truncate">{app.applicantName}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">{app.title}</p>
+                              <div className="flex items-center justify-between mt-1.5">
+                                <span className="text-[10px] text-muted-foreground">
+                                  {new Date(app.appliedDate).toLocaleDateString()}
+                                </span>
+                                <span className="font-mono text-[9px] text-muted-foreground">{app.applicationId}</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -1722,6 +2031,7 @@ export default function HRDashboard() {
                       <TableHead>Applications</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Posted</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1743,11 +2053,16 @@ export default function HRDashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">{new Date(job.postedDate).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleEditJob(job)}>
+                              Edit
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-sm">No postings</TableCell>
+                        <TableCell colSpan={7} className="text-center py-6 text-muted-foreground text-sm">No postings</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
