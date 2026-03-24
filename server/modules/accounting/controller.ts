@@ -7,6 +7,7 @@ import {
   FinancialReportingService,
   ExpenseService,
   RecurringExpenseService,
+  InvoiceService,
   CreateJournalEntryData
 } from './service';
 import { IExpense, IRecurringExpense } from './models';
@@ -101,22 +102,28 @@ static async createInvoice(req: Request, res: Response) {
     // Generate unique invoice number
     const invoiceNumber = await generateInvoiceNumber();
     
+    // Auto tax calculation
+    const taxCalc = await InvoiceService.calculateTax(amount);
+
     const invoice = new Invoice({
       invoiceNumber,
       clientName,
       amount,
+      taxRate: taxCalc.taxRate,
+      taxAmount: taxCalc.taxAmount,
+      totalAmount: taxCalc.totalAmount,
       dueDate: new Date(dueDate),
       description,
       status,
       paidAmount: 0,
-      createdBy: new mongoose.Types.ObjectId(req.user.id),  // convert string to ObjectId
+      createdBy: new mongoose.Types.ObjectId(req.user.id),
       createdAt: new Date()
     });
     
     await invoice.save();
     
-    // Optionally create a journal entry for accounts receivable
-    // await createJournalEntryForInvoice(invoice); // you can implement this later
+    // Auto journal entry for invoice creation
+    await InvoiceService.createInvoiceJournalEntry(invoice, req.user.id);
     
     res.status(201).json({
       success: true,

@@ -60,7 +60,7 @@ export class DashboardController {
     try {
       const { page = 1, limit = 50, type } = req.query;
 
-      const query: any = {};
+      const query: any = { isDeleted: { $ne: true } };
       if (type === 'income') query.transactionType = 'sale';
       else if (type === 'expense') query.transactionType = { $in: ['purchase', 'payment'] };
 

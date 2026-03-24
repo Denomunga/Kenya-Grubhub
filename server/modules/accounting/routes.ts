@@ -313,9 +313,9 @@ router.get(
 
 router.get('/stats', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), DashboardController.getStats);
 
-router.get('/transactions', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), [query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1, max: 100 }), query('type').optional().isIn(['income', 'expense'])], handleValidationErrors, DashboardController.getTransactions);
+router.get('/transactions', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person', 'staff']), [query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1, max: 100 }), query('type').optional().isIn(['income', 'expense'])], handleValidationErrors, DashboardController.getTransactions);
 
-router.get('/invoices', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), [query('status').optional().isIn(['paid', 'unpaid', 'overdue', 'partial'])], handleValidationErrors, DashboardController.getInvoices);
+router.get('/invoices', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person', 'staff']), [query('status').optional().isIn(['paid', 'unpaid', 'overdue', 'partial'])], handleValidationErrors, DashboardController.getInvoices);
 
 router.get('/monthly', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), [query('months').optional().isInt({ min: 1, max: 24 })], handleValidationErrors, DashboardController.getMonthlyData);
 
@@ -336,22 +336,22 @@ router.get('/accounts/category/:category', generalLimiter, requireAuth, AccountC
 // ============================================================
 // ENHANCED FINANCIAL REPORTS
 // ============================================================
-router.get('/reports/income-statement', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), ReportsController.getIncomeStatement);
-router.get('/reports/balance-sheet', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), ReportsController.getBalanceSheet);
-router.get('/reports/cash-flow', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), ReportsController.getCashFlowStatement);
-router.get('/reports/general-ledger', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), ReportsController.getGeneralLedger);
-router.get('/reports/trial-balance', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), ReportsController.getTrialBalance);
+router.get('/reports/income-statement', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), ReportsController.getIncomeStatement);
+router.get('/reports/balance-sheet', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), ReportsController.getBalanceSheet);
+router.get('/reports/cash-flow', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), ReportsController.getCashFlowStatement);
+router.get('/reports/general-ledger', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), ReportsController.getGeneralLedger);
+router.get('/reports/trial-balance', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), ReportsController.getTrialBalance);
 
 // ============================================================
 // AGING REPORTS
 // ============================================================
-router.get('/aging/receivable', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), AgingController.getReceivableAging);
-router.get('/aging/payable', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), AgingController.getPayableAging);
+router.get('/aging/receivable', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), AgingController.getReceivableAging);
+router.get('/aging/payable', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), AgingController.getPayableAging);
 
 // ============================================================
 // TAX MANAGEMENT
 // ============================================================
-router.get('/tax/rates', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), TaxController.getTaxRates);
+router.get('/tax/rates', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), TaxController.getTaxRates);
 router.post('/tax/rates', authLimiter, requireAuth, requireRole(['admin']),
   [body('name').trim().notEmpty(), body('code').trim().notEmpty(), body('rate').isFloat({ min: 0, max: 100 }), body('type').isIn(['vat', 'withholding', 'excise', 'custom'])],
   handleValidationErrors, TaxController.createTaxRate);
@@ -359,7 +359,7 @@ router.put('/tax/rates/:id', authLimiter, requireAuth, requireRole(['admin']),
   [param('id').isMongoId()], handleValidationErrors, TaxController.updateTaxRate);
 router.delete('/tax/rates/:id', authLimiter, requireAuth, requireRole(['admin']),
   [param('id').isMongoId()], handleValidationErrors, TaxController.deleteTaxRate);
-router.get('/tax/summary', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), TaxController.getTaxSummary);
+router.get('/tax/summary', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), TaxController.getTaxSummary);
 router.post('/tax/init', authLimiter, requireAuth, requireRole(['admin']), TaxController.initTaxRates);
 
 // ============================================================
@@ -377,7 +377,7 @@ router.put('/invoices/:id', authLimiter, requireAuth, requireRole(['admin', 'acc
   [param('id').isMongoId()], handleValidationErrors, InvoiceEnhancedController.updateInvoice);
 router.post('/invoices/:id/payment', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']),
   [param('id').isMongoId(), body('amount').isFloat({ min: 0.01 })], handleValidationErrors, InvoiceEnhancedController.recordPayment);
-router.delete('/invoices/:id', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']),
+router.delete('/invoices/:id', authLimiter, requireAuth, requireRole(['admin']),
   [param('id').isMongoId()], handleValidationErrors, InvoiceEnhancedController.deleteInvoice);
 router.post('/invoices/bulk-status', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']),
   [body('ids').isArray({ min: 1 }), body('status').isIn(['unpaid', 'paid', 'overdue', 'partial'])], handleValidationErrors, InvoiceEnhancedController.bulkUpdateStatus);

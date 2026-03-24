@@ -15,6 +15,11 @@ export interface IInvoice extends Document {
   description?: string;
   status: 'unpaid' | 'paid' | 'overdue' | 'partial';
   paidAmount: number;
+  taxRate: number;
+  taxAmount: number;
+  totalAmount: number;
+  isDeleted: boolean;
+  deletedAt?: Date;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -33,6 +38,11 @@ const InvoiceSchema = new Schema<IInvoice>(
       default: 'unpaid',
     },
     paidAmount: { type: Number, default: 0, min: 0 },
+    taxRate: { type: Number, default: 0 },
+    taxAmount: { type: Number, default: 0 },
+    totalAmount: { type: Number, default: 0 },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
@@ -42,6 +52,7 @@ InvoiceSchema.index({ invoiceNumber: 1 });
 InvoiceSchema.index({ clientName: 1 });
 InvoiceSchema.index({ dueDate: 1 });
 InvoiceSchema.index({ status: 1 });
+InvoiceSchema.index({ isDeleted: 1 });
 
 export const Invoice = mongoose.model<IInvoice>('Invoice', InvoiceSchema);
 
@@ -182,6 +193,8 @@ export interface ITransaction extends Document {
   journalEntries: mongoose.Types.ObjectId[]; // Links to journal entries
   totalAmount: number;
   status: 'pending' | 'recorded' | 'posted' | 'cancelled';
+  isDeleted: boolean;
+  deletedAt?: Date;
   createdBy: mongoose.Types.ObjectId;
   notes?: string;
   attachments?: string[];
@@ -209,6 +222,8 @@ const TransactionSchema = new Schema<ITransaction>(
       enum: ['pending', 'recorded', 'posted', 'cancelled'],
       default: 'pending'
     },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     notes: { type: String },
     attachments: [{ type: String }]
@@ -220,6 +235,7 @@ TransactionSchema.index({ transactionNumber: 1 });
 TransactionSchema.index({ transactionType: 1 });
 TransactionSchema.index({ transactionDate: -1 });
 TransactionSchema.index({ status: 1 });
+TransactionSchema.index({ isDeleted: 1 });
 
 export const Transaction = mongoose.model<ITransaction>('Transaction', TransactionSchema);
 

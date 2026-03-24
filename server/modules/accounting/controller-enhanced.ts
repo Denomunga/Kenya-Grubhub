@@ -272,7 +272,7 @@ export class InvoiceEnhancedController {
     try {
       const { amount } = req.body;
       if (!amount || amount <= 0) return res.status(400).json({ success: false, error: 'Valid payment amount required' });
-      const invoice = await InvoiceService.recordPayment(req.params.id, amount);
+      const invoice = await InvoiceService.recordPayment(req.params.id, amount, req.user!.id);
       await AuditService.log({ action: 'pay', entityType: 'Invoice', entityId: req.params.id, entityRef: invoice.invoiceNumber, userId: req.user!.id, metadata: { amount } });
       res.status(200).json({ success: true, data: invoice, message: 'Payment recorded' });
     } catch (error: any) {

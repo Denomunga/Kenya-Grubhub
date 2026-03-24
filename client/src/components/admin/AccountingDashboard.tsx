@@ -221,7 +221,7 @@ export default function AccountingDashboard() {
     status: 'unpaid',
   });
   const [submittingInvoice, setSubmittingInvoice] = useState(false);
-  const { user } = useHybridAuth();
+  const { user, isAdmin, isAccountant, isStaff } = useHybridAuth();
 
   useEffect(() => {
     if (user) fetchAccountingData();
@@ -590,32 +590,119 @@ export default function AccountingDashboard() {
     }
   };
 
+  const exportCSV = (filename: string, headers: string[], rows: string[][]) => {
+    const escape = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [headers.map(escape).join(','), ...rows.map(r => r.map(escape).join(','))].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = (title: string, headers: string[], rows: string[][]) => {
+    const w = window.open('', '_blank');
+    if (!w) { toast({ title: 'Error', description: 'Please allow popups for PDF export', variant: 'destructive' }); return; }
+    const tableRows = rows.map(r => `<tr>${r.map(c => `<td style="border:1px solid #ddd;padding:6px 10px;font-size:12px">${c}</td>`).join('')}</tr>`).join('');
+    w.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>
+      body{font-family:Arial,sans-serif;margin:20px}
+      h1{font-size:18px;margin-bottom:4px}
+      .meta{color:#666;font-size:12px;margin-bottom:16px}
+      table{border-collapse:collapse;width:100%}
+      th{border:1px solid #333;padding:8px 10px;background:#f3f4f6;font-size:12px;text-align:left}
+      @media print{body{margin:0}button{display:none}}
+    </style></head><body>
+      <h1>${title}</h1>
+      <div class="meta">Generated: ${new Date().toLocaleString()} | Period: ${reportPeriod.startDate} to ${reportPeriod.endDate}</div>
+      <table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table>
+      <br><button onclick="window.print()" style="padding:8px 16px;cursor:pointer">Print / Save as PDF</button>
+    </body></html>`);
+    w.document.close();
+  };
+
   const handleExport = (format: 'pdf' | 'excel') => {
-    if (format === 'excel') {
-      // Export transactions as CSV (Excel-compatible)
-      const headers = ['Date', 'ID', 'Type', 'Account', 'Description', 'Debit', 'Credit', 'Status'];
-      const rows = transactions.map(t => {
-        const date = new Date(t.transactionDate || t.date).toLocaleDateString();
-        const id = t.transactionNumber || t.transactionId;
+    const date = new Date().toISOString().slice(0, 10);
+    let headers: string[] = [];
+    let rows: string[][] = [];
+    let title = 'Accounting Report';
+    let filename = `accounting-${date}.csv`;
+
+    if (activeTab === 'transactions' || activeTab === 'overview') {
+      title = 'Transaction Report';
+      filename = `transactions-${date}.csv`;
+      headers = ['Date', 'ID', 'Type', 'Account', 'Description', 'Debit (KES)', 'Credit (KES)', 'Status'];
+      rows = filteredTransactions.map(t => {
         const amt = t.totalAmount || t.amount;
         return [
-          date, id, t.type || t.transactionType || '', t.accountName || t.category,
-          t.description, t.type === 'expense' ? amt : '', t.type === 'income' ? amt : '', t.status
-        ].join(',');
+          new Date(t.transactionDate || t.date).toLocaleDateString(),
+          t.transactionNumber || t.transactionId || '', t.type || t.transactionType || '',
+          t.accountName || t.category, t.description,
+          t.type === 'expense' ? String(amt) : '', t.type === 'income' ? String(amt) : '', t.status
+        ];
       });
-      const csv = [headers.join(','), ...rows].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `accounting-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast({ title: 'Exported', description: 'Transactions exported as Excel/CSV' });
+    } else if (activeTab === 'invoices') {
+      title = 'Invoice Report';
+      filename = `invoices-${date}.csv`;
+      headers = ['Invoice #', 'Client', 'Amount (KES)', 'Tax (KES)', 'Total (KES)', 'Paid (KES)', 'Balance (KES)', 'Due Date', 'Status'];
+      rows = invoices.map(inv => [
+        inv.invoiceNumber, inv.supplierName || inv.clientName, String(inv.amount),
+        String((inv as any).taxAmount || 0), String((inv as any).totalAmount || inv.amount),
+        String(inv.paidAmount), String(inv.amount - inv.paidAmount),
+        new Date(inv.dueDate).toLocaleDateString(), inv.status
+      ]);
+    } else if (activeTab === 'journal') {
+      title = 'Journal Entries';
+      filename = `journal-entries-${date}.csv`;
+      headers = ['Entry #', 'Date', 'Description', 'Total Debit', 'Total Credit', 'Status'];
+      rows = journalEntries.map(je => [
+        je.entryNumber, new Date(je.transactionDate).toLocaleDateString(),
+        je.description, String(je.totalDebit), String(je.totalCredit), je.status
+      ]);
+    } else if (activeTab === 'coa') {
+      title = 'Chart of Accounts';
+      filename = `chart-of-accounts-${date}.csv`;
+      headers = ['Code', 'Name', 'Category', 'Subcategory', 'Normal Balance', 'Balance (KES)', 'Status'];
+      rows = accounts.map(a => [a.code, a.name, a.category, a.subcategory || '', a.normalBalance, String(a.balance), a.status]);
+    } else if (activeTab === 'reports') {
+      title = reportTab === 'pl' ? 'Income Statement' : reportTab === 'bs' ? 'Balance Sheet' : reportTab === 'cf' ? 'Cash Flow Statement' : 'Trial Balance';
+      filename = `${title.toLowerCase().replace(/ /g, '-')}-${date}.csv`;
+      if (reportTab === 'tb' && trialBalance) {
+        headers = ['Code', 'Account', 'Category', 'Debit (KES)', 'Credit (KES)'];
+        rows = (trialBalance.accounts || []).map((a: any) => [a.code, a.name, a.category, String(a.debit || 0), String(a.credit || 0)]);
+      } else if (reportTab === 'pl' && incomeStatement) {
+        headers = ['Category', 'Amount (KES)'];
+        rows = [['Total Revenue', String(incomeStatement.totalRevenue || 0)], ['Total Expenses', String(incomeStatement.totalExpenses || 0)], ['Net Income', String(incomeStatement.netIncome || 0)]];
+      } else if (reportTab === 'bs' && balanceSheet) {
+        headers = ['Category', 'Amount (KES)'];
+        rows = [['Total Assets', String(balanceSheet.totalAssets || 0)], ['Total Liabilities', String(balanceSheet.totalLiabilities || 0)], ['Total Equity', String(balanceSheet.totalEquity || 0)]];
+      } else {
+        headers = ['Info']; rows = [['No data to export']];
+      }
+    } else if (activeTab === 'aging') {
+      title = 'Aging Report';
+      filename = `aging-report-${date}.csv`;
+      headers = ['Type', 'Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days', 'Total'];
+      rows = [];
+      if (arAging) rows.push(['Accounts Receivable', String(arAging.current || 0), String(arAging.days30 || 0), String(arAging.days60 || 0), String(arAging.days90 || 0), String(arAging.days90Plus || 0), String(arAging.total || 0)]);
+      if (apAging) rows.push(['Accounts Payable', String(apAging.current || 0), String(apAging.days30 || 0), String(apAging.days60 || 0), String(apAging.days90 || 0), String(apAging.days90Plus || 0), String(apAging.total || 0)]);
+    } else if (activeTab === 'tax') {
+      title = 'Tax Rates';
+      filename = `tax-rates-${date}.csv`;
+      headers = ['Name', 'Code', 'Type', 'Rate (%)', 'Default', 'Status'];
+      rows = taxRates.map((tr: any) => [tr.name, tr.code, tr.type, String(tr.rate), tr.isDefault ? 'Yes' : 'No', tr.isActive ? 'Active' : 'Inactive']);
+    } else if (activeTab === 'audit') {
+      title = 'Audit Trail';
+      filename = `audit-trail-${date}.csv`;
+      headers = ['Date', 'Action', 'Entity Type', 'Entity Ref', 'User'];
+      rows = auditLogs.map((log: any) => [new Date(log.createdAt).toLocaleString(), log.action, log.entityType, log.entityRef || '', log.userId || '']);
+    }
+
+    if (format === 'excel') {
+      exportCSV(filename, headers, rows);
+      toast({ title: 'Exported', description: `${title} exported as CSV/Excel` });
     } else {
-      // Trigger PDF export via print
-      window.print();
-      toast({ title: 'PDF Export', description: 'Print dialog opened — save as PDF' });
+      exportPDF(title, headers, rows);
+      toast({ title: 'PDF Export', description: `${title} PDF opened in new tab` });
     }
   };
 
@@ -1325,16 +1412,20 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
       <div className="overflow-x-auto -mx-1 px-1 scrollbar-thin">
         <div className="flex gap-1 border-b min-w-max">
           {([
-            { key: 'overview', label: 'Overview', icon: Eye },
-            { key: 'transactions', label: 'Transactions', icon: CreditCard },
-            { key: 'invoices', label: 'Invoices', icon: FileText },
-            { key: 'journal', label: 'Journal', icon: BookOpen },
-            { key: 'coa', label: 'Accounts', icon: Layers },
-            { key: 'reports', label: 'Reports', icon: BarChart3 },
-            { key: 'aging', label: 'Aging', icon: Clock },
-            { key: 'tax', label: 'Tax', icon: Receipt },
-            { key: 'audit', label: 'Audit', icon: Shield },
-          ] as const).map(tab => (
+            { key: 'overview', label: 'Overview', icon: Eye, minRole: 'staff' },
+            { key: 'transactions', label: 'Transactions', icon: CreditCard, minRole: 'staff' },
+            { key: 'invoices', label: 'Invoices', icon: FileText, minRole: 'staff' },
+            { key: 'journal', label: 'Journal', icon: BookOpen, minRole: 'accountant' },
+            { key: 'coa', label: 'Accounts', icon: Layers, minRole: 'accountant' },
+            { key: 'reports', label: 'Reports', icon: BarChart3, minRole: 'accountant' },
+            { key: 'aging', label: 'Aging', icon: Clock, minRole: 'accountant' },
+            { key: 'tax', label: 'Tax', icon: Receipt, minRole: 'accountant' },
+            { key: 'audit', label: 'Audit', icon: Shield, minRole: 'admin' },
+          ] as const).filter(tab => {
+            if (tab.minRole === 'admin') return isAdmin;
+            if (tab.minRole === 'accountant') return isAdmin || isAccountant;
+            return isAdmin || isAccountant || isStaff;
+          }).map(tab => (
             <Button
               key={tab.key}
               variant={activeTab === tab.key ? 'default' : 'ghost'}
@@ -1734,10 +1825,12 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                                   <Send className="h-3.5 w-3.5 text-red-500" />
                                 </Button>
                               )}
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Delete"
-                                onClick={() => handleDeleteInvoice(invoice._id)}>
-                                <Trash2 className="h-3.5 w-3.5 text-red-400" />
-                              </Button>
+                              {isAdmin && (
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Delete"
+                                  onClick={() => handleDeleteInvoice(invoice._id)}>
+                                  <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1860,9 +1953,17 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                 <CardTitle className="text-base">Chart of Accounts</CardTitle>
                 <CardDescription>Manage your account structure</CardDescription>
               </div>
-              <Button size="sm" className="gap-1" onClick={() => setAccountDialogOpen(true)}>
-                <Plus className="h-3.5 w-3.5" /> New Account
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('excel')}>
+                  <Download className="h-3.5 w-3.5" /> Excel
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('pdf')}>
+                  <FileText className="h-3.5 w-3.5" /> PDF
+                </Button>
+                <Button size="sm" className="gap-1" onClick={() => setAccountDialogOpen(true)}>
+                  <Plus className="h-3.5 w-3.5" /> New Account
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -1940,6 +2041,12 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                 </div>
                 <Button size="sm" onClick={fetchReports} className="gap-1">
                   <RefreshCw className="h-3.5 w-3.5" /> Generate
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('excel')}>
+                  <Download className="h-3.5 w-3.5" /> Excel
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('pdf')}>
+                  <FileText className="h-3.5 w-3.5" /> PDF
                 </Button>
                 <div className="ml-auto flex gap-1">
                   {([
@@ -2183,6 +2290,14 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           ═══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'aging' && (
         <div className="space-y-6">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('excel')}>
+              <Download className="h-3.5 w-3.5" /> Excel
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('pdf')}>
+              <FileText className="h-3.5 w-3.5" /> PDF
+            </Button>
+          </div>
           {/* AR Aging */}
           <Card className="border shadow-sm">
             <CardHeader>
@@ -2348,9 +2463,17 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                   <CardTitle className="text-base">Tax Rates</CardTitle>
                   <CardDescription>Configured tax rates</CardDescription>
                 </div>
-                <Button size="sm" variant="outline" onClick={fetchTax} className="gap-1">
-                  <RefreshCw className="h-3.5 w-3.5" /> Refresh
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('excel')}>
+                    <Download className="h-3.5 w-3.5" /> Excel
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('pdf')}>
+                    <FileText className="h-3.5 w-3.5" /> PDF
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={fetchTax} className="gap-1">
+                    <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -2363,6 +2486,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                     <TableHead className="text-right">Rate (%)</TableHead>
                     <TableHead>Default</TableHead>
                     <TableHead>Status</TableHead>
+                    {isAdmin && <TableHead className="w-20">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -2378,6 +2502,18 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                           {tr.isActive ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Delete"
+                            onClick={async () => {
+                              if (!confirm('Delete this tax rate?')) return;
+                              const res = await apiFetch(`/api/v1/accounting/tax/rates/${tr._id}`, { method: 'DELETE' });
+                              if (res.ok) { toast({ title: 'Deleted', description: 'Tax rate removed' }); fetchTax(); }
+                            }}>
+                            <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   )) : (
                     <TableRow>
@@ -2404,9 +2540,17 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                 <CardTitle className="text-base">Audit Trail</CardTitle>
                 <CardDescription>Record of all accounting changes</CardDescription>
               </div>
-              <Button size="sm" variant="outline" onClick={fetchAudit} className="gap-1">
-                <RefreshCw className="h-3.5 w-3.5" /> Refresh
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('excel')}>
+                  <Download className="h-3.5 w-3.5" /> Excel
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('pdf')}>
+                  <FileText className="h-3.5 w-3.5" /> PDF
+                </Button>
+                <Button size="sm" variant="outline" onClick={fetchAudit} className="gap-1">
+                  <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>

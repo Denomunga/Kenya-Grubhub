@@ -1359,8 +1359,112 @@ export class AuditService {
 // INVOICE SERVICE
 // ============================================================
 export class InvoiceService {
+  // --- Auto tax calculation helper ---
+  static async calculateTax(amount: number): Promise<{ taxRate: number; taxAmount: number; totalAmount: number }> {
+    try {
+      const vatRate = await TaxRate.findOne({ code: 'VAT', isActive: true }).lean();
+      const rate = vatRate ? vatRate.rate : 16; // Default Kenya VAT 16%
+      const taxAmount = Math.round((amount * rate / 100) * 100) / 100;
+      return { taxRate: rate, taxAmount, totalAmount: Math.round((amount + taxAmount) * 100) / 100 };
+    } catch {
+      return { taxRate: 0, taxAmount: 0, totalAmount: amount };
+    }
+  }
+
+  // --- Auto journal entry: Invoice Created (Debit: Accounts Receivable, Credit: Revenue) ---
+  static async createInvoiceJournalEntry(invoice: any, userId: string) {
+    try {
+      const arAccount = await Account.findOne({ code: { $in: ['1200', '1100'] }, status: 'active' });
+      const revenueAccount = await Account.findOne({ code: { $in: ['4000', '4100'] }, status: 'active' });
+      if (!arAccount || !revenueAccount) return null;
+
+      const totalAmount = invoice.totalAmount || invoice.amount;
+      const entryNumber = `JE-INV-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const lines = [
+        { accountId: arAccount._id, accountCode: arAccount.code, accountName: arAccount.name, debit: totalAmount, credit: 0, description: `Invoice ${invoice.invoiceNumber} - ${invoice.clientName}` },
+        { accountId: revenueAccount._id, accountCode: revenueAccount.code, accountName: revenueAccount.name, debit: 0, credit: totalAmount, description: `Revenue from invoice ${invoice.invoiceNumber}` },
+      ];
+
+      if (invoice.taxAmount && invoice.taxAmount > 0) {
+        const taxAccount = await Account.findOne({ code: { $in: ['2100', '2200'] }, status: 'active' });
+        if (taxAccount) {
+          lines[1].credit = invoice.amount;
+          lines.push({ accountId: taxAccount._id, accountCode: taxAccount.code, accountName: taxAccount.name, debit: 0, credit: invoice.taxAmount, description: `VAT on invoice ${invoice.invoiceNumber}` });
+        }
+      }
+
+      const je = new JournalEntry({
+        entryNumber,
+        transactionDate: new Date(),
+        description: `Auto journal entry for invoice ${invoice.invoiceNumber}`,
+        referenceType: 'Invoice',
+        referenceId: invoice._id,
+        referenceNumber: invoice.invoiceNumber,
+        lines,
+        totalDebit: totalAmount,
+        totalCredit: totalAmount,
+        balanced: true,
+        createdBy: userId,
+        status: 'posted',
+      });
+      await je.save();
+
+      // Update account balances
+      for (const line of lines) {
+        if (line.debit > 0) await Account.findByIdAndUpdate(line.accountId, { $inc: { balance: line.debit } });
+        if (line.credit > 0) await Account.findByIdAndUpdate(line.accountId, { $inc: { balance: -line.credit } });
+      }
+
+      return je;
+    } catch (err) {
+      console.error('Auto journal entry (invoice create) failed:', err);
+      return null;
+    }
+  }
+
+  // --- Auto journal entry: Payment Recorded (Debit: Cash/Bank, Credit: Accounts Receivable) ---
+  static async createPaymentJournalEntry(invoice: any, paymentAmount: number, userId: string) {
+    try {
+      const cashAccount = await Account.findOne({ code: { $in: ['1000', '1010'] }, status: 'active' });
+      const arAccount = await Account.findOne({ code: { $in: ['1200', '1100'] }, status: 'active' });
+      if (!cashAccount || !arAccount) return null;
+
+      const entryNumber = `JE-PAY-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const lines = [
+        { accountId: cashAccount._id, accountCode: cashAccount.code, accountName: cashAccount.name, debit: paymentAmount, credit: 0, description: `Payment received for invoice ${invoice.invoiceNumber}` },
+        { accountId: arAccount._id, accountCode: arAccount.code, accountName: arAccount.name, debit: 0, credit: paymentAmount, description: `AR reduced for invoice ${invoice.invoiceNumber}` },
+      ];
+
+      const je = new JournalEntry({
+        entryNumber,
+        transactionDate: new Date(),
+        description: `Auto journal entry for payment on invoice ${invoice.invoiceNumber}`,
+        referenceType: 'Payment',
+        referenceId: invoice._id,
+        referenceNumber: invoice.invoiceNumber,
+        lines,
+        totalDebit: paymentAmount,
+        totalCredit: paymentAmount,
+        balanced: true,
+        createdBy: userId,
+        status: 'posted',
+      });
+      await je.save();
+
+      for (const line of lines) {
+        if (line.debit > 0) await Account.findByIdAndUpdate(line.accountId, { $inc: { balance: line.debit } });
+        if (line.credit > 0) await Account.findByIdAndUpdate(line.accountId, { $inc: { balance: -line.credit } });
+      }
+
+      return je;
+    } catch (err) {
+      console.error('Auto journal entry (payment) failed:', err);
+      return null;
+    }
+  }
+
   static async getInvoices(filters: any = {}, page = 1, limit = 50) {
-    const query: any = {};
+    const query: any = { isDeleted: { $ne: true } };
     if (filters.status) query.status = filters.status;
     if (filters.clientName) query.clientName = { $regex: filters.clientName, $options: 'i' };
     if (filters.startDate || filters.endDate) {
@@ -1368,6 +1472,11 @@ export class InvoiceService {
       if (filters.startDate) query.dueDate.$gte = new Date(filters.startDate);
       if (filters.endDate) query.dueDate.$lte = new Date(filters.endDate);
     }
+    // Auto-update aging: mark overdue invoices
+    await Invoice.updateMany(
+      { status: 'unpaid', dueDate: { $lt: new Date() }, isDeleted: { $ne: true } },
+      { status: 'overdue' }
+    );
     const skip = (page - 1) * limit;
     const invoices = await Invoice.find(query).populate('createdBy', 'firstName lastName').sort({ createdAt: -1 }).skip(skip).limit(limit).lean();
     const total = await Invoice.countDocuments(query);
@@ -1375,37 +1484,49 @@ export class InvoiceService {
   }
 
   static async getInvoiceById(id: string) {
-    const invoice = await Invoice.findById(id).populate('createdBy', 'firstName lastName');
+    const invoice = await Invoice.findOne({ _id: id, isDeleted: { $ne: true } }).populate('createdBy', 'firstName lastName');
     if (!invoice) throw new Error('Invoice not found');
     return invoice;
   }
 
   static async updateInvoice(id: string, data: any) {
-    const invoice = await Invoice.findByIdAndUpdate(id, { ...data, updatedAt: new Date() }, { new: true, runValidators: true });
+    const invoice = await Invoice.findOneAndUpdate({ _id: id, isDeleted: { $ne: true } }, { ...data, updatedAt: new Date() }, { new: true, runValidators: true });
     if (!invoice) throw new Error('Invoice not found');
     return invoice;
   }
 
-  static async recordPayment(id: string, amount: number) {
-    const invoice = await Invoice.findById(id);
+  static async recordPayment(id: string, amount: number, userId?: string) {
+    const invoice = await Invoice.findOne({ _id: id, isDeleted: { $ne: true } });
     if (!invoice) throw new Error('Invoice not found');
     invoice.paidAmount = (invoice.paidAmount || 0) + amount;
-    if (invoice.paidAmount >= invoice.amount) invoice.status = 'paid';
+    if (invoice.paidAmount >= (invoice.totalAmount || invoice.amount)) invoice.status = 'paid';
     else invoice.status = 'partial';
+    await invoice.save();
+
+    // Auto journal entry for payment
+    if (userId) {
+      await InvoiceService.createPaymentJournalEntry(invoice, amount, userId);
+    }
+
+    return invoice;
+  }
+
+  // Soft delete instead of hard delete
+  static async deleteInvoice(id: string) {
+    const invoice = await Invoice.findOne({ _id: id, isDeleted: { $ne: true } });
+    if (!invoice) throw new Error('Invoice not found');
+    if (invoice.status === 'paid') throw new Error('Cannot delete a paid invoice');
+    invoice.isDeleted = true;
+    (invoice as any).deletedAt = new Date();
     await invoice.save();
     return invoice;
   }
 
-  static async deleteInvoice(id: string) {
-    const invoice = await Invoice.findById(id);
-    if (!invoice) throw new Error('Invoice not found');
-    if (invoice.status === 'paid') throw new Error('Cannot delete a paid invoice');
-    await Invoice.findByIdAndDelete(id);
-    return invoice;
-  }
-
   static async bulkUpdateStatus(ids: string[], status: string) {
-    const result = await Invoice.updateMany({ _id: { $in: ids } }, { status, updatedAt: new Date() });
+    const result = await Invoice.updateMany(
+      { _id: { $in: ids }, isDeleted: { $ne: true } },
+      { status, updatedAt: new Date() }
+    );
     return { modifiedCount: result.modifiedCount };
   }
 }
