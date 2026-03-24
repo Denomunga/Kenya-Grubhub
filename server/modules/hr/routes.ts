@@ -9,8 +9,12 @@ import { generalLimiter, authLimiter } from '@shared/middleware/rateLimiter';
 import { requireAuth } from '@shared/middleware/auth';
 import { requireRole } from '@shared/middleware/roles';
 import contractsPayslipsRoutes from './routes-contracts-payslips';
+import leaveRoutes from './routes-leave';
 
 const router = Router();
+
+// Mount leave routes
+router.use('/leaves', leaveRoutes);
 
 router.get(
   '/jobs',

@@ -94,6 +94,7 @@ const ConfirmPassword = lazy(() => import("@/pages/confirm-password"));
 const NewsDetail = lazy(() => import("@/pages/news-detail"));
 const ConfirmPhone = lazy(() => import("@/pages/confirm-phone"));
 const Jobs = lazy(() => import("@/pages/jobs"));
+const Leave = lazy(() => import("@/pages/leave"));
 
 function RedirectToMenu() {
   const [, setLocation] = useLocation();
@@ -133,6 +134,7 @@ function Router() {
               <Route path="/auth/confirm-password" component={ConfirmPassword} />
               <Route path="/news/:id" component={NewsDetail} />
               <Route path="/jobs" component={Jobs} />
+              <Route path="/leave" component={Leave} />
               <Route path="/auth/confirm-phone" component={ConfirmPhone} />
               <Route component={NotFound} />
             </Switch>

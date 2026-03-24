@@ -58,6 +58,10 @@ import {
   Banknote,
   PiggyBank,
   FileSpreadsheet,
+  Layers,
+  BarChart3,
+  Shield,
+  Trash2,
 } from 'lucide-react';
 import { InsightActionCard, InsightItem } from '@/components/ui/InsightActionCard';
 import { useToast } from '@/hooks/use-toast';
@@ -151,7 +155,31 @@ export default function AccountingDashboard() {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [cashFlowData, setCashFlowData] = useState<CashFlowData[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'invoices' | 'journal'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'invoices' | 'journal' | 'coa' | 'reports' | 'aging' | 'tax' | 'audit'>('overview');
+  // New tab data
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [incomeStatement, setIncomeStatement] = useState<any>(null);
+  const [balanceSheet, setBalanceSheet] = useState<any>(null);
+  const [cashFlowReport, setCashFlowReport] = useState<any>(null);
+  const [trialBalance, setTrialBalance] = useState<any>(null);
+  const [arAging, setArAging] = useState<any>(null);
+  const [apAging, setApAging] = useState<any>(null);
+  const [taxRates, setTaxRates] = useState<any[]>([]);
+  const [taxSummary, setTaxSummary] = useState<any>(null);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [reportPeriod, setReportPeriod] = useState({ startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] });
+  const [reportTab, setReportTab] = useState<'pl' | 'bs' | 'cf' | 'tb'>('pl');
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [accountForm, setAccountForm] = useState({ code: '', name: '', category: 'asset' as string, subcategory: '', description: '', normalBalance: 'debit' as string });
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentInvoiceId, setPaymentInvoiceId] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [submittingAccount, setSubmittingAccount] = useState(false);
+  const [submittingExpense, setSubmittingExpense] = useState(false);
+  const [submittingRecurring, setSubmittingRecurring] = useState(false);
+  const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
+  const [txnPage, setTxnPage] = useState(1);
+  const txnPerPage = 15;
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [loading, setLoading] = useState(true);
@@ -315,6 +343,145 @@ export default function AccountingDashboard() {
     }
   };
 
+  // ─── Fetch functions for new tabs ───────────────────────────────────────
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await apiFetch('/api/v1/accounting/accounts');
+      if (res.ok) { const d = await res.json(); setAccounts(d.data || []); }
+    } catch (e) { console.error('Fetch accounts error:', e); }
+  };
+
+  const fetchReports = async () => {
+    try {
+      const qs = `?startDate=${reportPeriod.startDate}&endDate=${reportPeriod.endDate}`;
+      const [plRes, bsRes, cfRes, tbRes] = await Promise.all([
+        apiFetch(`/api/v1/accounting/reports/income-statement${qs}`),
+        apiFetch(`/api/v1/accounting/reports/balance-sheet?asOfDate=${reportPeriod.endDate}`),
+        apiFetch(`/api/v1/accounting/reports/cash-flow${qs}`),
+        apiFetch(`/api/v1/accounting/reports/trial-balance?asOfDate=${reportPeriod.endDate}`),
+      ]);
+      if (plRes.ok) { const d = await plRes.json(); setIncomeStatement(d.data); }
+      if (bsRes.ok) { const d = await bsRes.json(); setBalanceSheet(d.data); }
+      if (cfRes.ok) { const d = await cfRes.json(); setCashFlowReport(d.data); }
+      if (tbRes.ok) { const d = await tbRes.json(); setTrialBalance(d.data); }
+    } catch (e) { console.error('Fetch reports error:', e); }
+  };
+
+  const fetchAging = async () => {
+    try {
+      const [arRes, apRes] = await Promise.all([
+        apiFetch('/api/v1/accounting/aging/receivable'),
+        apiFetch('/api/v1/accounting/aging/payable'),
+      ]);
+      if (arRes.ok) { const d = await arRes.json(); setArAging(d.data); }
+      if (apRes.ok) { const d = await apRes.json(); setApAging(d.data); }
+    } catch (e) { console.error('Fetch aging error:', e); }
+  };
+
+  const fetchTax = async () => {
+    try {
+      const [ratesRes, summaryRes] = await Promise.all([
+        apiFetch('/api/v1/accounting/tax/rates'),
+        apiFetch(`/api/v1/accounting/tax/summary?startDate=${reportPeriod.startDate}&endDate=${reportPeriod.endDate}`),
+      ]);
+      if (ratesRes.ok) { const d = await ratesRes.json(); setTaxRates(d.data || []); }
+      if (summaryRes.ok) { const d = await summaryRes.json(); setTaxSummary(d.data); }
+    } catch (e) { console.error('Fetch tax error:', e); }
+  };
+
+  const fetchAudit = async () => {
+    try {
+      const res = await apiFetch('/api/v1/accounting/audit-logs?limit=100');
+      if (res.ok) { const d = await res.json(); setAuditLogs(d.data || []); }
+    } catch (e) { console.error('Fetch audit error:', e); }
+  };
+
+  // Fetch data when tab changes
+  useEffect(() => {
+    if (activeTab === 'coa') fetchAccounts();
+    else if (activeTab === 'reports') fetchReports();
+    else if (activeTab === 'aging') fetchAging();
+    else if (activeTab === 'tax') fetchTax();
+    else if (activeTab === 'audit') fetchAudit();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // ─── New tab handlers ─────────────────────────────────────────────────
+
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingAccount(true);
+    try {
+      const res = await apiFetch('/api/v1/accounting/accounts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(accountForm),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Account created' });
+        setAccountDialogOpen(false);
+        setAccountForm({ code: '', name: '', category: 'asset', subcategory: '', description: '', normalBalance: 'debit' });
+        fetchAccounts();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({ title: 'Error', description: err.error || 'Failed to create account', variant: 'destructive' });
+      }
+    } catch { toast({ title: 'Error', description: 'Network error', variant: 'destructive' }); }
+    finally { setSubmittingAccount(false); }
+  };
+
+  const handleDeactivateAccount = async (id: string) => {
+    try {
+      const res = await apiFetch(`/api/v1/accounting/accounts/${id}`, { method: 'DELETE' });
+      if (res.ok) { toast({ title: 'Account deactivated' }); fetchAccounts(); }
+      else { toast({ title: 'Error', description: 'Failed to deactivate', variant: 'destructive' }); }
+    } catch { toast({ title: 'Error', description: 'Network error', variant: 'destructive' }); }
+  };
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await apiFetch(`/api/v1/accounting/invoices/${paymentInvoiceId}/payment`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: parseFloat(paymentAmount) }),
+      });
+      if (res.ok) {
+        toast({ title: 'Payment recorded' });
+        setPaymentDialogOpen(false);
+        setPaymentAmount('');
+        fetchAccountingData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({ title: 'Error', description: err.error || 'Failed', variant: 'destructive' });
+      }
+    } catch { toast({ title: 'Error', description: 'Network error', variant: 'destructive' }); }
+  };
+
+  const handleDeleteInvoice = async (id: string) => {
+    if (!confirm('Delete this invoice?')) return;
+    try {
+      const res = await apiFetch(`/api/v1/accounting/invoices/${id}`, { method: 'DELETE' });
+      if (res.ok) { toast({ title: 'Invoice deleted' }); fetchAccountingData(); }
+      else { const err = await res.json().catch(() => ({})); toast({ title: 'Error', description: err.error || 'Failed', variant: 'destructive' }); }
+    } catch { toast({ title: 'Error', description: 'Network error', variant: 'destructive' }); }
+  };
+
+  const handleBulkInvoiceStatus = async (status: string) => {
+    if (selectedInvoices.length === 0) return;
+    try {
+      const res = await apiFetch('/api/v1/accounting/invoices/bulk-status', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedInvoices, status }),
+      });
+      if (res.ok) { toast({ title: `${selectedInvoices.length} invoices updated` }); setSelectedInvoices([]); fetchAccountingData(); }
+      else { toast({ title: 'Error', description: 'Bulk update failed', variant: 'destructive' }); }
+    } catch { toast({ title: 'Error', description: 'Network error', variant: 'destructive' }); }
+  };
+
+  const toggleInvoiceSelect = (id: string) => {
+    setSelectedInvoices(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
   // ─── Computed values ────────────────────────────────────────────────────
 
   const accountsPayable = useMemo(() => stats?.totalLiabilities ?? 0, [stats]);
@@ -337,7 +504,7 @@ export default function AccountingDashboard() {
   }, [stats, transactions]);
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((txn) => {
+    const result = transactions.filter((txn) => {
       const id = txn.transactionId || txn.transactionNumber || '';
       const matchesSearch =
         id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -347,7 +514,14 @@ export default function AccountingDashboard() {
       if (filterType === 'all') return matchesSearch;
       return matchesSearch && txn.type === filterType;
     });
+    return result;
   }, [transactions, searchTerm, filterType]);
+
+  const totalTxnPages = Math.max(1, Math.ceil(filteredTransactions.length / txnPerPage));
+  const paginatedTransactions = useMemo(() => {
+    const start = (txnPage - 1) * txnPerPage;
+    return filteredTransactions.slice(start, start + txnPerPage);
+  }, [filteredTransactions, txnPage, txnPerPage]);
 
   // ─── Status helpers ─────────────────────────────────────────────────────
 
@@ -530,6 +704,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
 
   const handleSubmitExpense = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmittingExpense(true);
     try {
       const res = await apiFetch('/api/v1/accounting/expenses', {
         method: 'POST',
@@ -543,17 +718,20 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
       if (res.ok) {
         toast({ title: 'Success', description: 'Expense created successfully' });
         setExpenseDialogOpen(false);
-        fetchAccountingData(); // Refresh data
+        fetchAccountingData();
       } else {
         toast({ title: 'Error', description: 'Failed to create expense', variant: 'destructive' });
       }
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to create expense', variant: 'destructive' });
+    } finally {
+      setSubmittingExpense(false);
     }
   };
 
   const handleSubmitRecurringExpense = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmittingRecurring(true);
     try {
       const res = await apiFetch('/api/v1/accounting/recurring-expenses', {
         method: 'POST',
@@ -568,12 +746,14 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
       if (res.ok) {
         toast({ title: 'Success', description: 'Recurring expense created successfully' });
         setRecurringExpenseDialogOpen(false);
-        fetchAccountingData(); // Refresh data
+        fetchAccountingData();
       } else {
         toast({ title: 'Error', description: 'Failed to create recurring expense', variant: 'destructive' });
       }
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to create recurring expense', variant: 'destructive' });
+    } finally {
+      setSubmittingRecurring(false);
     }
   };
 
@@ -926,8 +1106,8 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
               />
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" type="button" onClick={() => setExpenseDialogOpen(false)}>Cancel</Button>
-              <Button type="submit">Create Expense</Button>
+              <Button variant="outline" type="button" onClick={() => setExpenseDialogOpen(false)} disabled={submittingExpense}>Cancel</Button>
+              <Button type="submit" disabled={submittingExpense}>{submittingExpense ? 'Creating...' : 'Create Expense'}</Button>
             </div>
           </form>
         </DialogContent>
@@ -1132,8 +1312,8 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
               <label htmlFor="autoGenerate" className="text-sm">Auto-generate expenses</label>
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" type="button" onClick={() => setRecurringExpenseDialogOpen(false)}>Cancel</Button>
-              <Button type="submit">Create Recurring Expense</Button>
+              <Button variant="outline" type="button" onClick={() => setRecurringExpenseDialogOpen(false)} disabled={submittingRecurring}>Cancel</Button>
+              <Button type="submit" disabled={submittingRecurring}>{submittingRecurring ? 'Creating...' : 'Create Recurring Expense'}</Button>
             </div>
           </form>
         </DialogContent>
@@ -1142,24 +1322,31 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
       {/* ═══════════════════════════════════════════════════════════════════
           TAB NAVIGATION
           ═══════════════════════════════════════════════════════════════════ */}
-      <div className="flex gap-1 border-b">
-        {([
-          { key: 'overview', label: 'Overview', icon: Eye },
-          { key: 'transactions', label: 'Transactions', icon: CreditCard },
-          { key: 'invoices', label: 'Invoices', icon: FileText },
-          { key: 'journal', label: 'Journal', icon: BookOpen },
-        ] as const).map(tab => (
-          <Button
-            key={tab.key}
-            variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
-            size="sm"
-            className="gap-1.5 rounded-b-none"
-          >
-            <tab.icon className="h-3.5 w-3.5" />
-            {tab.label}
-          </Button>
-        ))}
+      <div className="overflow-x-auto -mx-1 px-1 scrollbar-thin">
+        <div className="flex gap-1 border-b min-w-max">
+          {([
+            { key: 'overview', label: 'Overview', icon: Eye },
+            { key: 'transactions', label: 'Transactions', icon: CreditCard },
+            { key: 'invoices', label: 'Invoices', icon: FileText },
+            { key: 'journal', label: 'Journal', icon: BookOpen },
+            { key: 'coa', label: 'Accounts', icon: Layers },
+            { key: 'reports', label: 'Reports', icon: BarChart3 },
+            { key: 'aging', label: 'Aging', icon: Clock },
+            { key: 'tax', label: 'Tax', icon: Receipt },
+            { key: 'audit', label: 'Audit', icon: Shield },
+          ] as const).map(tab => (
+            <Button
+              key={tab.key}
+              variant={activeTab === tab.key ? 'default' : 'ghost'}
+              onClick={() => setActiveTab(tab.key)}
+              size="sm"
+              className="gap-1.5 rounded-b-none whitespace-nowrap"
+            >
+              <tab.icon className="h-3.5 w-3.5" />
+              {tab.label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -1379,8 +1566,8 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTransactions.length > 0 ? (
-                    filteredTransactions.map((txn) => {
+                  {paginatedTransactions.length > 0 ? (
+                    paginatedTransactions.map((txn) => {
                       const amt = txn.totalAmount || txn.amount;
                       return (
                         <TableRow key={txn._id}>
@@ -1429,6 +1616,21 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                 </TableBody>
               </Table>
             </div>
+            {/* Pagination Controls */}
+            {filteredTransactions.length > txnPerPage && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <span className="text-xs text-muted-foreground">
+                  Showing {((txnPage - 1) * txnPerPage) + 1}–{Math.min(txnPage * txnPerPage, filteredTransactions.length)} of {filteredTransactions.length}
+                </span>
+                <div className="flex gap-1">
+                  <Button variant="outline" size="sm" disabled={txnPage <= 1} onClick={() => setTxnPage(1)}>First</Button>
+                  <Button variant="outline" size="sm" disabled={txnPage <= 1} onClick={() => setTxnPage(p => p - 1)}>Prev</Button>
+                  <span className="px-3 py-1 text-sm font-medium">{txnPage} / {totalTxnPages}</span>
+                  <Button variant="outline" size="sm" disabled={txnPage >= totalTxnPages} onClick={() => setTxnPage(p => p + 1)}>Next</Button>
+                  <Button variant="outline" size="sm" disabled={txnPage >= totalTxnPages} onClick={() => setTxnPage(totalTxnPages)}>Last</Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -1445,15 +1647,22 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                 <CardDescription>Supplier, status, and due date tracking</CardDescription>
               </div>
               <div className="flex gap-2">
+                {selectedInvoices.length > 0 && (
+                  <>
+                    <span className="text-xs text-muted-foreground self-center">{selectedInvoices.length} selected</span>
+                    <Button variant="outline" size="sm" className="gap-1 text-green-600" onClick={() => handleBulkInvoiceStatus('paid')}>
+                      <CheckCircle className="h-3.5 w-3.5" /> Mark Paid
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-1 text-red-600" onClick={() => handleBulkInvoiceStatus('overdue')}>
+                      <AlertCircle className="h-3.5 w-3.5" /> Mark Overdue
+                    </Button>
+                  </>
+                )}
                 <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('excel')}>
                   <Download className="h-3.5 w-3.5" /> Export
                 </Button>
-               <Button 
-                size="sm" 
-                className="gap-1" 
-                onClick={() => setInvoiceDialogOpen(true)}
-                >
-                <Plus className="h-3.5 w-3.5" /> New Invoice
+                <Button size="sm" className="gap-1" onClick={() => setInvoiceDialogOpen(true)}>
+                  <Plus className="h-3.5 w-3.5" /> New Invoice
                 </Button>
               </div>
             </div>
@@ -1463,6 +1672,10 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">
+                      <input type="checkbox" checked={selectedInvoices.length === invoices.length && invoices.length > 0}
+                        onChange={e => setSelectedInvoices(e.target.checked ? invoices.map(i => i._id) : [])} />
+                    </TableHead>
                     <TableHead>Invoice #</TableHead>
                     <TableHead>Client / Supplier</TableHead>
                     <TableHead className="text-right">Amount (KES)</TableHead>
@@ -1471,7 +1684,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                     <TableHead>Due Date</TableHead>
                     <TableHead>Days</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="w-20">Actions</TableHead>
+                    <TableHead className="w-28">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1483,6 +1696,10 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
 
                       return (
                         <TableRow key={invoice._id} className={isOverdue ? 'bg-red-50/50' : ''}>
+                          <TableCell>
+                            <input type="checkbox" checked={selectedInvoices.includes(invoice._id)}
+                              onChange={() => toggleInvoiceSelect(invoice._id)} />
+                          </TableCell>
                           <TableCell className="font-mono text-xs font-medium">{invoice.invoiceNumber}</TableCell>
                           <TableCell className="text-sm">{invoice.supplierName || invoice.clientName}</TableCell>
                           <TableCell className="text-right text-sm font-mono">{invoice.amount.toLocaleString()}</TableCell>
@@ -1506,17 +1723,21 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-0.5">
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="View">
-                                <Eye className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Record Payment">
-                                <DollarSign className="h-3.5 w-3.5" />
-                              </Button>
+                              {invoice.status !== 'paid' && (
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Record Payment"
+                                  onClick={() => { setPaymentInvoiceId(invoice._id); setPaymentDialogOpen(true); }}>
+                                  <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                                </Button>
+                              )}
                               {isOverdue && (
                                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Send Reminder">
                                   <Send className="h-3.5 w-3.5 text-red-500" />
                                 </Button>
                               )}
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Delete"
+                                onClick={() => handleDeleteInvoice(invoice._id)}>
+                                <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1524,7 +1745,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
                         No invoices found
                       </TableCell>
@@ -1627,6 +1848,694 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           </CardContent>
         </Card>
       )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          CHART OF ACCOUNTS TAB
+          ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'coa' && (
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Chart of Accounts</CardTitle>
+                <CardDescription>Manage your account structure</CardDescription>
+              </div>
+              <Button size="sm" className="gap-1" onClick={() => setAccountDialogOpen(true)}>
+                <Plus className="h-3.5 w-3.5" /> New Account
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Subcategory</TableHead>
+                    <TableHead>Normal Balance</TableHead>
+                    <TableHead className="text-right">Balance (KES)</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-16">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {accounts.length > 0 ? accounts.map(acct => (
+                    <TableRow key={acct._id}>
+                      <TableCell className="font-mono text-xs font-medium">{acct.code}</TableCell>
+                      <TableCell className="text-sm">{acct.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] capitalize">{acct.category}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{acct.subcategory || '—'}</TableCell>
+                      <TableCell className="text-xs capitalize">{acct.normalBalance}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">{(acct.balance || 0).toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`text-[10px] ${acct.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
+                          {acct.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {acct.status === 'active' && (
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Deactivate" onClick={() => handleDeactivateAccount(acct._id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <Layers className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                        No accounts found. Initialize chart of accounts first.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          REPORTS TAB (P&L, Balance Sheet, Cash Flow, Trial Balance)
+          ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'reports' && (
+        <div className="space-y-4">
+          {/* Period selector + sub-tabs */}
+          <Card className="border shadow-sm">
+            <CardContent className="pt-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">From:</label>
+                  <Input type="date" className="h-8 w-40" value={reportPeriod.startDate}
+                    onChange={e => setReportPeriod(p => ({ ...p, startDate: e.target.value }))} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">To:</label>
+                  <Input type="date" className="h-8 w-40" value={reportPeriod.endDate}
+                    onChange={e => setReportPeriod(p => ({ ...p, endDate: e.target.value }))} />
+                </div>
+                <Button size="sm" onClick={fetchReports} className="gap-1">
+                  <RefreshCw className="h-3.5 w-3.5" /> Generate
+                </Button>
+                <div className="ml-auto flex gap-1">
+                  {([
+                    { key: 'pl', label: 'P&L' },
+                    { key: 'bs', label: 'Balance Sheet' },
+                    { key: 'cf', label: 'Cash Flow' },
+                    { key: 'tb', label: 'Trial Balance' },
+                  ] as const).map(rt => (
+                    <Button key={rt.key} size="sm" variant={reportTab === rt.key ? 'default' : 'outline'}
+                      onClick={() => setReportTab(rt.key)}>{rt.label}</Button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* P&L */}
+          {reportTab === 'pl' && incomeStatement && (
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Income Statement (Profit & Loss)</CardTitle>
+                <CardDescription>{reportPeriod.startDate} to {reportPeriod.endDate}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-emerald-700 mb-2">Revenue</h4>
+                    <Table>
+                      <TableBody>
+                        {incomeStatement.revenue?.map((r: any) => (
+                          <TableRow key={r.code}>
+                            <TableCell className="font-mono text-xs w-20">{r.code}</TableCell>
+                            <TableCell className="text-sm">{r.name}</TableCell>
+                            <TableCell className="text-right font-mono text-sm text-emerald-600">{r.amount.toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="border-t-2 font-bold">
+                          <TableCell colSpan={2} className="text-sm">Total Revenue</TableCell>
+                          <TableCell className="text-right font-mono text-sm text-emerald-700">{(incomeStatement.totalRevenue || 0).toLocaleString()}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-red-700 mb-2">Expenses</h4>
+                    <Table>
+                      <TableBody>
+                        {incomeStatement.expenses?.map((e: any) => (
+                          <TableRow key={e.code}>
+                            <TableCell className="font-mono text-xs w-20">{e.code}</TableCell>
+                            <TableCell className="text-sm">{e.name}</TableCell>
+                            <TableCell className="text-right font-mono text-sm text-red-600">{e.amount.toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="border-t-2 font-bold">
+                          <TableCell colSpan={2} className="text-sm">Total Expenses</TableCell>
+                          <TableCell className="text-right font-mono text-sm text-red-700">{(incomeStatement.totalExpenses || 0).toLocaleString()}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="border-t-4 pt-3 flex justify-between items-center">
+                    <span className="text-base font-bold">Net Income</span>
+                    <span className={`text-xl font-bold font-mono ${(incomeStatement.netIncome || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                      KES {(incomeStatement.netIncome || 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Balance Sheet */}
+          {reportTab === 'bs' && balanceSheet && (
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Balance Sheet</CardTitle>
+                <CardDescription>As of {reportPeriod.endDate}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-sm font-semibold text-blue-700 mb-2">Assets</h4>
+                    <Table><TableBody>
+                      {balanceSheet.assets?.map((a: any) => (
+                        <TableRow key={a.code}>
+                          <TableCell className="font-mono text-xs">{a.code}</TableCell>
+                          <TableCell className="text-sm">{a.name}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{a.balance.toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="border-t-2 font-bold">
+                        <TableCell colSpan={2}>Total Assets</TableCell>
+                        <TableCell className="text-right font-mono">{(balanceSheet.totalAssets || 0).toLocaleString()}</TableCell>
+                      </TableRow>
+                    </TableBody></Table>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-semibold text-orange-700 mb-2">Liabilities</h4>
+                      <Table><TableBody>
+                        {balanceSheet.liabilities?.map((l: any) => (
+                          <TableRow key={l.code}>
+                            <TableCell className="font-mono text-xs">{l.code}</TableCell>
+                            <TableCell className="text-sm">{l.name}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{l.balance.toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="border-t-2 font-bold">
+                          <TableCell colSpan={2}>Total Liabilities</TableCell>
+                          <TableCell className="text-right font-mono">{(balanceSheet.totalLiabilities || 0).toLocaleString()}</TableCell>
+                        </TableRow>
+                      </TableBody></Table>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-purple-700 mb-2">Equity</h4>
+                      <Table><TableBody>
+                        {balanceSheet.equity?.map((e: any) => (
+                          <TableRow key={e.code}>
+                            <TableCell className="font-mono text-xs">{e.code}</TableCell>
+                            <TableCell className="text-sm">{e.name}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{e.balance.toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow>
+                          <TableCell className="font-mono text-xs">—</TableCell>
+                          <TableCell className="text-sm italic">Retained Earnings</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{(balanceSheet.retainedEarnings || 0).toLocaleString()}</TableCell>
+                        </TableRow>
+                        <TableRow className="border-t-2 font-bold">
+                          <TableCell colSpan={2}>Total Equity</TableCell>
+                          <TableCell className="text-right font-mono">{(balanceSheet.totalEquity || 0).toLocaleString()}</TableCell>
+                        </TableRow>
+                      </TableBody></Table>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 p-3 rounded-lg bg-muted/50 flex items-center justify-between">
+                  <span className="text-sm font-medium">Balance Check: Assets = Liabilities + Equity</span>
+                  <Badge variant="outline" className={balanceSheet.balanced ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}>
+                    {balanceSheet.balanced ? 'Balanced ✓' : 'Not Balanced ✗'}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Cash Flow */}
+          {reportTab === 'cf' && cashFlowReport && (
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Cash Flow Statement</CardTitle>
+                <CardDescription>{reportPeriod.startDate} to {reportPeriod.endDate}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {(['operating', 'investing', 'financing'] as const).map(section => (
+                    <div key={section} className="border rounded-lg p-4">
+                      <h4 className="text-sm font-semibold capitalize mb-2">{section} Activities</h4>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div><span className="text-muted-foreground">Inflow:</span> <span className="font-mono text-emerald-600 ml-1">{(cashFlowReport[section]?.inflow || 0).toLocaleString()}</span></div>
+                        <div><span className="text-muted-foreground">Outflow:</span> <span className="font-mono text-red-600 ml-1">{(cashFlowReport[section]?.outflow || 0).toLocaleString()}</span></div>
+                        <div><span className="text-muted-foreground">Net:</span> <span className={`font-mono font-bold ml-1 ${(cashFlowReport[section]?.net || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{(cashFlowReport[section]?.net || 0).toLocaleString()}</span></div>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="border-t-4 pt-3 flex justify-between items-center">
+                    <span className="font-bold">Net Cash Change</span>
+                    <span className={`text-lg font-bold font-mono ${(cashFlowReport.netCashChange || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                      KES {(cashFlowReport.netCashChange || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Ending Cash Balance</span>
+                    <span className="font-mono font-bold">KES {(cashFlowReport.endingCashBalance || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Trial Balance */}
+          {reportTab === 'tb' && trialBalance && (
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Trial Balance</CardTitle>
+                <CardDescription>As of {trialBalance.asOfDate ? new Date(trialBalance.asOfDate).toLocaleDateString() : reportPeriod.endDate}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Account Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">Debit (KES)</TableHead>
+                        <TableHead className="text-right">Credit (KES)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {trialBalance.accounts?.map((a: any) => (
+                        <TableRow key={a.accountCode}>
+                          <TableCell className="font-mono text-xs">{a.accountCode}</TableCell>
+                          <TableCell className="text-sm">{a.accountName}</TableCell>
+                          <TableCell><Badge variant="outline" className="text-[10px] capitalize">{a.category}</Badge></TableCell>
+                          <TableCell className="text-right font-mono text-sm">{a.debitBalance > 0 ? a.debitBalance.toLocaleString() : '—'}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{a.creditBalance > 0 ? a.creditBalance.toLocaleString() : '—'}</TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="border-t-4 font-bold">
+                        <TableCell colSpan={3}>Totals</TableCell>
+                        <TableCell className="text-right font-mono">{(trialBalance.totalDebits || 0).toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-mono">{(trialBalance.totalCredits || 0).toLocaleString()}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <Badge variant="outline" className={trialBalance.balanced ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}>
+                    {trialBalance.balanced ? 'Balanced ✓' : 'Not Balanced ✗'}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!incomeStatement && !balanceSheet && !cashFlowReport && !trialBalance && (
+            <Card className="border shadow-sm">
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Select a date range and click Generate to view reports</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          AGING TAB
+          ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'aging' && (
+        <div className="space-y-6">
+          {/* AR Aging */}
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Accounts Receivable Aging</CardTitle>
+              <CardDescription>Outstanding invoices by age bucket</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {arAging ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {[
+                      { label: 'Current', value: arAging.summary?.current, color: 'text-green-700 bg-green-50' },
+                      { label: '1-30 Days', value: arAging.summary?.days30, color: 'text-yellow-700 bg-yellow-50' },
+                      { label: '31-60 Days', value: arAging.summary?.days60, color: 'text-orange-700 bg-orange-50' },
+                      { label: '61-90 Days', value: arAging.summary?.days90, color: 'text-red-600 bg-red-50' },
+                      { label: '90+ Days', value: arAging.summary?.over90, color: 'text-red-800 bg-red-100' },
+                    ].map(b => (
+                      <div key={b.label} className={`p-3 rounded-lg ${b.color}`}>
+                        <div className="text-xs font-medium">{b.label}</div>
+                        <div className="text-lg font-bold font-mono">KES {(b.value || 0).toLocaleString()}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-sm font-medium">Total Outstanding: <span className="font-mono">KES {(arAging.total || 0).toLocaleString()}</span></div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Client</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-right">Outstanding</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Days Overdue</TableHead>
+                        <TableHead>Bucket</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {arAging.details?.slice(0, 20).map((d: any, i: number) => (
+                        <TableRow key={i}>
+                          <TableCell className="font-mono text-xs">{d.invoiceNumber}</TableCell>
+                          <TableCell className="text-sm">{d.clientName}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{d.amount?.toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-mono text-sm font-medium text-orange-600">{d.outstanding?.toLocaleString()}</TableCell>
+                          <TableCell className="text-xs">{new Date(d.dueDate).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-xs">{d.daysOverdue > 0 ? `${d.daysOverdue}d` : '—'}</TableCell>
+                          <TableCell><Badge variant="outline" className="text-[10px]">{d.bucket}</Badge></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-muted-foreground text-sm">Loading AR aging data...</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* AP Aging */}
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Accounts Payable Aging</CardTitle>
+              <CardDescription>Outstanding expenses by age bucket</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {apAging ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {[
+                      { label: 'Current', value: apAging.summary?.current, color: 'text-green-700 bg-green-50' },
+                      { label: '1-30 Days', value: apAging.summary?.days30, color: 'text-yellow-700 bg-yellow-50' },
+                      { label: '31-60 Days', value: apAging.summary?.days60, color: 'text-orange-700 bg-orange-50' },
+                      { label: '61-90 Days', value: apAging.summary?.days90, color: 'text-red-600 bg-red-50' },
+                      { label: '90+ Days', value: apAging.summary?.over90, color: 'text-red-800 bg-red-100' },
+                    ].map(b => (
+                      <div key={b.label} className={`p-3 rounded-lg ${b.color}`}>
+                        <div className="text-xs font-medium">{b.label}</div>
+                        <div className="text-lg font-bold font-mono">KES {(b.value || 0).toLocaleString()}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-sm font-medium">Total Payable: <span className="font-mono">KES {(apAging.total || 0).toLocaleString()}</span></div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Expense ID</TableHead>
+                        <TableHead>Vendor</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Days Overdue</TableHead>
+                        <TableHead>Bucket</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {apAging.details?.slice(0, 20).map((d: any, i: number) => (
+                        <TableRow key={i}>
+                          <TableCell className="font-mono text-xs">{d.expenseId}</TableCell>
+                          <TableCell className="text-sm">{d.vendor || '—'}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">{d.description}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{d.amount?.toLocaleString()}</TableCell>
+                          <TableCell className="text-xs">{d.dueDate ? new Date(d.dueDate).toLocaleDateString() : '—'}</TableCell>
+                          <TableCell className="text-xs">{d.daysOverdue > 0 ? `${d.daysOverdue}d` : '—'}</TableCell>
+                          <TableCell><Badge variant="outline" className="text-[10px]">{d.bucket}</Badge></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-muted-foreground text-sm">Loading AP aging data...</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          TAX TAB
+          ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'tax' && (
+        <div className="space-y-6">
+          {/* Tax Summary */}
+          {taxSummary && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="border shadow-sm">
+                <CardContent className="pt-4 pb-3">
+                  <div className="text-xs text-muted-foreground">Output VAT (Sales)</div>
+                  <div className="text-xl font-bold font-mono text-orange-600">KES {(taxSummary.outputVAT || 0).toLocaleString()}</div>
+                  <div className="text-[10px] text-muted-foreground">{taxSummary.invoiceCount} invoices</div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardContent className="pt-4 pb-3">
+                  <div className="text-xs text-muted-foreground">Input VAT (Purchases)</div>
+                  <div className="text-xl font-bold font-mono text-blue-600">KES {(taxSummary.inputVAT || 0).toLocaleString()}</div>
+                  <div className="text-[10px] text-muted-foreground">{taxSummary.expenseCount} expenses</div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardContent className="pt-4 pb-3">
+                  <div className="text-xs text-muted-foreground">Net VAT Payable</div>
+                  <div className={`text-xl font-bold font-mono ${(taxSummary.netVAT || 0) >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    KES {(taxSummary.netVAT || 0).toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">Rate: {taxSummary.vatRate}%</div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardContent className="pt-4 pb-3">
+                  <div className="text-xs text-muted-foreground">Period</div>
+                  <div className="text-sm font-medium mt-1">{reportPeriod.startDate}</div>
+                  <div className="text-sm font-medium">to {reportPeriod.endDate}</div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Tax Rates */}
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Tax Rates</CardTitle>
+                  <CardDescription>Configured tax rates</CardDescription>
+                </div>
+                <Button size="sm" variant="outline" onClick={fetchTax} className="gap-1">
+                  <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Rate (%)</TableHead>
+                    <TableHead>Default</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {taxRates.length > 0 ? taxRates.map((tr: any) => (
+                    <TableRow key={tr._id}>
+                      <TableCell className="text-sm font-medium">{tr.name}</TableCell>
+                      <TableCell className="font-mono text-xs">{tr.code}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-[10px] capitalize">{tr.type}</Badge></TableCell>
+                      <TableCell className="text-right font-mono text-sm">{tr.rate}%</TableCell>
+                      <TableCell>{tr.isDefault ? <CheckCircle className="h-4 w-4 text-green-500" /> : '—'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`text-[10px] ${tr.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
+                          {tr.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-sm">
+                        No tax rates configured
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          AUDIT TRAIL TAB
+          ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'audit' && (
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Audit Trail</CardTitle>
+                <CardDescription>Record of all accounting changes</CardDescription>
+              </div>
+              <Button size="sm" variant="outline" onClick={fetchAudit} className="gap-1">
+                <RefreshCw className="h-3.5 w-3.5" /> Refresh
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Entity</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {auditLogs.length > 0 ? auditLogs.map((log: any) => (
+                    <TableRow key={log._id}>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] capitalize">{log.action}</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">{log.entityType}</TableCell>
+                      <TableCell className="font-mono text-xs">{log.entityRef || '—'}</TableCell>
+                      <TableCell className="text-sm">{log.userName || (log.userId?.firstName ? `${log.userId.firstName} ${log.userId.lastName}` : '—')}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                        {log.changes ? JSON.stringify(log.changes).slice(0, 80) : '—'}
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <Shield className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                        No audit logs yet
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          CREATE ACCOUNT DIALOG
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Account</DialogTitle>
+            <DialogDescription>Add an account to the chart of accounts</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateAccount} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Account Code</label>
+                <Input placeholder="e.g. 1100" value={accountForm.code} onChange={e => setAccountForm(f => ({ ...f, code: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Account Name</label>
+                <Input placeholder="e.g. Petty Cash" value={accountForm.name} onChange={e => setAccountForm(f => ({ ...f, name: e.target.value }))} required />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Category</label>
+                <select className="w-full h-9 px-3 border rounded-lg text-sm bg-background" value={accountForm.category}
+                  onChange={e => {
+                    const cat = e.target.value;
+                    const nb = ['asset', 'expense'].includes(cat) ? 'debit' : 'credit';
+                    setAccountForm(f => ({ ...f, category: cat, normalBalance: nb }));
+                  }}>
+                  <option value="asset">Asset</option>
+                  <option value="liability">Liability</option>
+                  <option value="equity">Equity</option>
+                  <option value="revenue">Revenue</option>
+                  <option value="expense">Expense</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Normal Balance</label>
+                <select className="w-full h-9 px-3 border rounded-lg text-sm bg-background" value={accountForm.normalBalance}
+                  onChange={e => setAccountForm(f => ({ ...f, normalBalance: e.target.value }))}>
+                  <option value="debit">Debit</option>
+                  <option value="credit">Credit</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Subcategory (optional)</label>
+              <Input placeholder="e.g. current_asset" value={accountForm.subcategory} onChange={e => setAccountForm(f => ({ ...f, subcategory: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description (optional)</label>
+              <Input placeholder="Account description" value={accountForm.description} onChange={e => setAccountForm(f => ({ ...f, description: e.target.value }))} />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" type="button" onClick={() => setAccountDialogOpen(false)} disabled={submittingAccount}>Cancel</Button>
+              <Button type="submit" disabled={submittingAccount}>{submittingAccount ? 'Creating...' : 'Create Account'}</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          RECORD PAYMENT DIALOG
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>Enter the payment amount for this invoice</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRecordPayment} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Amount (KES)</label>
+              <Input type="number" step="0.01" placeholder="0.00" value={paymentAmount}
+                onChange={e => setPaymentAmount(e.target.value)} required />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" type="button" onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
+              <Button type="submit">Record Payment</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

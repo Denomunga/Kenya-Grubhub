@@ -444,3 +444,76 @@ RecurringExpenseSchema.index({ isActive: 1 });
 RecurringExpenseSchema.index({ autoGenerate: 1 });
 
 export const RecurringExpense = mongoose.model<IRecurringExpense>('RecurringExpense', RecurringExpenseSchema);
+
+// ============================================================
+// AUDIT LOG MODEL
+// ============================================================
+export interface IAuditLog extends Document {
+  action: 'create' | 'update' | 'delete' | 'approve' | 'post' | 'reverse' | 'pay' | 'export';
+  entityType: string;
+  entityId: mongoose.Types.ObjectId;
+  entityRef?: string;
+  userId: mongoose.Types.ObjectId;
+  userName?: string;
+  changes?: Record<string, { old: any; new: any }>;
+  metadata?: Record<string, any>;
+  ipAddress?: string;
+  createdAt: Date;
+}
+
+const AuditLogSchema = new Schema<IAuditLog>(
+  {
+    action: { type: String, enum: ['create', 'update', 'delete', 'approve', 'post', 'reverse', 'pay', 'export'], required: true },
+    entityType: { type: String, required: true },
+    entityId: { type: Schema.Types.ObjectId, required: true },
+    entityRef: { type: String },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    userName: { type: String },
+    changes: { type: Schema.Types.Mixed },
+    metadata: { type: Schema.Types.Mixed },
+    ipAddress: { type: String },
+  },
+  { timestamps: true }
+);
+
+AuditLogSchema.index({ entityType: 1, entityId: 1 });
+AuditLogSchema.index({ userId: 1 });
+AuditLogSchema.index({ createdAt: -1 });
+AuditLogSchema.index({ action: 1 });
+
+export const AuditLog = mongoose.model<IAuditLog>('AuditLog', AuditLogSchema);
+
+// ============================================================
+// TAX RATE MODEL
+// ============================================================
+export interface ITaxRate extends Document {
+  name: string;
+  code: string;
+  rate: number;
+  type: 'vat' | 'withholding' | 'excise' | 'custom';
+  description?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  createdBy: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const TaxRateSchema = new Schema<ITaxRate>(
+  {
+    name: { type: String, required: true },
+    code: { type: String, required: true, unique: true },
+    rate: { type: Number, required: true, min: 0, max: 100 },
+    type: { type: String, enum: ['vat', 'withholding', 'excise', 'custom'], required: true },
+    description: { type: String },
+    isDefault: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { timestamps: true }
+);
+
+TaxRateSchema.index({ code: 1 });
+TaxRateSchema.index({ type: 1 });
+
+export const TaxRate = mongoose.model<ITaxRate>('TaxRate', TaxRateSchema);

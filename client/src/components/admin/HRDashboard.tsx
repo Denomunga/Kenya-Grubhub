@@ -211,7 +211,7 @@ export default function HRDashboard() {
   const [payrollOverview, setPayrollOverview] = useState<PayrollOverview | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [payslips, setPayslips] = useState<Payslip[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'recruitment' | 'contracts' | 'payslips' | 'my-contracts' | 'my-payslips'>(
+  const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'recruitment' | 'contracts' | 'payslips' | 'leaves' | 'my-contracts' | 'my-payslips'>(
     user?.role === 'admin' || user?.role === 'staff' ? 'overview' : 'my-contracts'
   );
   const [searchTerm, setSearchTerm] = useState('');
@@ -231,6 +231,7 @@ export default function HRDashboard() {
   const [selectedEditContract, setSelectedEditContract] = useState<Contract | null>(null);
   const [contractForm, setContractForm] = useState({
     employeeId: '', contractType: 'permanent', title: '', startDate: '', endDate: '', salary: '', terms: 'Standard employment terms per Kenyan Employment Act 2007.', notes: '',
+    annualLeave: '21', sickLeave: '10', maternityLeave: '90', paternityLeave: '14', compassionateLeave: '3',
   });
   const [editPayslipOpen, setEditPayslipOpen] = useState(false);
   const [viewPayslipOpen, setViewPayslipOpen] = useState(false);
@@ -239,6 +240,10 @@ export default function HRDashboard() {
   const [contractOfferOpen, setContractOfferOpen] = useState(false);
   const [contractSignOpen, setContractSignOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+  const [reviewLeaveOpen, setReviewLeaveOpen] = useState(false);
+  const [selectedLeave, setSelectedLeave] = useState<any>(null);
+  const [leaveReviewNotes, setLeaveReviewNotes] = useState('');
   const [employeeForm, setEmployeeForm] = useState({
     firstName: '',
     lastName: '',
@@ -342,6 +347,17 @@ export default function HRDashboard() {
             setPayslips(employeeData.data || []);
           }
         }
+      }
+
+      // Fetch leave requests (admin/HR only)
+      if (user?.role === 'admin' || user?.role === 'staff') {
+        try {
+          const leavesRes = await apiFetch('/api/v1/hr/leaves');
+          if (leavesRes.ok) {
+            const data = await leavesRes.json();
+            setLeaveRequests(data.data?.leaves || []);
+          }
+        } catch {}
       }
     } catch (error) {
       console.error('Failed to fetch HR data:', error);
@@ -781,7 +797,7 @@ export default function HRDashboard() {
 
   // ─── Contract Handlers ─────────────────────────────────────────────
   const handleOpenCreateContract = () => {
-    setContractForm({ employeeId: '', contractType: 'permanent', title: '', startDate: new Date().toISOString().split('T')[0], endDate: '', salary: '', terms: 'Standard employment terms per Kenyan Employment Act 2007.', notes: '' });
+    setContractForm({ employeeId: '', contractType: 'permanent', title: '', startDate: new Date().toISOString().split('T')[0], endDate: '', salary: '', terms: 'Standard employment terms per Kenyan Employment Act 2007.', notes: '', annualLeave: '21', sickLeave: '10', maternityLeave: '90', paternityLeave: '14', compassionateLeave: '3' });
     setCreateContractOpen(true);
   };
 
@@ -792,9 +808,21 @@ export default function HRDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...contractForm,
-          salary: parseFloat(contractForm.salary),
+          employeeId: contractForm.employeeId,
+          contractType: contractForm.contractType,
+          title: contractForm.title,
+          startDate: contractForm.startDate,
           endDate: contractForm.endDate || undefined,
+          salary: parseFloat(contractForm.salary),
+          terms: contractForm.terms,
+          notes: contractForm.notes,
+          leaveEntitlements: {
+            annualLeave: parseInt(contractForm.annualLeave) || 21,
+            sickLeave: parseInt(contractForm.sickLeave) || 10,
+            maternityLeave: parseInt(contractForm.maternityLeave) || 90,
+            paternityLeave: parseInt(contractForm.paternityLeave) || 14,
+            compassionateLeave: parseInt(contractForm.compassionateLeave) || 3,
+          },
         }),
       });
       if (res.ok) {
@@ -821,6 +849,11 @@ export default function HRDashboard() {
       salary: String(contract.salary),
       terms: contract.terms || '',
       notes: contract.notes || '',
+      annualLeave: String(contract.leaveEntitlements?.annualLeave ?? 21),
+      sickLeave: String(contract.leaveEntitlements?.sickLeave ?? 10),
+      maternityLeave: String(contract.leaveEntitlements?.maternityLeave ?? 90),
+      paternityLeave: String(contract.leaveEntitlements?.paternityLeave ?? 14),
+      compassionateLeave: String(contract.leaveEntitlements?.compassionateLeave ?? 3),
     });
     setEditContractOpen(true);
   };
@@ -841,6 +874,13 @@ export default function HRDashboard() {
           terms: contractForm.terms,
           notes: contractForm.notes,
           status: selectedEditContract.status,
+          leaveEntitlements: {
+            annualLeave: parseInt(contractForm.annualLeave) || 21,
+            sickLeave: parseInt(contractForm.sickLeave) || 10,
+            maternityLeave: parseInt(contractForm.maternityLeave) || 90,
+            paternityLeave: parseInt(contractForm.paternityLeave) || 14,
+            compassionateLeave: parseInt(contractForm.compassionateLeave) || 3,
+          },
         }),
       });
       if (res.ok) {
@@ -1018,7 +1058,38 @@ export default function HRDashboard() {
     }
   };
 
+  // ─── Leave Management ──────────────────────────────────────────────────
+  const handleReviewLeave = (leave: any) => {
+    setSelectedLeave(leave);
+    setLeaveReviewNotes('');
+    setReviewLeaveOpen(true);
+  };
+
+  const handleSubmitLeaveReview = async (action: 'approved' | 'rejected') => {
+    if (!selectedLeave) return;
+    try {
+      const res = await apiFetch(`/api/v1/hr/leaves/${selectedLeave._id}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, reviewNotes: leaveReviewNotes }),
+      });
+      if (res.ok) {
+        toast({ title: action === 'approved' ? 'Approved' : 'Rejected', description: `Leave request ${action}` });
+        setReviewLeaveOpen(false);
+        setSelectedLeave(null);
+        fetchHRData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast({ title: 'Error', description: err.error || `Failed to ${action} leave`, variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to review leave request', variant: 'destructive' });
+    }
+  };
+
   // ─── Insights ───────────────────────────────────────────────────────────
+
+  const pendingLeaveCount = leaveRequests.filter(l => l.status === 'pending').length;
 
   const expiringContracts = contracts.filter(c => {
     if (!c.endDate || c.status !== 'active') return false;
@@ -1694,6 +1765,31 @@ export default function HRDashboard() {
               />
             </div>
             <div>
+              <label className="text-sm font-medium">Leave Entitlements (days/year)</label>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Annual</label>
+                  <Input type="number" value={contractForm.annualLeave} onChange={(e) => setContractForm({ ...contractForm, annualLeave: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Sick</label>
+                  <Input type="number" value={contractForm.sickLeave} onChange={(e) => setContractForm({ ...contractForm, sickLeave: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Maternity</label>
+                  <Input type="number" value={contractForm.maternityLeave} onChange={(e) => setContractForm({ ...contractForm, maternityLeave: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Paternity</label>
+                  <Input type="number" value={contractForm.paternityLeave} onChange={(e) => setContractForm({ ...contractForm, paternityLeave: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Compassionate</label>
+                  <Input type="number" value={contractForm.compassionateLeave} onChange={(e) => setContractForm({ ...contractForm, compassionateLeave: e.target.value })} />
+                </div>
+              </div>
+            </div>
+            <div>
               <label className="text-sm font-medium">Notes</label>
               <Input
                 placeholder="Additional notes..."
@@ -1784,6 +1880,31 @@ export default function HRDashboard() {
                 onChange={(e) => setContractForm({ ...contractForm, terms: e.target.value })}
                 required
               />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Leave Entitlements (days/year)</label>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Annual</label>
+                  <Input type="number" value={contractForm.annualLeave} onChange={(e) => setContractForm({ ...contractForm, annualLeave: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Sick</label>
+                  <Input type="number" value={contractForm.sickLeave} onChange={(e) => setContractForm({ ...contractForm, sickLeave: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Maternity</label>
+                  <Input type="number" value={contractForm.maternityLeave} onChange={(e) => setContractForm({ ...contractForm, maternityLeave: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Paternity</label>
+                  <Input type="number" value={contractForm.paternityLeave} onChange={(e) => setContractForm({ ...contractForm, paternityLeave: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Compassionate</label>
+                  <Input type="number" value={contractForm.compassionateLeave} onChange={(e) => setContractForm({ ...contractForm, compassionateLeave: e.target.value })} />
+                </div>
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium">Notes (promotion, demotion, etc.)</label>
@@ -2044,6 +2165,7 @@ export default function HRDashboard() {
             { key: 'recruitment' as const, label: 'Recruitment', icon: UserPlus },
             { key: 'contracts' as const, label: 'Contracts', icon: FileText },
             { key: 'payslips' as const, label: 'Payslips', icon: DollarSign },
+            { key: 'leaves' as const, label: `Leaves${pendingLeaveCount > 0 ? ` (${pendingLeaveCount})` : ''}`, icon: Calendar },
           ] : [
             { key: 'my-contracts' as const, label: 'My Contracts', icon: FileText },
             { key: 'my-payslips' as const, label: 'My Payslips', icon: DollarSign },
@@ -2873,6 +2995,172 @@ export default function HRDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          LEAVES TAB (HR/Admin)
+          ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'leaves' && (
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Leave Requests</CardTitle>
+                <CardDescription>Manage employee leave applications</CardDescription>
+              </div>
+              <div className="flex gap-2 text-xs">
+                <Badge variant="outline" className="text-amber-700 bg-amber-50">{leaveRequests.filter(l => l.status === 'pending').length} Pending</Badge>
+                <Badge variant="outline" className="text-green-700 bg-green-50">{leaveRequests.filter(l => l.status === 'approved').length} Approved</Badge>
+                <Badge variant="outline" className="text-red-700 bg-red-50">{leaveRequests.filter(l => l.status === 'rejected').length} Rejected</Badge>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Dates</TableHead>
+                    <TableHead className="text-center">Days</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leaveRequests.length > 0 ? (
+                    leaveRequests.map((leave: any) => (
+                      <TableRow key={leave._id}>
+                        <TableCell className="text-xs font-medium">
+                          {leave.employeeId?.firstName} {leave.employeeId?.lastName}
+                          <p className="text-[10px] text-muted-foreground">{leave.employeeId?.department}</p>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-[10px] ${
+                            leave.leaveType === 'annual' ? 'text-blue-600 bg-blue-50' :
+                            leave.leaveType === 'sick' ? 'text-red-600 bg-red-50' :
+                            leave.leaveType === 'maternity' ? 'text-pink-600 bg-pink-50' :
+                            leave.leaveType === 'paternity' ? 'text-purple-600 bg-purple-50' :
+                            leave.leaveType === 'compassionate' ? 'text-amber-600 bg-amber-50' :
+                            'text-gray-600 bg-gray-50'
+                          }`}>
+                            {leave.leaveType}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {new Date(leave.startDate).toLocaleDateString()} — {new Date(leave.endDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-center font-medium">{leave.totalDays}</TableCell>
+                        <TableCell className="text-xs max-w-[180px] truncate">{leave.reason}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-[10px] ${
+                            leave.status === 'pending' ? 'text-amber-700 bg-amber-50' :
+                            leave.status === 'approved' ? 'text-green-700 bg-green-50' :
+                            leave.status === 'rejected' ? 'text-red-700 bg-red-50' :
+                            'text-gray-700 bg-gray-50'
+                          }`}>
+                            {leave.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            {leave.doctorLetterUrl && (
+                              <a href={leave.doctorLetterUrl} target="_blank" rel="noopener noreferrer">
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="View Doctor Letter">
+                                  <FileText className="h-3.5 w-3.5 text-blue-600" />
+                                </Button>
+                              </a>
+                            )}
+                            {leave.status === 'pending' && (
+                              <Button variant="outline" size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleReviewLeave(leave)}>
+                                Review
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <Calendar className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                        No leave requests found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Review Leave Dialog */}
+      <Dialog open={reviewLeaveOpen} onOpenChange={setReviewLeaveOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Review Leave Request</DialogTitle>
+            <DialogDescription>Approve or reject this leave application</DialogDescription>
+          </DialogHeader>
+          {selectedLeave && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground text-xs">Employee</span>
+                  <p className="font-medium">{selectedLeave.employeeId?.firstName} {selectedLeave.employeeId?.lastName}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Department</span>
+                  <p className="font-medium">{selectedLeave.employeeId?.department}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Leave Type</span>
+                  <p className="font-medium capitalize">{selectedLeave.leaveType}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Duration</span>
+                  <p className="font-medium">{selectedLeave.totalDays} day(s)</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Start Date</span>
+                  <p className="font-medium">{new Date(selectedLeave.startDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">End Date</span>
+                  <p className="font-medium">{new Date(selectedLeave.endDate).toLocaleDateString()}</p>
+                </div>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">Reason</span>
+                <p className="text-sm bg-muted/50 rounded p-2 mt-1">{selectedLeave.reason}</p>
+              </div>
+              {selectedLeave.doctorLetterUrl && (
+                <div>
+                  <span className="text-muted-foreground text-xs">Doctor's Letter</span>
+                  <a href={selectedLeave.doctorLetterUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:underline mt-1">
+                    <FileText className="h-4 w-4" /> View attached document
+                  </a>
+                </div>
+              )}
+              <div>
+                <label className="text-sm font-medium">Review Notes (optional)</label>
+                <textarea
+                  className="w-full h-16 px-3 py-2 border rounded-lg text-sm bg-background text-foreground mt-1"
+                  placeholder="Add notes about your decision..."
+                  value={leaveReviewNotes}
+                  onChange={(e) => setLeaveReviewNotes(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setReviewLeaveOpen(false)}>Cancel</Button>
+                <Button variant="destructive" onClick={() => handleSubmitLeaveReview('rejected')}>Reject</Button>
+                <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleSubmitLeaveReview('approved')}>Approve</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ═══════════════════════════════════════════════════════════════════
           MY CONTRACTS TAB (Employee View)

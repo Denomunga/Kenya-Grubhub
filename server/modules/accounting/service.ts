@@ -7,7 +7,11 @@ import {
   Expense,
   IExpense,
   RecurringExpense,
-  IRecurringExpense
+  IRecurringExpense,
+  Invoice,
+  AuditLog,
+  TaxRate,
+  ITaxRate,
 } from './models';
 import { PurchaseOrder } from '../procurement/models';
 
@@ -1044,5 +1048,364 @@ export class RecurringExpenseService {
     } catch (error: any) {
       throw new Error(`Failed to initialize recurring expenses: ${error?.message || String(error)}`);
     }
+  }
+}
+// ============================================================
+// ENHANCED CHART OF ACCOUNTS SERVICE (CRUD)
+// ============================================================
+export class AccountService {
+  static async createAccount(data: Partial<IAccount>) {
+    const existing = await Account.findOne({ code: data.code });
+    if (existing) throw new Error(`Account code ${data.code} already exists`);
+    const account = new Account(data);
+    await account.save();
+    return account;
+  }
+
+  static async updateAccount(id: string, data: Partial<IAccount>) {
+    const account = await Account.findByIdAndUpdate(id, { ...data, updatedAt: new Date() }, { new: true, runValidators: true });
+    if (!account) throw new Error('Account not found');
+    return account;
+  }
+
+  static async deleteAccount(id: string) {
+    const account = await Account.findById(id);
+    if (!account) throw new Error('Account not found');
+    const hasEntries = await JournalEntry.countDocuments({ 'lines.accountCode': account.code, status: 'posted' });
+    if (hasEntries > 0) throw new Error('Cannot delete account with posted journal entries. Deactivate it instead.');
+    account.status = 'inactive';
+    await account.save();
+    return account;
+  }
+
+  static async getAccountById(id: string) {
+    const account = await Account.findById(id);
+    if (!account) throw new Error('Account not found');
+    return account;
+  }
+
+  static async getAccountsByCategory(category: string) {
+    return Account.find({ category, status: 'active' }).sort({ code: 1 }).lean();
+  }
+}
+
+// ============================================================
+// ENHANCED FINANCIAL REPORTING (with date ranges)
+// ============================================================
+export class EnhancedReportingService {
+  static async getIncomeStatement(startDate: Date, endDate: Date) {
+    const entries = await JournalEntry.find({
+      status: 'posted',
+      transactionDate: { $gte: startDate, $lte: endDate }
+    }).lean();
+
+    const revenueAccounts: Record<string, { code: string; name: string; amount: number }> = {};
+    const expenseAccounts: Record<string, { code: string; name: string; amount: number }> = {};
+
+    for (const entry of entries) {
+      for (const line of entry.lines) {
+        const account = await Account.findOne({ code: line.accountCode }).lean();
+        if (!account) continue;
+        if (account.category === 'revenue') {
+          if (!revenueAccounts[line.accountCode]) revenueAccounts[line.accountCode] = { code: line.accountCode, name: line.accountName, amount: 0 };
+          revenueAccounts[line.accountCode].amount += (line.credit - line.debit);
+        } else if (account.category === 'expense') {
+          if (!expenseAccounts[line.accountCode]) expenseAccounts[line.accountCode] = { code: line.accountCode, name: line.accountName, amount: 0 };
+          expenseAccounts[line.accountCode].amount += (line.debit - line.credit);
+        }
+      }
+    }
+
+    const totalRevenue = Object.values(revenueAccounts).reduce((s, a) => s + a.amount, 0);
+    const totalExpenses = Object.values(expenseAccounts).reduce((s, a) => s + a.amount, 0);
+
+    return {
+      period: { startDate, endDate },
+      revenue: Object.values(revenueAccounts).sort((a, b) => a.code.localeCompare(b.code)),
+      expenses: Object.values(expenseAccounts).sort((a, b) => a.code.localeCompare(b.code)),
+      totalRevenue,
+      totalExpenses,
+      netIncome: totalRevenue - totalExpenses,
+      grossProfit: totalRevenue - (expenseAccounts['5000']?.amount || 0),
+    };
+  }
+
+  static async getBalanceSheet(asOfDate: Date) {
+    const accounts = await Account.find({ status: 'active' }).sort({ code: 1 }).lean();
+    const assets: any[] = [];
+    const liabilities: any[] = [];
+    const equity: any[] = [];
+    let totalAssets = 0, totalLiabilities = 0, totalEquity = 0;
+
+    for (const acct of accounts) {
+      const item = { code: acct.code, name: acct.name, subcategory: acct.subcategory, balance: acct.balance };
+      if (acct.category === 'asset') { assets.push(item); totalAssets += acct.balance; }
+      else if (acct.category === 'liability') { liabilities.push(item); totalLiabilities += acct.balance; }
+      else if (acct.category === 'equity') { equity.push(item); totalEquity += acct.balance; }
+    }
+
+    const yearStart = new Date(asOfDate.getFullYear(), 0, 1);
+    const pl = await this.getIncomeStatement(yearStart, asOfDate);
+    const retainedEarnings = pl.netIncome;
+
+    return {
+      asOfDate,
+      assets, liabilities, equity, retainedEarnings,
+      totalAssets, totalLiabilities,
+      totalEquity: totalEquity + retainedEarnings,
+      balanced: Math.abs(totalAssets - (totalLiabilities + totalEquity + retainedEarnings)) < 0.01,
+    };
+  }
+
+  static async getCashFlowStatement(startDate: Date, endDate: Date) {
+    const entries = await JournalEntry.find({
+      status: 'posted',
+      transactionDate: { $gte: startDate, $lte: endDate },
+      'lines.accountCode': '1000'
+    }).lean();
+
+    let operatingIn = 0, operatingOut = 0, investingIn = 0, investingOut = 0, financingIn = 0, financingOut = 0;
+
+    for (const entry of entries) {
+      const cashLine = entry.lines.find(l => l.accountCode === '1000');
+      if (!cashLine) continue;
+      const otherLines = entry.lines.filter(l => l.accountCode !== '1000');
+      const isInflow = cashLine.debit > 0;
+      const amount = isInflow ? cashLine.debit : cashLine.credit;
+
+      let classified = false;
+      for (const ol of otherLines) {
+        const acct = await Account.findOne({ code: ol.accountCode }).lean();
+        if (!acct) continue;
+        if (acct.category === 'revenue' || acct.category === 'expense' || acct.subcategory === 'current_liability' || acct.subcategory === 'current_asset') {
+          if (isInflow) operatingIn += amount; else operatingOut += amount;
+          classified = true; break;
+        } else if (acct.subcategory === 'fixed_asset') {
+          if (isInflow) investingIn += amount; else investingOut += amount;
+          classified = true; break;
+        } else if (acct.subcategory === 'long_term_liability' || acct.category === 'equity') {
+          if (isInflow) financingIn += amount; else financingOut += amount;
+          classified = true; break;
+        }
+      }
+      if (!classified) { if (isInflow) operatingIn += amount; else operatingOut += amount; }
+    }
+
+    const cashAccount = await Account.findOne({ code: '1000' }).lean();
+    return {
+      period: { startDate, endDate },
+      operating: { inflow: operatingIn, outflow: operatingOut, net: operatingIn - operatingOut },
+      investing: { inflow: investingIn, outflow: investingOut, net: investingIn - investingOut },
+      financing: { inflow: financingIn, outflow: financingOut, net: financingIn - financingOut },
+      netCashChange: (operatingIn - operatingOut) + (investingIn - investingOut) + (financingIn - financingOut),
+      endingCashBalance: cashAccount?.balance || 0,
+    };
+  }
+
+  static async getGeneralLedger(startDate: Date, endDate: Date, accountCode?: string, page = 1, limit = 100) {
+    const query: any = { status: 'posted', transactionDate: { $gte: startDate, $lte: endDate } };
+    if (accountCode) query['lines.accountCode'] = accountCode;
+    const skip = (page - 1) * limit;
+    const entries = await JournalEntry.find(query).sort({ transactionDate: -1 }).skip(skip).limit(limit).lean();
+    const total = await JournalEntry.countDocuments(query);
+    return { entries, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
+  }
+
+  static async getTrialBalance(_asOfDate?: Date) {
+    const accounts = await Account.find({ status: 'active' }).sort({ code: 1 }).lean();
+    const balances = accounts.map(acct => ({
+      accountId: acct._id, accountCode: acct.code, accountName: acct.name, category: acct.category,
+      debitBalance: ['asset', 'expense'].includes(acct.category) ? Math.max(0, acct.balance) : Math.max(0, -acct.balance),
+      creditBalance: ['liability', 'equity', 'revenue'].includes(acct.category) ? Math.max(0, acct.balance) : Math.max(0, -acct.balance),
+    }));
+    const totalDebits = balances.reduce((s, b) => s + b.debitBalance, 0);
+    const totalCredits = balances.reduce((s, b) => s + b.creditBalance, 0);
+    return { asOfDate: _asOfDate || new Date(), accounts: balances, totalDebits, totalCredits, balanced: Math.abs(totalDebits - totalCredits) < 0.01 };
+  }
+}
+
+// ============================================================
+// AGING REPORTS SERVICE
+// ============================================================
+export class AgingReportService {
+  static async getReceivableAging() {
+    const now = new Date();
+    const invoices = await Invoice.find({ status: { $in: ['unpaid', 'partial', 'overdue'] } }).lean();
+    const buckets = { current: 0, days30: 0, days60: 0, days90: 0, over90: 0 };
+    const details: any[] = [];
+    for (const inv of invoices) {
+      const outstanding = inv.amount - (inv.paidAmount || 0);
+      const daysOverdue = Math.floor((now.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+      let bucket: string;
+      if (daysOverdue <= 0) { buckets.current += outstanding; bucket = 'current'; }
+      else if (daysOverdue <= 30) { buckets.days30 += outstanding; bucket = '1-30'; }
+      else if (daysOverdue <= 60) { buckets.days60 += outstanding; bucket = '31-60'; }
+      else if (daysOverdue <= 90) { buckets.days90 += outstanding; bucket = '61-90'; }
+      else { buckets.over90 += outstanding; bucket = '90+'; }
+      details.push({ invoiceNumber: inv.invoiceNumber, clientName: inv.clientName, amount: inv.amount, outstanding, dueDate: inv.dueDate, daysOverdue: Math.max(0, daysOverdue), bucket });
+    }
+    return { summary: buckets, total: Object.values(buckets).reduce((s, v) => s + v, 0), details: details.sort((a, b) => b.daysOverdue - a.daysOverdue) };
+  }
+
+  static async getPayableAging() {
+    const now = new Date();
+    const expenses = await Expense.find({ status: { $in: ['pending', 'approved', 'overdue'] } }).lean();
+    const buckets = { current: 0, days30: 0, days60: 0, days90: 0, over90: 0 };
+    const details: any[] = [];
+    for (const exp of expenses) {
+      const dueDate = exp.dueDate || exp.expenseDate;
+      const daysOverdue = Math.floor((now.getTime() - new Date(dueDate).getTime()) / (1000 * 60 * 60 * 24));
+      let bucket: string;
+      if (daysOverdue <= 0) { buckets.current += exp.amount; bucket = 'current'; }
+      else if (daysOverdue <= 30) { buckets.days30 += exp.amount; bucket = '1-30'; }
+      else if (daysOverdue <= 60) { buckets.days60 += exp.amount; bucket = '31-60'; }
+      else if (daysOverdue <= 90) { buckets.days90 += exp.amount; bucket = '61-90'; }
+      else { buckets.over90 += exp.amount; bucket = '90+'; }
+      details.push({ expenseId: exp.expenseId, description: exp.description, vendor: exp.vendor, amount: exp.amount, dueDate, daysOverdue: Math.max(0, daysOverdue), status: exp.status, bucket });
+    }
+    return { summary: buckets, total: Object.values(buckets).reduce((s, v) => s + v, 0), details: details.sort((a, b) => b.daysOverdue - a.daysOverdue) };
+  }
+}
+
+// ============================================================
+// TAX SERVICE
+// ============================================================
+export class TaxService {
+  static async createTaxRate(data: Partial<ITaxRate>) {
+    const existing = await TaxRate.findOne({ code: data.code });
+    if (existing) throw new Error(`Tax code ${data.code} already exists`);
+    const taxRate = new TaxRate(data);
+    await taxRate.save();
+    return taxRate;
+  }
+
+  static async getTaxRates(filters: any = {}) {
+    const query: any = {};
+    if (filters.type) query.type = filters.type;
+    if (filters.isActive !== undefined) query.isActive = filters.isActive;
+    return TaxRate.find(query).sort({ type: 1, code: 1 }).lean();
+  }
+
+  static async updateTaxRate(id: string, data: Partial<ITaxRate>) {
+    const rate = await TaxRate.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    if (!rate) throw new Error('Tax rate not found');
+    return rate;
+  }
+
+  static async deleteTaxRate(id: string) {
+    const rate = await TaxRate.findByIdAndDelete(id);
+    if (!rate) throw new Error('Tax rate not found');
+    return rate;
+  }
+
+  static async getTaxSummary(startDate: Date, endDate: Date) {
+    const invoices = await Invoice.find({ createdAt: { $gte: startDate, $lte: endDate } }).lean();
+    const expenses = await Expense.find({ expenseDate: { $gte: startDate, $lte: endDate } }).lean();
+    const totalSales = invoices.reduce((s, i) => s + i.amount, 0);
+    const totalPurchases = expenses.filter(e => e.status !== 'cancelled').reduce((s, e) => s + e.amount, 0);
+    const vatRate = await TaxRate.findOne({ type: 'vat', isDefault: true }).lean();
+    const vat = vatRate?.rate || 16;
+    const outputVAT = totalSales * (vat / (100 + vat));
+    const inputVAT = totalPurchases * (vat / (100 + vat));
+    return {
+      period: { startDate, endDate }, totalSales, totalPurchases, vatRate: vat,
+      outputVAT: Math.round(outputVAT * 100) / 100, inputVAT: Math.round(inputVAT * 100) / 100,
+      netVAT: Math.round((outputVAT - inputVAT) * 100) / 100,
+      invoiceCount: invoices.length, expenseCount: expenses.length,
+    };
+  }
+
+  static async initializeDefaultTaxRates(userId: string) {
+    const count = await TaxRate.countDocuments();
+    if (count > 0) return;
+    const defaults = [
+      { name: 'VAT 16%', code: 'VAT-16', rate: 16, type: 'vat' as const, description: 'Standard VAT rate (Kenya)', isDefault: true, isActive: true, createdBy: userId },
+      { name: 'VAT 0%', code: 'VAT-0', rate: 0, type: 'vat' as const, description: 'Zero-rated VAT', isDefault: false, isActive: true, createdBy: userId },
+      { name: 'VAT Exempt', code: 'VAT-EX', rate: 0, type: 'vat' as const, description: 'VAT Exempt supplies', isDefault: false, isActive: true, createdBy: userId },
+      { name: 'Withholding Tax 5%', code: 'WHT-5', rate: 5, type: 'withholding' as const, description: 'Withholding tax on services', isDefault: true, isActive: true, createdBy: userId },
+      { name: 'Withholding Tax 3%', code: 'WHT-3', rate: 3, type: 'withholding' as const, description: 'Withholding tax on goods', isDefault: false, isActive: true, createdBy: userId },
+    ];
+    for (const d of defaults) await TaxRate.create(d);
+  }
+}
+
+// ============================================================
+// AUDIT TRAIL SERVICE
+// ============================================================
+export class AuditService {
+  static async log(data: { action: string; entityType: string; entityId: string; entityRef?: string; userId: string; userName?: string; changes?: any; metadata?: any; ipAddress?: string }) {
+    try { await AuditLog.create(data); } catch (err) { console.error('Audit log error:', err); }
+  }
+
+  static async getAuditLogs(filters: any = {}, page = 1, limit = 50) {
+    const query: any = {};
+    if (filters.entityType) query.entityType = filters.entityType;
+    if (filters.entityId) query.entityId = filters.entityId;
+    if (filters.userId) query.userId = filters.userId;
+    if (filters.action) query.action = filters.action;
+    if (filters.startDate || filters.endDate) {
+      query.createdAt = {};
+      if (filters.startDate) query.createdAt.$gte = new Date(filters.startDate);
+      if (filters.endDate) query.createdAt.$lte = new Date(filters.endDate);
+    }
+    const skip = (page - 1) * limit;
+    const logs = await AuditLog.find(query).populate('userId', 'firstName lastName email').sort({ createdAt: -1 }).skip(skip).limit(limit).lean();
+    const total = await AuditLog.countDocuments(query);
+    return { logs, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
+  }
+}
+
+// ============================================================
+// INVOICE SERVICE
+// ============================================================
+export class InvoiceService {
+  static async getInvoices(filters: any = {}, page = 1, limit = 50) {
+    const query: any = {};
+    if (filters.status) query.status = filters.status;
+    if (filters.clientName) query.clientName = { $regex: filters.clientName, $options: 'i' };
+    if (filters.startDate || filters.endDate) {
+      query.dueDate = {};
+      if (filters.startDate) query.dueDate.$gte = new Date(filters.startDate);
+      if (filters.endDate) query.dueDate.$lte = new Date(filters.endDate);
+    }
+    const skip = (page - 1) * limit;
+    const invoices = await Invoice.find(query).populate('createdBy', 'firstName lastName').sort({ createdAt: -1 }).skip(skip).limit(limit).lean();
+    const total = await Invoice.countDocuments(query);
+    return { invoices, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
+  }
+
+  static async getInvoiceById(id: string) {
+    const invoice = await Invoice.findById(id).populate('createdBy', 'firstName lastName');
+    if (!invoice) throw new Error('Invoice not found');
+    return invoice;
+  }
+
+  static async updateInvoice(id: string, data: any) {
+    const invoice = await Invoice.findByIdAndUpdate(id, { ...data, updatedAt: new Date() }, { new: true, runValidators: true });
+    if (!invoice) throw new Error('Invoice not found');
+    return invoice;
+  }
+
+  static async recordPayment(id: string, amount: number) {
+    const invoice = await Invoice.findById(id);
+    if (!invoice) throw new Error('Invoice not found');
+    invoice.paidAmount = (invoice.paidAmount || 0) + amount;
+    if (invoice.paidAmount >= invoice.amount) invoice.status = 'paid';
+    else invoice.status = 'partial';
+    await invoice.save();
+    return invoice;
+  }
+
+  static async deleteInvoice(id: string) {
+    const invoice = await Invoice.findById(id);
+    if (!invoice) throw new Error('Invoice not found');
+    if (invoice.status === 'paid') throw new Error('Cannot delete a paid invoice');
+    await Invoice.findByIdAndDelete(id);
+    return invoice;
+  }
+
+  static async bulkUpdateStatus(ids: string[], status: string) {
+    const result = await Invoice.updateMany({ _id: { $in: ids } }, { status, updatedAt: new Date() });
+    return { modifiedCount: result.modifiedCount };
   }
 }
