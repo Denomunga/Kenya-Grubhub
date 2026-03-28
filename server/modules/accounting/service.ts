@@ -12,6 +12,7 @@ import {
   AuditLog,
   TaxRate,
   ITaxRate,
+  RecurringInvoice,
 } from './models';
 import { PurchaseOrder } from '../procurement/models';
 
@@ -1528,5 +1529,311 @@ export class InvoiceService {
       { status, updatedAt: new Date() }
     );
     return { modifiedCount: result.modifiedCount };
+  }
+}
+
+// ============================================================
+// INVENTORY ACCOUNTING SERVICE (COGS, Stock Tracking)
+// ============================================================
+export class InventoryAccountingService {
+  static async getStockOverview() {
+    try {
+      const InventoryItem = (await import('../inventory/model')).InventoryItem;
+      const items = await InventoryItem.find({ status: { $ne: 'discontinued' } }).sort({ currentStock: 1 }).lean();
+      const lowStock = items.filter((i: any) => i.currentStock <= i.minimumStock);
+      const outOfStock = items.filter((i: any) => i.currentStock === 0);
+      const totalValue = items.reduce((sum: number, i: any) => sum + (i.currentStock * i.costPrice), 0);
+      const totalRetailValue = items.reduce((sum: number, i: any) => sum + (i.currentStock * i.sellingPrice), 0);
+      return {
+        items,
+        summary: {
+          totalItems: items.length,
+          totalValue: Math.round(totalValue * 100) / 100,
+          totalRetailValue: Math.round(totalRetailValue * 100) / 100,
+          potentialProfit: Math.round((totalRetailValue - totalValue) * 100) / 100,
+          lowStockCount: lowStock.length,
+          outOfStockCount: outOfStock.length,
+        },
+        lowStockAlerts: lowStock,
+        outOfStock,
+      };
+    } catch (err) {
+      console.error('Stock overview error:', err);
+      return { items: [], summary: { totalItems: 0, totalValue: 0, totalRetailValue: 0, potentialProfit: 0, lowStockCount: 0, outOfStockCount: 0 }, lowStockAlerts: [], outOfStock: [] };
+    }
+  }
+
+  static async getCOGS(startDate: Date, endDate: Date) {
+    try {
+      const { Order } = await import('../../models/Order');
+      const orders = await Order.find({
+        status: 'Delivered',
+        createdAt: { $gte: startDate, $lte: endDate }
+      }).lean();
+
+      const { Product } = await import('../../models/Product');
+      let totalCOGS = 0;
+      let totalRevenue = 0;
+      const productCOGS: any[] = [];
+
+      for (const order of orders) {
+        for (const item of (order as any).items || []) {
+          if (item.productId) {
+            const product = await Product.findById(item.productId).lean();
+            if (product) {
+              const InventoryItem = (await import('../inventory/model')).InventoryItem;
+              const invItem = await InventoryItem.findOne({ productId: item.productId }).lean();
+              const costPrice = invItem ? (invItem as any).costPrice : (product as any).price * 0.6;
+              const itemCOGS = costPrice * item.quantity;
+              const itemRevenue = item.price * item.quantity;
+              totalCOGS += itemCOGS;
+              totalRevenue += itemRevenue;
+              productCOGS.push({ productId: item.productId, name: item.name, quantity: item.quantity, costPrice, revenue: itemRevenue, cogs: itemCOGS, profit: itemRevenue - itemCOGS, margin: itemRevenue > 0 ? ((itemRevenue - itemCOGS) / itemRevenue * 100) : 0 });
+            }
+          }
+        }
+      }
+
+      return {
+        totalCOGS: Math.round(totalCOGS * 100) / 100,
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
+        grossProfit: Math.round((totalRevenue - totalCOGS) * 100) / 100,
+        grossMargin: totalRevenue > 0 ? Math.round((totalRevenue - totalCOGS) / totalRevenue * 10000) / 100 : 0,
+        products: productCOGS.sort((a, b) => b.profit - a.profit),
+        period: { startDate, endDate },
+      };
+    } catch (err) {
+      console.error('COGS calculation error:', err);
+      return { totalCOGS: 0, totalRevenue: 0, grossProfit: 0, grossMargin: 0, products: [], period: { startDate, endDate } };
+    }
+  }
+}
+
+// ============================================================
+// SMART INSIGHTS SERVICE
+// ============================================================
+export class InsightsService {
+  static async getInsights() {
+    try {
+      const now = new Date();
+      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      const insights: { type: 'warning' | 'success' | 'info' | 'danger'; icon: string; message: string; detail?: string }[] = [];
+
+      // Expense trend
+      const thisMonthExpenses = await Expense.aggregate([
+        { $match: { expenseDate: { $gte: thisMonthStart }, status: { $ne: 'cancelled' } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]);
+      const lastMonthExpenses = await Expense.aggregate([
+        { $match: { expenseDate: { $gte: lastMonthStart, $lte: lastMonthEnd }, status: { $ne: 'cancelled' } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]);
+      const thisExp = thisMonthExpenses[0]?.total || 0;
+      const lastExp = lastMonthExpenses[0]?.total || 0;
+      if (lastExp > 0 && thisExp > lastExp) {
+        const pct = Math.round((thisExp - lastExp) / lastExp * 100);
+        insights.push({ type: 'warning', icon: 'TrendingUp', message: `Your expenses increased by ${pct}% this month`, detail: `KES ${thisExp.toLocaleString()} vs KES ${lastExp.toLocaleString()} last month` });
+      } else if (lastExp > 0 && thisExp < lastExp) {
+        const pct = Math.round((lastExp - thisExp) / lastExp * 100);
+        insights.push({ type: 'success', icon: 'TrendingDown', message: `Your expenses decreased by ${pct}% this month`, detail: `KES ${thisExp.toLocaleString()} vs KES ${lastExp.toLocaleString()} last month` });
+      }
+
+      // Most profitable product
+      try {
+        const { Order } = await import('../../models/Order');
+        const recentOrders = await Order.find({ status: 'Delivered', createdAt: { $gte: lastMonthStart } }).lean();
+        const productRevenue: Record<string, { name: string; revenue: number; count: number }> = {};
+        for (const order of recentOrders) {
+          for (const item of (order as any).items || []) {
+            const key = item.name || item.productId || 'Unknown';
+            if (!productRevenue[key]) productRevenue[key] = { name: key, revenue: 0, count: 0 };
+            productRevenue[key].revenue += item.price * item.quantity;
+            productRevenue[key].count += item.quantity;
+          }
+        }
+        const sorted = Object.values(productRevenue).sort((a, b) => b.revenue - a.revenue);
+        if (sorted.length > 0) {
+          insights.push({ type: 'success', icon: 'Star', message: `Your most profitable product is ${sorted[0].name}`, detail: `KES ${sorted[0].revenue.toLocaleString()} revenue from ${sorted[0].count} units sold` });
+        }
+        if (sorted.length > 2) {
+          const worst = sorted[sorted.length - 1];
+          insights.push({ type: 'danger', icon: 'AlertTriangle', message: `Low performer: ${worst.name}`, detail: `Only KES ${worst.revenue.toLocaleString()} from ${worst.count} units` });
+        }
+      } catch {}
+
+      // Overdue invoices warning
+      const overdueCount = await Invoice.countDocuments({ status: 'overdue', isDeleted: { $ne: true } });
+      if (overdueCount > 0) {
+        const overdueTotal = await Invoice.aggregate([
+          { $match: { status: 'overdue', isDeleted: { $ne: true } } },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+        insights.push({ type: 'danger', icon: 'Clock', message: `You have ${overdueCount} overdue invoice(s)`, detail: `Total outstanding: KES ${(overdueTotal[0]?.total || 0).toLocaleString()}` });
+      }
+
+      // Upcoming recurring expenses
+      const upcomingRecurring = await RecurringExpense.find({ isActive: true, nextDueDate: { $lte: new Date(now.getTime() + 7 * 86400000) } }).lean();
+      if (upcomingRecurring.length > 0) {
+        const total = upcomingRecurring.reduce((s: number, r: any) => s + r.amount, 0);
+        insights.push({ type: 'info', icon: 'Calendar', message: ` recurring expense(s) due this week`, detail: `Total: KES ${total.toLocaleString()}` });
+      }
+
+      return insights;
+    } catch (err) {
+      console.error('Insights error:', err);
+      return [];
+    }
+  }
+}
+
+// ============================================================
+// CASH FLOW FORECAST SERVICE
+// ============================================================
+export class CashFlowForecastService {
+  static async getForecast(days: number = 30) {
+    try {
+      const now = new Date();
+      const forecastEnd = new Date(now.getTime() + days * 86400000);
+
+      // Current cash position (from Account model)
+      const cashAccounts = await Account.find({ code: { $in: ['1000', '1010', '1020'] }, status: 'active' }).lean();
+      const currentCash = cashAccounts.reduce((s: number, a: any) => s + (a.balance || 0), 0);
+
+      // Expected income (unpaid invoices due in forecast period)
+      const expectedIncome = await Invoice.aggregate([
+        { $match: { status: { $in: ['unpaid', 'partial'] }, dueDate: { $lte: forecastEnd }, isDeleted: { $ne: true } } },
+        { $group: { _id: null, total: { $sum: { $subtract: [{ $ifNull: ['$totalAmount', '$amount'] }, { $ifNull: ['$paidAmount', 0] }] } } } }
+      ]);
+
+      // Upcoming recurring expenses
+      const recurringExpenses = await RecurringExpense.find({ isActive: true, nextDueDate: { $lte: forecastEnd } }).lean();
+      const expectedExpenses = recurringExpenses.reduce((s: number, r: any) => s + r.amount, 0);
+
+      // Pending expenses
+      const pendingExpenses = await Expense.aggregate([
+        { $match: { status: { $in: ['pending', 'approved'] }, dueDate: { $lte: forecastEnd } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]);
+
+      const inflow = expectedIncome[0]?.total || 0;
+      const outflow = expectedExpenses + (pendingExpenses[0]?.total || 0);
+      const projectedBalance = currentCash + inflow - outflow;
+
+      // Calculate days until cash runs out (if negative trend)
+      let daysUntilCashOut: number | null = null;
+      if (outflow > inflow && outflow > 0) {
+        const dailyBurn = (outflow - inflow) / days;
+        if (dailyBurn > 0) daysUntilCashOut = Math.floor(currentCash / dailyBurn);
+      }
+
+      // Daily forecast breakdown
+      const dailyForecast: { date: string; inflow: number; outflow: number; balance: number }[] = [];
+      let runningBalance = currentCash;
+      for (let d = 0; d < Math.min(days, 30); d++) {
+        const date = new Date(now.getTime() + d * 86400000);
+        const dateStr = date.toISOString().slice(0, 10);
+        const dayInflow = inflow / days;
+        const dayOutflow = outflow / days;
+        runningBalance += dayInflow - dayOutflow;
+        dailyForecast.push({ date: dateStr, inflow: Math.round(dayInflow), outflow: Math.round(dayOutflow), balance: Math.round(runningBalance) });
+      }
+
+      return {
+        currentCash: Math.round(currentCash),
+        expectedIncome: Math.round(inflow),
+        expectedExpenses: Math.round(outflow),
+        projectedBalance: Math.round(projectedBalance),
+        daysUntilCashOut,
+        recurringExpenses: recurringExpenses.map((r: any) => ({ name: r.description, amount: r.amount, dueDate: r.nextDueDate, frequency: r.frequency })),
+        dailyForecast,
+        warning: daysUntilCashOut !== null && daysUntilCashOut <= 30 ? `You will run out of cash in ${daysUntilCashOut} days` : null,
+      };
+    } catch (err) {
+      console.error('Cash flow forecast error:', err);
+      return { currentCash: 0, expectedIncome: 0, expectedExpenses: 0, projectedBalance: 0, daysUntilCashOut: null, recurringExpenses: [], dailyForecast: [], warning: null };
+    }
+  }
+}
+
+// ============================================================
+// RECURRING INVOICE SERVICE
+// ============================================================
+export class RecurringInvoiceService {
+  static async getAll() {
+    return RecurringInvoice.find().sort({ nextDueDate: 1 }).lean();
+  }
+
+  static async create(data: any) {
+    const recurringId = `RI-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const taxCalc = await InvoiceService.calculateTax(data.amount);
+    const ri = new RecurringInvoice({
+      ...data,
+      recurringId,
+      taxRate: taxCalc.taxRate,
+      taxAmount: taxCalc.taxAmount,
+      totalAmount: taxCalc.totalAmount,
+      generatedCount: 0,
+    });
+    await ri.save();
+    return ri;
+  }
+
+  static async update(id: string, data: any) {
+    const ri = await RecurringInvoice.findByIdAndUpdate(id, { ...data, updatedAt: new Date() }, { new: true });
+    if (!ri) throw new Error('Recurring invoice not found');
+    return ri;
+  }
+
+  static async delete(id: string) {
+    const ri = await RecurringInvoice.findByIdAndUpdate(id, { isActive: false }, { new: true });
+    if (!ri) throw new Error('Recurring invoice not found');
+    return ri;
+  }
+
+  static async generateDueInvoices(userId: string) {
+    const now = new Date();
+    const dueItems = await RecurringInvoice.find({ isActive: true, autoGenerate: true, nextDueDate: { $lte: now } });
+    const generated: any[] = [];
+
+    for (const ri of dueItems) {
+      try {
+        const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        const invoice = new Invoice({
+          invoiceNumber,
+          clientName: ri.clientName,
+          amount: ri.amount,
+          taxRate: ri.taxRate,
+          taxAmount: ri.taxAmount,
+          totalAmount: ri.totalAmount,
+          dueDate: ri.nextDueDate,
+          description: `[Auto] ${ri.description || 'Recurring invoice'}` ,
+          status: 'unpaid',
+          paidAmount: 0,
+          createdBy: ri.createdBy,
+        });
+        await invoice.save();
+        await InvoiceService.createInvoiceJournalEntry(invoice, userId);
+
+        // Update recurring invoice next due date
+        let nextDue = new Date(ri.nextDueDate);
+        if (ri.frequency === 'weekly') nextDue.setDate(nextDue.getDate() + 7);
+        else if (ri.frequency === 'monthly') nextDue.setMonth(nextDue.getMonth() + 1);
+        else if (ri.frequency === 'quarterly') nextDue.setMonth(nextDue.getMonth() + 3);
+        else if (ri.frequency === 'yearly') nextDue.setFullYear(nextDue.getFullYear() + 1);
+
+        ri.nextDueDate = nextDue;
+        ri.lastGeneratedDate = now;
+        ri.generatedCount = (ri.generatedCount || 0) + 1;
+        if (ri.endDate && nextDue > ri.endDate) ri.isActive = false;
+        await ri.save();
+
+        generated.push(invoice);
+      } catch (err) {
+        console.error(`Failed to generate invoice for RI ${ri.recurringId}:`, err);
+      }
+    }
+    return { generated: generated.length, invoices: generated };
   }
 }

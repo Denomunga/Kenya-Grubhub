@@ -1327,86 +1327,67 @@ export default function Dashboard() {
                 Orders
               </span>
             </TabsTrigger>
-            <TabsTrigger value="pos" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
-              <span className="inline-flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                POS
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="menu" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
-              <span className="inline-flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Menu
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="location" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
-              <span className="inline-flex items-center gap-2">
-                <MapPinned className="h-4 w-4" />
-                Location
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="news" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
-              <span className="inline-flex items-center gap-2">
-                <Newspaper className="h-4 w-4" />
-                News
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="newsletter" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
-              <span className="inline-flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Newsletter
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
-              <span className="inline-flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Settings
-              </span>
-            </TabsTrigger>
 
-            {isAdmin && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="sm:hidden inline-flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm border bg-background/70 hover:bg-background transition-colors snap-start shrink-0"
-                    aria-label="More admin tabs"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                    More
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => setActiveTab("pos")}>POS</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setActiveTab("menu")}>Menu</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setActiveTab("location")}>Location</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setActiveTab("news")}>News</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setActiveTab("newsletter")}>Newsletter</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setActiveTab("settings")}>Settings</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setActiveTab("hr")}>HR</DropdownMenuItem>
-                  {(isAdmin || isAccountant) && <DropdownMenuItem onSelect={() => setActiveTab("accounting")}>Accounting</DropdownMenuItem>}
-                  <DropdownMenuItem onSelect={() => setActiveTab("audit")}>Audit</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setActiveTab("user-audit")}>User Audit</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            <TabsTrigger value="hr" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
-              <span className="inline-flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                HR
-              </span>
-            </TabsTrigger>
-            {(isAdmin || isAccountant) && (
-              <TabsTrigger value="accounting" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
-                <span className="inline-flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Accounting
-                </span>
-              </TabsTrigger>
-            )}
-            {isAdmin && <TabsTrigger value="audit" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">Audit</TabsTrigger>}
-            {isAdmin && <TabsTrigger value="user-audit" className="hidden sm:inline-flex data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">User Audit</TabsTrigger>}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm border bg-background/70 hover:bg-background transition-colors snap-start shrink-0"
+                  aria-label="More links"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                  <span className="hidden sm:inline">Links</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onSelect={() => setActiveTab("pos")}>
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  POS
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setActiveTab("menu")}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Menu
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setActiveTab("location")}>
+                  <MapPinned className="h-4 w-4 mr-2" />
+                  Location
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setActiveTab("news")}>
+                  <Newspaper className="h-4 w-4 mr-2" />
+                  News
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setActiveTab("newsletter")}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Newsletter
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setActiveTab("settings")}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setActiveTab("hr")}>
+                  <Users className="h-4 w-4 mr-2" />
+                  HR
+                </DropdownMenuItem>
+                {(isAdmin || isAccountant) && (
+                  <DropdownMenuItem onSelect={() => setActiveTab("accounting")}>
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Accounting
+                  </DropdownMenuItem>
+                )}
+                {isAdmin && (
+                  <>
+                    <DropdownMenuItem onSelect={() => setActiveTab("audit")}>
+                      <LayoutGrid className="h-4 w-4 mr-2" />
+                      Audit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setActiveTab("user-audit")}>
+                      <Users className="h-4 w-4 mr-2" />
+                      User Audit
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </TabsList>
         </div>
 

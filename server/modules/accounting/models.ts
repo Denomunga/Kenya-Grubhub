@@ -533,3 +533,56 @@ TaxRateSchema.index({ code: 1 });
 TaxRateSchema.index({ type: 1 });
 
 export const TaxRate = mongoose.model<ITaxRate>('TaxRate', TaxRateSchema);
+// ============================================================
+// RECURRING INVOICE MODEL
+// ============================================================
+export interface IRecurringInvoice extends Document {
+  recurringId: string;
+  clientName: string;
+  amount: number;
+  description?: string;
+  frequency: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  startDate: Date;
+  endDate?: Date;
+  nextDueDate: Date;
+  lastGeneratedDate?: Date;
+  dayOfMonth?: number;
+  taxRate: number;
+  taxAmount: number;
+  totalAmount: number;
+  autoGenerate: boolean;
+  isActive: boolean;
+  generatedCount: number;
+  createdBy: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const RecurringInvoiceSchema = new Schema<IRecurringInvoice>(
+  {
+    recurringId: { type: String, required: true, unique: true },
+    clientName: { type: String, required: true },
+    amount: { type: Number, required: true, min: 0 },
+    description: { type: String },
+    frequency: { type: String, enum: ['weekly', 'monthly', 'quarterly', 'yearly'], required: true, default: 'monthly' },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date },
+    nextDueDate: { type: Date, required: true },
+    lastGeneratedDate: { type: Date },
+    dayOfMonth: { type: Number, min: 1, max: 28 },
+    taxRate: { type: Number, default: 0 },
+    taxAmount: { type: Number, default: 0 },
+    totalAmount: { type: Number, default: 0 },
+    autoGenerate: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: true },
+    generatedCount: { type: Number, default: 0 },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { timestamps: true }
+);
+
+RecurringInvoiceSchema.index({ recurringId: 1 });
+RecurringInvoiceSchema.index({ nextDueDate: 1 });
+RecurringInvoiceSchema.index({ isActive: 1 });
+
+export const RecurringInvoice = mongoose.model<IRecurringInvoice>('RecurringInvoice', RecurringInvoiceSchema);
