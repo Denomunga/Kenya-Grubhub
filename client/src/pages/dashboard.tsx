@@ -1318,7 +1318,7 @@ export default function Dashboard() {
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="flex-1 min-w-[80px] max-w-[180px] data-[state=active]:bg-background data-[state=active]:shadow-md data-[state=active]:text-primary data-[state=active]:border-primary/20 border border-transparent hover:border-border/60 hover:bg-muted/40 whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 h-auto"
+                  className="flex-1 min-w-20 max-w-[180px] data-[state=active]:bg-background data-[state=active]:shadow-md data-[state=active]:text-primary data-[state=active]:border-primary/20 border border-transparent hover:border-border/60 hover:bg-muted/40 whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 h-auto"
                 >
                   <span className="inline-flex items-center justify-center gap-2 w-full">
                     <tab.icon className="h-4 w-4 shrink-0" />
