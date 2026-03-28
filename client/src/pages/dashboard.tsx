@@ -1351,31 +1351,31 @@ export default function Dashboard() {
                   <div className="p-1.5 rounded-md bg-green-500/10 text-green-600">
                     <DollarSign className="h-4 w-4" />
                   </div>
-                  <span className="font-medium">POS</span>
+                  <span className="font-medium">Point Of Sale (POS)</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setActiveTab("menu")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
                   <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-600">
                     <Mail className="h-4 w-4" />
                   </div>
-                  <span className="font-medium">Menu</span>
+                  <span className="font-medium">STORE</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setActiveTab("location")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
                   <div className="p-1.5 rounded-md bg-orange-500/10 text-orange-600">
                     <MapPinned className="h-4 w-4" />
                   </div>
-                  <span className="font-medium">Location</span>
+                  <span className="font-medium">Add B/S Location</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setActiveTab("news")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
                   <div className="p-1.5 rounded-md bg-purple-500/10 text-purple-600">
                     <Newspaper className="h-4 w-4" />
                   </div>
-                  <span className="font-medium">News</span>
+                  <span className="font-medium">Add/Edit News</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setActiveTab("newsletter")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
                   <div className="p-1.5 rounded-md bg-pink-500/10 text-pink-600">
                     <Mail className="h-4 w-4" />
                   </div>
-                  <span className="font-medium">Newsletter</span>
+                  <span className="font-medium">Send Newsletter</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setActiveTab("settings")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
                   <div className="p-1.5 rounded-md bg-gray-500/10 text-gray-600">
@@ -1387,7 +1387,7 @@ export default function Dashboard() {
                   <div className="p-1.5 rounded-md bg-indigo-500/10 text-indigo-600">
                     <Users className="h-4 w-4" />
                   </div>
-                  <span className="font-medium">HR</span>
+                  <span className="font-medium"> Human Resource (HR)</span>
                 </DropdownMenuItem>
                 {(isAdmin || isAccountant) && (
                   <DropdownMenuItem onSelect={() => setActiveTab("accounting")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
