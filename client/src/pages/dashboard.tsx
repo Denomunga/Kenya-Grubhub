@@ -1357,7 +1357,7 @@ export default function Dashboard() {
                   <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-600">
                     <Mail className="h-4 w-4" />
                   </div>
-                  <span className="font-medium">STORE</span>
+                  <span className="font-medium">Store</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setActiveTab("location")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
                   <div className="p-1.5 rounded-md bg-orange-500/10 text-orange-600">
