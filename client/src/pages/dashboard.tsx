@@ -1309,6 +1309,7 @@ export default function Dashboard() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="sticky top-16 z-20 -mx-4 px-4 py-4 bg-background/95 backdrop-blur-xl border-b shadow-sm supports-backdrop-filter:bg-background/80">
           <div className="flex items-center gap-3">
+            <TabsList className="flex-1 flex gap-2 bg-transparent p-0 h-auto">
               {[
                 { value: "overview", icon: LayoutGrid, label: "Overview" },
                 { value: "analytics", icon: BarChart3, label: "Analytics" },
@@ -1317,17 +1318,15 @@ export default function Dashboard() {
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="relative flex-1 min-w-[100px] max-w-[140px] data-[state=active]:bg-linear-to-br data-[state=active]:from-background data-[state=active]:to-muted data-[state=active]:shadow-md data-[state=active]:text-primary whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-muted/50 data-[state=active]:hover:bg-linear-to-br"
+                  className="flex-1 min-w-[80px] max-w-[180px] data-[state=active]:bg-background data-[state=active]:shadow-md data-[state=active]:text-primary data-[state=active]:border-primary/20 border border-transparent hover:border-border/60 hover:bg-muted/40 whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 h-auto"
                 >
-                  <span className="inline-flex items-center gap-2">
-                    <tab.icon className="h-4 w-4 transition-transform duration-200 group-data-[state=active]:scale-110" />
-                    {tab.label}
+                  <span className="inline-flex items-center justify-center gap-2 w-full">
+                    <tab.icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{tab.label}</span>
                   </span>
-                  {activeTab === tab.value && (
-                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
-                  )}
                 </TabsTrigger>
               ))}
+            </TabsList>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
