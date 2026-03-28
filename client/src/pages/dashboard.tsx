@@ -1339,7 +1339,7 @@ export default function Dashboard() {
                     <MoreHorizontal className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
                   </div>
-                  <span className="hidden sm:inline text-muted-foreground group-hover:text-foreground transition-colors">Links</span>
+                  <span className="hidden sm:inline text-muted-foreground group-hover:text-foreground transition-colors">More</span>
                   <svg className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
