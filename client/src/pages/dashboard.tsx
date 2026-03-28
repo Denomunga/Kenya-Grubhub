@@ -1307,88 +1307,121 @@ export default function Dashboard() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="sticky top-16 z-20 -mx-4 px-4 py-3 bg-background/80 backdrop-blur-xl border-b supports-backdrop-filter:bg-background/60">
-          <TabsList className="w-full flex flex-nowrap gap-2 p-1 bg-muted/50 rounded-xl border overflow-x-auto overscroll-x-contain snap-x snap-mandatory">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
-              <span className="inline-flex items-center gap-2">
-                <LayoutGrid className="h-4 w-4" />
-                Overview
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
-              <span className="inline-flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Analytics
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg text-sm snap-start shrink-0">
-              <span className="inline-flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4" />
-                Orders
-              </span>
-            </TabsTrigger>
+        <div className="sticky top-16 z-20 -mx-4 px-4 py-4 bg-background/95 backdrop-blur-xl border-b shadow-sm supports-backdrop-filter:bg-background/80">
+          <div className="flex items-center justify-between gap-4">
+            <TabsList className="flex-1 flex flex-nowrap gap-1.5 p-1.5 bg-muted/60 rounded-2xl border shadow-inner overflow-x-auto overscroll-x-contain">
+              {[
+                { value: "overview", icon: LayoutGrid, label: "Overview" },
+                { value: "analytics", icon: BarChart3, label: "Analytics" },
+                { value: "orders", icon: ShoppingBag, label: "Orders" },
+              ].map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="relative flex-1 min-w-[100px] max-w-[140px] data-[state=active]:bg-gradient-to-br data-[state=active]:from-background data-[state=active]:to-muted data-[state=active]:shadow-md data-[state=active]:text-primary whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-muted/50 data-[state=active]:hover:bg-gradient-to-br"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <tab.icon className="h-4 w-4 transition-transform duration-200 group-data-[state=active]:scale-110" />
+                    {tab.label}
+                  </span>
+                  {activeTab === tab.value && (
+                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm border bg-background/70 hover:bg-background transition-colors snap-start shrink-0"
-                  aria-label="More links"
+                  className="group flex items-center gap-2 whitespace-nowrap px-4 py-2.5 rounded-xl text-sm font-medium border bg-gradient-to-br from-background to-muted shadow-sm hover:shadow-md hover:from-muted hover:to-muted/80 transition-all duration-200 snap-start shrink-0"
+                  aria-label="More navigation links"
                 >
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="hidden sm:inline">Links</span>
+                  <div className="relative">
+                    <MoreHorizontal className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
+                  </div>
+                  <span className="hidden sm:inline text-muted-foreground group-hover:text-foreground transition-colors">Links</span>
+                  <svg className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onSelect={() => setActiveTab("pos")}>
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  POS
+              <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-xl shadow-xl border bg-popover">
+                <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Navigation</div>
+                <DropdownMenuItem onSelect={() => setActiveTab("pos")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                  <div className="p-1.5 rounded-md bg-green-500/10 text-green-600">
+                    <DollarSign className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">POS</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setActiveTab("menu")}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Menu
+                <DropdownMenuItem onSelect={() => setActiveTab("menu")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                  <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-600">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">Menu</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setActiveTab("location")}>
-                  <MapPinned className="h-4 w-4 mr-2" />
-                  Location
+                <DropdownMenuItem onSelect={() => setActiveTab("location")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                  <div className="p-1.5 rounded-md bg-orange-500/10 text-orange-600">
+                    <MapPinned className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">Location</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setActiveTab("news")}>
-                  <Newspaper className="h-4 w-4 mr-2" />
-                  News
+                <DropdownMenuItem onSelect={() => setActiveTab("news")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                  <div className="p-1.5 rounded-md bg-purple-500/10 text-purple-600">
+                    <Newspaper className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">News</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setActiveTab("newsletter")}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Newsletter
+                <DropdownMenuItem onSelect={() => setActiveTab("newsletter")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                  <div className="p-1.5 rounded-md bg-pink-500/10 text-pink-600">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">Newsletter</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setActiveTab("settings")}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
+                <DropdownMenuItem onSelect={() => setActiveTab("settings")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                  <div className="p-1.5 rounded-md bg-gray-500/10 text-gray-600">
+                    <Settings className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">Settings</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setActiveTab("hr")}>
-                  <Users className="h-4 w-4 mr-2" />
-                  HR
+                <DropdownMenuItem onSelect={() => setActiveTab("hr")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                  <div className="p-1.5 rounded-md bg-indigo-500/10 text-indigo-600">
+                    <Users className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">HR</span>
                 </DropdownMenuItem>
                 {(isAdmin || isAccountant) && (
-                  <DropdownMenuItem onSelect={() => setActiveTab("accounting")}>
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Accounting
+                  <DropdownMenuItem onSelect={() => setActiveTab("accounting")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                    <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-600">
+                      <DollarSign className="h-4 w-4" />
+                    </div>
+                    <span className="font-medium">Accounting</span>
+                    {(isAdmin || isAccountant) && <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">PRO</span>}
                   </DropdownMenuItem>
                 )}
                 {isAdmin && (
                   <>
-                    <DropdownMenuItem onSelect={() => setActiveTab("audit")}>
-                      <LayoutGrid className="h-4 w-4 mr-2" />
-                      Audit
+                    <div className="h-px bg-border my-1.5" />
+                    <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Admin Only</div>
+                    <DropdownMenuItem onSelect={() => setActiveTab("audit")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                      <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-600">
+                        <LayoutGrid className="h-4 w-4" />
+                      </div>
+                      <span className="font-medium">Audit</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => setActiveTab("user-audit")}>
-                      <Users className="h-4 w-4 mr-2" />
-                      User Audit
+                    <DropdownMenuItem onSelect={() => setActiveTab("user-audit")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                      <div className="p-1.5 rounded-md bg-rose-500/10 text-rose-600">
+                        <Users className="h-4 w-4" />
+                      </div>
+                      <span className="font-medium">User Audit</span>
                     </DropdownMenuItem>
                   </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-          </TabsList>
+          </div>
         </div>
 
         <TabsContent value="overview">
