@@ -490,6 +490,7 @@ export class AutoJournalController {
       // Create journal entries for regular orders
       for (const order of newOrders) {
         const entryNumber = `JE-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        const orderTotal = (order as any).total || 0;
         const je = new JournalEntry({
           entryNumber,
           transactionDate: (order as any).createdAt || new Date(),
@@ -498,9 +499,11 @@ export class AutoJournalController {
           referenceId: (order as any)._id,
           referenceNumber: (order as any).orderNumber,
           lineItems: [
-            { accountId: arAccount._id, accountCode: arAccount.code, accountName: arAccount.name, debit: (order as any).total || 0, credit: 0, description: 'Accounts Receivable' },
-            { accountId: revenueAccount._id, accountCode: revenueAccount.code, accountName: revenueAccount.name, debit: 0, credit: (order as any).total || 0, description: 'Sales Revenue' }
+            { accountId: arAccount._id, accountCode: arAccount.code, accountName: arAccount.name, debit: orderTotal, credit: 0, description: 'Accounts Receivable' },
+            { accountId: revenueAccount._id, accountCode: revenueAccount.code, accountName: revenueAccount.name, debit: 0, credit: orderTotal, description: 'Sales Revenue' }
           ],
+          totalDebit: orderTotal,
+          totalCredit: orderTotal,
           status: 'posted',
           createdBy: req.user!.id,
           postedBy: req.user!.id,
@@ -514,6 +517,7 @@ export class AutoJournalController {
       // Create journal entries for POS sales
       for (const sale of newSales) {
         const entryNumber = `JE-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        const saleTotal = (sale as any).total || 0;
         const je = new JournalEntry({
           entryNumber,
           transactionDate: (sale as any).createdAt || new Date(),
@@ -522,9 +526,11 @@ export class AutoJournalController {
           referenceId: (sale as any)._id,
           referenceNumber: (sale as any).receiptNumber,
           lineItems: [
-            { accountId: arAccount._id, accountCode: arAccount.code, accountName: arAccount.name, debit: (sale as any).total || 0, credit: 0, description: 'Cash/Accounts Receivable' },
-            { accountId: revenueAccount._id, accountCode: revenueAccount.code, accountName: revenueAccount.name, debit: 0, credit: (sale as any).total || 0, description: 'POS Sales Revenue' }
+            { accountId: arAccount._id, accountCode: arAccount.code, accountName: arAccount.name, debit: saleTotal, credit: 0, description: 'Cash/Accounts Receivable' },
+            { accountId: revenueAccount._id, accountCode: revenueAccount.code, accountName: revenueAccount.name, debit: 0, credit: saleTotal, description: 'POS Sales Revenue' }
           ],
+          totalDebit: saleTotal,
+          totalCredit: saleTotal,
           status: 'posted',
           createdBy: req.user!.id,
           postedBy: req.user!.id,
