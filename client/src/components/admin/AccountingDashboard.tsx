@@ -1141,7 +1141,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           <DialogHeader>
             <DialogTitle>Generate Auto Journal Entries</DialogTitle>
             <DialogDescription>
-              This will automatically create double-entry journal entries from {autoJournalSource === 'orders' ? 'recent orders (Sales Revenue ↔ Accounts Receivable)' : 'procurement transactions (Inventory ↔ Accounts Payable)'}.
+              This will automatically create double-entry journal entries from {autoJournalSource === 'orders' ? 'recent orders and POS sales (Sales Revenue ↔ Accounts Receivable). Includes both online orders and in-store POS transactions from the last 30 days.' : 'procurement transactions (Inventory ↔ Accounts Payable)'}.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">

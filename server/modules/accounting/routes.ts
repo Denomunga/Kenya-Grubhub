@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { body, query, param, validationResult } from 'express-validator';
 import { AccountingController, ExpenseController, RecurringExpenseController } from './controller';
 import { DashboardController } from './dashboardController';
-import { AccountCRUDController, ReportsController, AgingController, TaxController, AuditController, InvoiceEnhancedController, InventoryAccountingController, InsightsController, CashFlowForecastController, RecurringInvoiceController } from './controller-enhanced';
+import { AccountCRUDController, ReportsController, AgingController, TaxController, AuditController, InvoiceEnhancedController, InventoryAccountingController, InsightsController, CashFlowForecastController, RecurringInvoiceController, AutoJournalController } from './controller-enhanced';
 import { requireAuth } from '@shared/middleware/auth';
 import { requireRole } from '@shared/middleware/roles';
 import { generalLimiter, authLimiter } from '@shared/middleware/rateLimiter';
@@ -437,6 +437,12 @@ router.post('/recurring-invoices', authLimiter, requireAuth, requireRole(['admin
 router.put('/recurring-invoices/:id', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), [param('id').isMongoId()], handleValidationErrors, RecurringInvoiceController.update);
 router.delete('/recurring-invoices/:id', authLimiter, requireAuth, requireRole(['admin']), [param('id').isMongoId()], handleValidationErrors, RecurringInvoiceController.delete);
 router.post('/recurring-invoices/generate-due', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), RecurringInvoiceController.generateDue);
+
+// ============================================================
+// AUTO JOURNAL ENTRY ROUTES
+// ============================================================
+router.post('/auto-journal/orders', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), AutoJournalController.generateFromOrders);
+router.post('/auto-journal/procurement', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), AutoJournalController.generateFromProcurement);
 
 export default router;
 

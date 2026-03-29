@@ -413,3 +413,132 @@ export class RecurringInvoiceController {
     }
   }
 }
+
+// ============================================================
+// AUTO JOURNAL ENTRY CONTROLLER
+// ============================================================
+export class AutoJournalController {
+  static async generateFromOrders(req: AuthRequest, res: Response) {
+    try {
+      const { Order } = await import('../../models/Order');
+      const { Sale } = await import('../../models/Sale');
+      const { Account, JournalEntry } = await import('./models');
+      
+      // Get orders and POS sales from last 30 days that don't have journal entries yet
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const [orders, sales] = await Promise.all([
+        Order.find({ 
+          status: 'Delivered', 
+          createdAt: { $gte: thirtyDaysAgo }
+        }).lean(),
+        Sale.find({ 
+          status: 'Completed', 
+          createdAt: { $gte: thirtyDaysAgo }
+        }).lean()
+      ]);
+      
+      // Get existing journal entries to avoid duplicates
+      const existingOrderRefs = await JournalEntry.find({
+        referenceType: 'Order',
+        referenceId: { $in: orders.map((o: any) => o._id) }
+      }).distinct('referenceId');
+      
+      const existingSaleRefs = await JournalEntry.find({
+        referenceType: 'POSSale',
+        referenceId: { $in: sales.map((s: any) => s._id) }
+      }).distinct('referenceId');
+      
+      const existingOrderIds = new Set(existingOrderRefs.map(String));
+      const existingSaleIds = new Set(existingSaleRefs.map(String));
+      
+      // Filter out orders/sales that already have journal entries
+      const newOrders = orders.filter((o: any) => !existingOrderIds.has(String(o._id)));
+      const newSales = sales.filter((s: any) => !existingSaleIds.has(String(s._id)));
+      
+      // Get accounts
+      const revenueAccount = await Account.findOne({ code: { $in: ['4000', '4100'] }, status: 'active' });
+      const arAccount = await Account.findOne({ code: { $in: ['1200', '1100'] }, status: 'active' });
+      
+      if (!revenueAccount || !arAccount) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Required accounts not found. Please initialize chart of accounts first.' 
+        });
+      }
+      
+      let count = 0;
+      
+      // Create journal entries for regular orders
+      for (const order of newOrders) {
+        const entryNumber = `JE-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        const je = new JournalEntry({
+          entryNumber,
+          transactionDate: (order as any).createdAt || new Date(),
+          description: `Sales revenue from Order #${(order as any).orderNumber || (order as any)._id}`,
+          referenceType: 'Order',
+          referenceId: (order as any)._id,
+          referenceNumber: (order as any).orderNumber,
+          lineItems: [
+            { accountId: arAccount._id, accountCode: arAccount.code, accountName: arAccount.name, debit: (order as any).total || 0, credit: 0, description: 'Accounts Receivable' },
+            { accountId: revenueAccount._id, accountCode: revenueAccount.code, accountName: revenueAccount.name, debit: 0, credit: (order as any).total || 0, description: 'Sales Revenue' }
+          ],
+          status: 'posted',
+          createdBy: req.user!.id,
+          postedBy: req.user!.id,
+          postedAt: new Date()
+        });
+        await je.save();
+        await AuditService.log({ action: 'create', entityType: 'JournalEntry', entityId: je._id.toString(), entityRef: je.entryNumber, userId: req.user!.id, metadata: `Auto-generated from order ${(order as any).orderNumber}` });
+        count++;
+      }
+      
+      // Create journal entries for POS sales
+      for (const sale of newSales) {
+        const entryNumber = `JE-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        const je = new JournalEntry({
+          entryNumber,
+          transactionDate: (sale as any).createdAt || new Date(),
+          description: `POS sales revenue - Receipt #${(sale as any).receiptNumber || (sale as any)._id}`,
+          referenceType: 'POSSale',
+          referenceId: (sale as any)._id,
+          referenceNumber: (sale as any).receiptNumber,
+          lineItems: [
+            { accountId: arAccount._id, accountCode: arAccount.code, accountName: arAccount.name, debit: (sale as any).total || 0, credit: 0, description: 'Cash/Accounts Receivable' },
+            { accountId: revenueAccount._id, accountCode: revenueAccount.code, accountName: revenueAccount.name, debit: 0, credit: (sale as any).total || 0, description: 'POS Sales Revenue' }
+          ],
+          status: 'posted',
+          createdBy: req.user!.id,
+          postedBy: req.user!.id,
+          postedAt: new Date()
+        });
+        await je.save();
+        await AuditService.log({ action: 'create', entityType: 'JournalEntry', entityId: je._id.toString(), entityRef: je.entryNumber, userId: req.user!.id, metadata: `Auto-generated from POS sale ${(sale as any).receiptNumber}` });
+        count++;
+      }
+      
+      res.json({ 
+        success: true, 
+        data: { 
+          count, 
+          orders: newOrders.length, 
+          posSales: newSales.length,
+          message: `Generated ${count} journal entries (${newOrders.length} from orders, ${newSales.length} from POS sales)` 
+        } 
+      });
+    } catch (error: any) {
+      console.error('Auto-journal from orders failed:', error);
+      res.status(500).json({ success: false, error: error?.message || 'Failed to generate journal entries' });
+    }
+  }
+  
+  static async generateFromProcurement(_req: AuthRequest, res: Response) {
+    try {
+      // This can be implemented later for procurement transactions
+      res.json({ success: true, data: { count: 0, message: 'Procurement auto-journal not yet implemented' } });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error?.message || 'Failed to generate journal entries' });
+    }
+  }
+}
