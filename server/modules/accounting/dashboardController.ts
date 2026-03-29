@@ -3,7 +3,7 @@ import {
   FinancialReportingService,
   ExpenseService
 } from './service';
-import { Transaction, Invoice } from './models';
+import { Transaction, Invoice, JournalEntry, Expense } from './models';
 
 interface AuthRequest extends Request {
   user?: {
@@ -138,20 +138,88 @@ export class DashboardController {
       const startDate = new Date();
       startDate.setMonth(startDate.getMonth() - monthCount);
 
-      const monthlyData = await Transaction.aggregate([
-        { $match: { transactionDate: { $gte: startDate } } },
+      // Get revenue from journal entries (posted sales)
+      const revenueData = await JournalEntry.aggregate([
+        { 
+          $match: { 
+            transactionDate: { $gte: startDate },
+            status: 'posted',
+            $or: [
+              { referenceType: 'Order' },
+              { referenceType: 'POSSale' }
+            ]
+          } 
+        },
+        { $unwind: '$lineItems' },
+        {
+          $match: {
+            'lineItems.credit': { $gt: 0 },
+            'lineItems.accountCode': { $in: ['4000', '4100', '4200'] } // Revenue accounts
+          }
+        },
         {
           $group: {
             _id: {
               year: { $year: '$transactionDate' },
               month: { $month: '$transactionDate' }
             },
-            totalAmount: { $sum: '$totalAmount' },
-            count: { $sum: 1 }
+            revenue: { $sum: '$lineItems.credit' }
           }
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1 } }
+        }
       ]);
+
+      // Get expenses from Expense collection
+      const expenseData = await Expense.aggregate([
+        { 
+          $match: { 
+            expenseDate: { $gte: startDate },
+            status: { $in: ['approved', 'paid'] }
+          } 
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$expenseDate' },
+              month: { $month: '$expenseDate' }
+            },
+            expenses: { $sum: '$amount' }
+          }
+        }
+      ]);
+
+      // Merge revenue and expense data by month
+      const monthMap = new Map();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      revenueData.forEach((item: any) => {
+        const key = `${item._id.year}-${item._id.month}`;
+        monthMap.set(key, { 
+          month: monthNames[item._id.month - 1],
+          year: item._id.year,
+          revenue: item.revenue || 0,
+          expenses: 0
+        });
+      });
+
+      expenseData.forEach((item: any) => {
+        const key = `${item._id.year}-${item._id.month}`;
+        if (monthMap.has(key)) {
+          monthMap.get(key).expenses = item.expenses || 0;
+        } else {
+          monthMap.set(key, {
+            month: monthNames[item._id.month - 1],
+            year: item._id.year,
+            revenue: 0,
+            expenses: item.expenses || 0
+          });
+        }
+      });
+
+      const monthlyData = Array.from(monthMap.values())
+        .sort((a, b) => {
+          if (a.year !== b.year) return a.year - b.year;
+          return monthNames.indexOf(a.month) - monthNames.indexOf(b.month);
+        });
 
       res.status(200).json({
         success: true,
@@ -178,19 +246,66 @@ export class DashboardController {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - dayCount);
 
-      const cashFlow = await Transaction.aggregate([
-        { $match: { transactionDate: { $gte: startDate }, status: 'posted' } },
+      // Get inflow from journal entries (revenue)
+      const inflowData = await JournalEntry.aggregate([
+        { 
+          $match: { 
+            transactionDate: { $gte: startDate },
+            status: 'posted',
+            $or: [
+              { referenceType: 'Order' },
+              { referenceType: 'POSSale' }
+            ]
+          } 
+        },
+        { $unwind: '$lineItems' },
         {
-          $group: {
-            _id: {
-              date: { $dateToString: { format: '%Y-%m-%d', date: '$transactionDate' } },
-              type: '$transactionType'
-            },
-            total: { $sum: '$totalAmount' }
+          $match: {
+            'lineItems.credit': { $gt: 0 },
+            'lineItems.accountCode': { $in: ['4000', '4100', '4200'] }
           }
         },
-        { $sort: { '_id.date': 1 } }
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$transactionDate' } },
+            inflow: { $sum: '$lineItems.credit' }
+          }
+        }
       ]);
+
+      // Get outflow from expenses
+      const outflowData = await Expense.aggregate([
+        { 
+          $match: { 
+            expenseDate: { $gte: startDate },
+            status: { $in: ['approved', 'paid'] }
+          } 
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$expenseDate' } },
+            outflow: { $sum: '$amount' }
+          }
+        }
+      ]);
+
+      // Merge inflow and outflow by date
+      const dateMap = new Map();
+
+      inflowData.forEach((item: any) => {
+        dateMap.set(item._id, { date: item._id, inflow: item.inflow || 0, outflow: 0 });
+      });
+
+      outflowData.forEach((item: any) => {
+        if (dateMap.has(item._id)) {
+          dateMap.get(item._id).outflow = item.outflow || 0;
+        } else {
+          dateMap.set(item._id, { date: item._id, inflow: 0, outflow: item.outflow || 0 });
+        }
+      });
+
+      const cashFlow = Array.from(dateMap.values())
+        .sort((a, b) => a.date.localeCompare(b.date));
 
       res.status(200).json({
         success: true,
