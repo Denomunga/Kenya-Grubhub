@@ -595,10 +595,10 @@ const DragDropMenuManager: React.FC = () => {
       </Card>
 
       {/* Product List */}
-      <div className="space-y-2">
+      <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Products</h3>
-          <p className="text-sm text-muted-foreground">Drag to reorder</p>
+          {viewMode === 'list' && <p className="text-sm text-muted-foreground">Drag to reorder</p>}
         </div>
         {filteredItems.length === 0 ? (
           <Card className="border shadow-sm">
@@ -614,16 +614,17 @@ const DragDropMenuManager: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        ) : (
-          filteredItems.map((item, index) => (
-            <React.Fragment key={item.id}>
-              <DraggableMenuItem
-                item={item}
-                index={index}
-                moveItem={moveItem}
-                onDelete={handleDeleteItem}
-                onEdit={handleEditItem}
-              />
+        ) : viewMode === 'list' ? (
+          <div className="space-y-2">
+            {filteredItems.map((item, index) => (
+              <React.Fragment key={item.id}>
+                <DraggableMenuItem
+                  item={item}
+                  index={index}
+                  moveItem={moveItem}
+                  onDelete={handleDeleteItem}
+                  onEdit={handleEditItem}
+                />
 
               {isEditModalOpen && editingItem?.id === item.id && (
                 <div className="mb-6">
@@ -926,7 +927,60 @@ const DragDropMenuManager: React.FC = () => {
                 </div>
               )}
             </React.Fragment>
-          ))
+          ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredItems.map((item) => (
+              <Card key={item.id} className="border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                <div className="relative aspect-square">
+                  <img 
+                    src={item.images?.[0] || 'https://placehold.co/400x400?text=Product'} 
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {item.images && item.images.length > 1 && (
+                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs rounded-full px-2 py-1 font-semibold">
+                      {item.images.length} photos
+                    </div>
+                  )}
+                  <Badge 
+                    variant={item.available ? "default" : "secondary"} 
+                    className="absolute top-2 left-2"
+                  >
+                    {item.available ? "Available" : "Out of Stock"}
+                  </Badge>
+                </div>
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-base truncate mb-1">{item.name}</h3>
+                  <Badge variant="outline" className="text-xs mb-2">{item.category}</Badge>
+                  <p className="text-sm font-bold text-primary mb-3">KES {item.price.toLocaleString()}</p>
+                  {item.stock !== undefined && (
+                    <p className="text-xs text-muted-foreground mb-3">Stock: {item.stock}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleEditItem(item)}
+                      className="flex-1"
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleDeleteItem(item.id)}
+                      className="hover:text-destructive"
+                    >
+                      <Trash className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
 
