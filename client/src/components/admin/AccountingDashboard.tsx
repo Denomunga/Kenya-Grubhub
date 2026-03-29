@@ -869,6 +869,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          name: recurringExpenseForm.description, // Backend requires 'name'
           ...recurringExpenseForm,
           amount: parseFloat(recurringExpenseForm.amount),
           startDate: new Date(recurringExpenseForm.startDate).toISOString(),
