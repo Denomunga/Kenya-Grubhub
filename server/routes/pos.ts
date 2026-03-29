@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from "express";
+﻿import { Router, Request, Response, NextFunction } from "express";
 import { Sale } from "../models/Sale";
 import { Product } from "../models/Product";
 import { User } from "../models/User";
@@ -7,6 +7,7 @@ import { Order } from "../models/Order";
 import rateLimit from 'express-rate-limit';
 import { calculateTotalRevenue } from '../routes';
 import MpesaService from '../services/realMpesaService';
+import { requireAuth as jwtAuth } from '../shared/middleware/auth';
 
 const router = Router();
 
@@ -17,21 +18,23 @@ const apiLimiter = rateLimit({
   message: 'Too many requests, please try again later.',
 });
 
-// Auth middleware
+// Auth middleware - use JWT-based auth and populate full user
 const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  try {
-    const user = await User.findById(req.session.userId).select("-password");
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
+  await jwtAuth(req, res, async () => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await User.findById(req.user.id).select("-password");
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      req.user = user as any;
+      next();
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
     }
-    req.user = user;
-    next();
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
+  });
 };
 
 // Get all COMPLETED sales (admin only)
