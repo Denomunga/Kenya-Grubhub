@@ -1,4 +1,4 @@
-import {
+﻿import {
   Account,
   IAccount,
   JournalEntry,
@@ -1773,11 +1773,16 @@ export class CashFlowForecastService {
       const cashAccounts = await Account.find({ code: { $in: ['1000', '1010', '1020'] }, status: 'active' }).lean();
       const cashBalance = cashAccounts.reduce((s: number, a: any) => s + (a.balance || 0), 0);
       
-      // Add inventory stock value (current assets)
-      const stockOverview = await InventoryAccountingService.getStockOverview();
-      const inventoryValue = stockOverview.summary?.totalValue || 0;
+            // Add revenue from orders and POS sales (completed transactions)
+      const { Order } = await import('../../models/Order');
+      const { Sale } = await import('../../models/Sale');
+      const [orderRevenue, saleRevenue] = await Promise.all([
+        Order.aggregate([{ $match: { status: { $ne: 'Cancelled' } } }, { $group: { _id: null, revenue: { $sum: '$total' } } }]),
+        Sale.aggregate([{ $match: { status: 'Completed' } }, { $group: { _id: null, revenue: { $sum: '$total' } } }])
+      ]);
+      const totalSalesRevenue = (orderRevenue[0]?.revenue || 0) + (saleRevenue[0]?.revenue || 0);
       
-      const currentCash = cashBalance + inventoryValue;
+      const currentCash = cashBalance + totalSalesRevenue;
 
       // Expected income (unpaid invoices due in forecast period)
       const expectedIncome = await Invoice.aggregate([
