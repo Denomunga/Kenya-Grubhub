@@ -462,9 +462,14 @@ export class AutoJournalController {
       const arAccount = await Account.findOne({ code: { $in: ['1200', '1100'] }, status: 'active' });
       
       if (!revenueAccount || !arAccount) {
+        const missing = [];
+        if (!revenueAccount) missing.push('Revenue Account (4000/4100)');
+        if (!arAccount) missing.push('Accounts Receivable (1200/1100)');
+        
         return res.status(400).json({ 
           success: false, 
-          error: 'Required accounts not found. Please initialize chart of accounts first.' 
+          error: `Required accounts not found: ${missing.join(', ')}. Please initialize the Chart of Accounts first by going to the Chart of Accounts tab and clicking "Initialize Default Accounts".`,
+          missingAccounts: missing
         });
       }
       

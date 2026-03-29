@@ -10,6 +10,7 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number; // in KSHS
+  costPrice?: number; // Buying price - admin only for profit calculations
   category: string; // Now flexible - can be "HP", "Dell", "Lenovo", "Asus", "Apple (MacBooks)", "Toshiba", "Acer", "Microsoft Surface", "Stationery", "Mobilephones", "Others", etc.
   subcategory?: string;
   unit?: string; // e.g. pcs, kg, litre, packet, bottle

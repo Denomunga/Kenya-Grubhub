@@ -1539,27 +1539,62 @@ export class InventoryAccountingService {
   static async getStockOverview() {
     try {
       const InventoryItem = (await import('../inventory/model')).InventoryItem;
-      const items = await InventoryItem.find({ status: { $ne: 'discontinued' } }).sort({ currentStock: 1 }).lean();
-      const lowStock = items.filter((i: any) => i.currentStock <= i.minimumStock);
-      const outOfStock = items.filter((i: any) => i.currentStock === 0);
-      const totalValue = items.reduce((sum: number, i: any) => sum + (i.currentStock * i.costPrice), 0);
-      const totalRetailValue = items.reduce((sum: number, i: any) => sum + (i.currentStock * i.sellingPrice), 0);
+      const { Product } = await import('../../models/Product');
+      
+      // Get inventory items
+      const inventoryItems = await InventoryItem.find({ status: { $ne: 'discontinued' } }).sort({ currentStock: 1 }).lean();
+      
+      // Get all products that don't have inventory records
+      const productIdsWithInventory = new Set(inventoryItems.map((i: any) => String(i.productId)));
+      const products = await Product.find({ 
+        _id: { $nin: Array.from(productIdsWithInventory) },
+        available: { $ne: false }
+      }).lean();
+      
+      // Convert products to inventory-like format
+      const productAsInventory = products.map((p: any) => ({
+        _id: p._id,
+        productId: p._id,
+        productName: p.name,
+        sku: p.sku || `PROD-${p._id.toString().slice(-6)}`,
+        category: p.category,
+        currentStock: p.stock || 0,
+        minimumStock: 5, // default threshold
+        unit: p.unit || 'pcs',
+        location: 'Main Store',
+        costPrice: p.costPrice || p.price * 0.6, // estimate cost as 60% of price
+        sellingPrice: p.price,
+        status: p.stock === 0 ? 'out_of_stock' : (p.stock && p.stock > 0 ? 'active' : 'active'),
+        lastRestockedAt: p.updatedAt,
+        fromProduct: true
+      }));
+      
+      // Combine both sources
+      const allItems = [...inventoryItems, ...productAsInventory];
+      
+      const lowStock = allItems.filter((i: any) => i.currentStock <= i.minimumStock && i.currentStock > 0);
+      const outOfStock = allItems.filter((i: any) => i.currentStock === 0);
+      const totalValue = allItems.reduce((sum: number, i: any) => sum + (i.currentStock * i.costPrice), 0);
+      const totalRetailValue = allItems.reduce((sum: number, i: any) => sum + (i.currentStock * i.sellingPrice), 0);
+      
       return {
-        items,
+        items: allItems,
         summary: {
-          totalItems: items.length,
+          totalItems: allItems.length,
           totalValue: Math.round(totalValue * 100) / 100,
           totalRetailValue: Math.round(totalRetailValue * 100) / 100,
           potentialProfit: Math.round((totalRetailValue - totalValue) * 100) / 100,
           lowStockCount: lowStock.length,
           outOfStockCount: outOfStock.length,
+          inventoryItemsCount: inventoryItems.length,
+          productItemsCount: productAsInventory.length,
         },
         lowStockAlerts: lowStock,
         outOfStock,
       };
     } catch (err) {
       console.error('Stock overview error:', err);
-      return { items: [], summary: { totalItems: 0, totalValue: 0, totalRetailValue: 0, potentialProfit: 0, lowStockCount: 0, outOfStockCount: 0 }, lowStockAlerts: [], outOfStock: [] };
+      return { items: [], summary: { totalItems: 0, totalValue: 0, totalRetailValue: 0, potentialProfit: 0, lowStockCount: 0, outOfStockCount: 0, inventoryItemsCount: 0, productItemsCount: 0 }, lowStockAlerts: [], outOfStock: [] };
     }
   }
 

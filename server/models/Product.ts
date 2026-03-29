@@ -3,7 +3,8 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IProduct extends Document {
   name: string;
   description: string;
-  price: number;
+  price: number; // Selling price (what customers see)
+  costPrice?: number; // Buying price (admin only - for profit calculation)
   category: string;
   subcategory?: string;
   unit?: string; // e.g. pcs, kg, litre, packet, bottle
@@ -31,6 +32,7 @@ const ProductSchema = new Schema<IProduct>(
     name: { type: String, required: true },
     description: { type: String, required: true },
     price: { type: Number, required: true },
+    costPrice: { type: Number }, // Admin only - buying price for profit calculation
     category: { type: String, required: true },
     subcategory: { type: String },
     unit: { type: String, default: "pcs" },

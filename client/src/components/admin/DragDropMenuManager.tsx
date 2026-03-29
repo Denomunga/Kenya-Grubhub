@@ -189,7 +189,8 @@ const DragDropMenuManager: React.FC = () => {
     location?: string;
     stock?: number;
     tags?: string[];
-  }>({ name: '', category: 'HP', price: 0, images: [], description: '', imageFiles: [], unit: 'pcs', quantityStep: 1 });
+    costPrice?: number;
+  }>({ name: '', category: 'HP', price: 0, costPrice: undefined, images: [], description: '', imageFiles: [], unit: 'pcs', quantityStep: 1 });
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingImageFiles, setEditingImageFiles] = useState<File[]>([]);
@@ -271,6 +272,7 @@ const DragDropMenuManager: React.FC = () => {
       name: sanitizeInput(newItem.name),
       category: newItem.category,
       price: newItem.price,
+      costPrice: (newItem as any).costPrice,
       description: sanitizeInput(newItem.description || ''),
       available: true,
       images: uploadedImages.length > 0 ? uploadedImages : ["https://placehold.co/400x300?text=Product"],
@@ -293,7 +295,8 @@ const DragDropMenuManager: React.FC = () => {
     setNewItem({ 
       name: '', 
       category: 'HP', 
-      price: 0, 
+      price: 0,
+      costPrice: undefined,
       images: [], 
       description: '', 
       imageFiles: [],
@@ -800,6 +803,16 @@ const DragDropMenuManager: React.FC = () => {
                           onChange={(e) => setEditingItem({ ...editingItem, price: parseInt(e.target.value) || 0 })}
                           className="liquid-transition"
                         />
+                        <div className="space-y-1">
+                          <Input
+                            type="number"
+                            placeholder="Buying Price (KES) - Admin only"
+                            value={(editingItem as any).costPrice || ''}
+                            onChange={(e) => setEditingItem({ ...(editingItem as any), costPrice: parseFloat(e.target.value) || undefined })}
+                            className="liquid-transition"
+                          />
+                          <p className="text-xs text-muted-foreground">Internal use only - for profit calculations</p>
+                        </div>
                         <div className="flex items-center gap-2">
                           <input
                             type="checkbox"
@@ -1059,10 +1072,19 @@ const DragDropMenuManager: React.FC = () => {
               />
               <Input
                 type="number"
-                placeholder="Price (KES) *"
+                placeholder="Selling Price (KES) * - Customers see this"
                 value={newItem.price || ''}
                 onChange={(e) => setNewItem({ ...newItem, price: parseInt(e.target.value) || 0 })}
               />
+              <div className="space-y-1">
+                <Input
+                  type="number"
+                  placeholder="Buying Price (KES) - Admin only"
+                  value={(newItem as any).costPrice || ''}
+                  onChange={(e) => setNewItem({ ...(newItem as any), costPrice: parseFloat(e.target.value) || undefined })}
+                />
+                <p className="text-xs text-muted-foreground">Internal use only - for profit calculations</p>
+              </div>
             </div>
             <Input
               placeholder="Tags (comma separated)"
@@ -1112,7 +1134,7 @@ const DragDropMenuManager: React.FC = () => {
               variant="outline" 
               onClick={() => {
                 setIsAddDialogOpen(false);
-                setNewItem({ name: '', category: 'HP', price: 0, images: [], description: '', imageFiles: [], unit: 'pcs', quantityStep: 1 });
+                setNewItem({ name: '', category: 'HP', price: 0, costPrice: undefined, images: [], description: '', imageFiles: [], unit: 'pcs', quantityStep: 1 });
               }}
             >
               Cancel
