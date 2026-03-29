@@ -249,7 +249,7 @@ export default function AccountingDashboard() {
 
   const fetchAccountingData = async () => {
     try {
-      const [statsRes, transactionsRes, expensesRes, invoicesRes, monthlyRes, cashFlowRes, journalRes] = await Promise.all([
+      const [statsRes, transactionsRes, expensesRes, invoicesRes, monthlyRes, cashFlowRes, journalRes, recurringRes] = await Promise.all([
         apiFetch('/api/v1/accounting/stats'),
         apiFetch('/api/v1/accounting/transactions?page=1&limit=50'),
         apiFetch('/api/v1/accounting/expenses?page=1&limit=50'),
@@ -257,6 +257,7 @@ export default function AccountingDashboard() {
         apiFetch('/api/v1/accounting/monthly?months=12'),
         apiFetch('/api/v1/accounting/cashflow?days=30'),
         apiFetch('/api/v1/accounting/journal-entries?page=1&limit=20'),
+        apiFetch('/api/v1/accounting/recurring-expenses'),
       ]);
 
       if (statsRes.ok) {
@@ -311,6 +312,11 @@ export default function AccountingDashboard() {
       if (journalRes.ok) {
         const data = await journalRes.json();
         setJournalEntries(data.data || []);
+      }
+
+      if (recurringRes.ok) {
+        const data = await recurringRes.json();
+        setRecurringExpenses(data.data?.recurringExpenses || data.data || []);
       }
     } catch (error) {
       console.error('Failed to fetch accounting data:', error);
