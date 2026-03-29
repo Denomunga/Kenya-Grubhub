@@ -2515,6 +2515,12 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                 <CardDescription>Double-entry bookkeeping ledger</CardDescription>
               </div>
               <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('excel')}>
+                  <Download className="h-3.5 w-3.5" /> Excel
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('pdf')}>
+                  <FileText className="h-3.5 w-3.5" /> PDF
+                </Button>
                 <Button variant="outline" size="sm" className="gap-1" onClick={() => handleAutoJournal('orders')}>
                   <BookOpen className="h-3.5 w-3.5" /> Auto from Orders
                 </Button>
