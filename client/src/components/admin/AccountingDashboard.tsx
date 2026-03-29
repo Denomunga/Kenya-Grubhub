@@ -182,7 +182,7 @@ export default function AccountingDashboard() {
   const [reportPeriod, setReportPeriod] = useState({ startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] });
   const [reportTab, setReportTab] = useState<'pl' | 'bs' | 'cf' | 'tb'>('pl');
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
-  const [accountForm, setAccountForm] = useState({ code: '', name: '', category: 'asset' as string, subcategory: '', description: '', normalBalance: 'debit' as string });
+  const [accountForm, setAccountForm] = useState({ code: '', name: '', category: 'asset' as string, subcategory: '', description: '', normalBalance: 'debit' as string, balance: 0 });
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentInvoiceId, setPaymentInvoiceId] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -244,7 +244,7 @@ export default function AccountingDashboard() {
       const [statsRes, transactionsRes, invoicesRes, monthlyRes, cashFlowRes, journalRes] = await Promise.all([
         apiFetch('/api/v1/accounting/stats'),
         apiFetch('/api/v1/accounting/transactions?page=1&limit=50'),
-        apiFetch('/api/v1/accounting/invoices?status=unpaid'),
+        apiFetch('/api/v1/accounting/invoices'),
         apiFetch('/api/v1/accounting/monthly?months=12'),
         apiFetch('/api/v1/accounting/cashflow?days=30'),
         apiFetch('/api/v1/accounting/journal-entries?page=1&limit=20'),
@@ -465,7 +465,7 @@ export default function AccountingDashboard() {
       if (res.ok) {
         toast({ title: 'Success', description: 'Account created' });
         setAccountDialogOpen(false);
-        setAccountForm({ code: '', name: '', category: 'asset', subcategory: '', description: '', normalBalance: 'debit' });
+        setAccountForm({ code: '', name: '', category: 'asset', subcategory: '', description: '', normalBalance: 'debit', balance: 0 });
         fetchAccounts();
       } else {
         const err = await res.json().catch(() => ({}));
@@ -2973,6 +2973,11 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                   <option value="credit">Credit</option>
                 </select>
               </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Initial Balance (KES)</label>
+              <Input type="number" placeholder="0.00" value={accountForm.balance} onChange={e => setAccountForm(f => ({ ...f, balance: parseFloat(e.target.value) || 0 }))} />
+              <p className="text-xs text-muted-foreground mt-1">Opening balance for this account</p>
             </div>
             <div>
               <label className="text-sm font-medium">Subcategory (optional)</label>
