@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { GripVertical, Edit, Trash, Plus, X } from 'lucide-react';
+import { GripVertical, Edit, Trash, Plus, X, Search, Grid3x3, List, Package, AlertCircle, DollarSign } from 'lucide-react';
 import { useData } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -106,43 +106,47 @@ const DraggableMenuItem: React.FC<DraggableMenuItemProps> = ({ item, index, move
   return (
     <div
       ref={ref}
-      className={`card-3d cursor-move transition-all duration-300 ${isDragging ? 'opacity-50' : 'opacity-100'}`}
-      style={{ transform: isDragging ? 'rotate(2deg)' : '' }}
+      className={`transition-all duration-200 ${isDragging ? 'opacity-50 scale-95' : 'opacity-100'}`}
     >
-      <Card className="mb-4 border-animated-gradient depth-layer-3 ">
+      <Card className="mb-3 border shadow-sm hover:shadow-md transition-shadow">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
-            <div className="cursor-grab active:cursor-grabbing">
+            <div className="cursor-grab active:cursor-grabbing hover:bg-muted/50 p-1 rounded">
               <GripVertical className="h-5 w-5 text-muted-foreground" />
             </div>
-            <div className="relative">
+            <div className="relative shrink-0">
               <img 
-                src={item.images?.[0] || 'https://placehold.co/48x48?text=Food'} 
+                src={item.images?.[0] || 'https://placehold.co/64x64?text=Product'} 
                 alt={item.name} 
-                className="h-12 w-12 rounded-lg object-cover" 
+                className="h-16 w-16 rounded-lg object-cover border" 
               />
               {item.images && item.images.length > 1 && (
-                <div className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  +{item.images.length - 1}
+                <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                  {item.images.length}
                 </div>
               )}
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-holographic">{item.name}</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary">{item.category}</Badge>
-                <span className="text-sm font-medium text-primary">{item.price} KSHS</span>
-                <Badge variant={item.available ? "default" : "outline"}>
-                  {item.available ? "Available" : "Unavailable"}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-base truncate">{item.name}</h3>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <Badge variant="secondary" className="text-xs">{item.category}</Badge>
+                {item.stock !== undefined && (
+                  <Badge variant="outline" className="text-xs">
+                    Stock: {item.stock}
+                  </Badge>
+                )}
+                <Badge variant={item.available ? "default" : "outline"} className="text-xs">
+                  {item.available ? "Available" : "Out of Stock"}
                 </Badge>
               </div>
+              <p className="text-sm font-semibold text-primary mt-1">KES {item.price.toLocaleString()}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               <Button 
                 variant="ghost" 
-                size="icon" 
+                size="icon"
                 onClick={() => onEdit(item)}
-                className="hover:text-primary"
+                className="h-8 w-8"
               >
                 <Edit className="h-4 w-4" />
               </Button>
@@ -150,7 +154,7 @@ const DraggableMenuItem: React.FC<DraggableMenuItemProps> = ({ item, index, move
                 variant="ghost" 
                 size="icon" 
                 onClick={() => onDelete(item.id)}
-                className="hover:text-destructive"
+                className="h-8 w-8 hover:text-destructive"
               >
                 <Trash className="h-4 w-4" />
               </Button>
@@ -191,6 +195,9 @@ const DragDropMenuManager: React.FC = () => {
   const [editingImageFiles, setEditingImageFiles] = useState<File[]>([]);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<MenuItem | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
   React.useEffect(() => {
     setMenuItems(menu);
@@ -417,11 +424,108 @@ const DragDropMenuManager: React.FC = () => {
   const showLaptopFieldsForNewItem = !isAgrovetCategory(newItem.category);
   const showLaptopFieldsForEditingItem = editingItem ? !isAgrovetCategory(editingItem.category) : true;
 
+  // Filter and search logic
+  const filteredItems = useMemo(() => {
+    let items = menuItems;
+    
+    // Category filter
+    if (categoryFilter !== 'all') {
+      items = items.filter(item => item.category === categoryFilter);
+    }
+    
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      items = items.filter(item => 
+        item.name.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query)
+      );
+    }
+    
+    return items;
+  }, [menuItems, categoryFilter, searchQuery]);
+
+  // Stats calculations
+  const stats = useMemo(() => {
+    const total = menuItems.length;
+    const available = menuItems.filter(i => i.available).length;
+    const outOfStock = menuItems.filter(i => !i.available).length;
+    const totalValue = menuItems.reduce((sum, i) => sum + (i.price * (i.stock || 0)), 0);
+    const lowStock = menuItems.filter(i => i.stock !== undefined && i.stock < 10).length;
+    
+    return { total, available, outOfStock, totalValue, lowStock };
+  }, [menuItems]);
+
+  const uniqueCategories = useMemo(() => {
+    return Array.from(new Set(menuItems.map(i => i.category)));
+  }, [menuItems]);
+
   return (
     <div className="space-y-6">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-holographic mb-2">Drag & Drop Menu Manager</h2>
-        <p className="text-muted-foreground">Reorganize your menu by dragging items</p>
+      {/* Header Section */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Product Catalog</h2>
+          <p className="text-muted-foreground mt-1">Manage your store inventory and pricing</p>
+        </div>
+        <Button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add Product
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs text-muted-foreground font-medium">Total Products</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              <p className="text-2xl font-bold">{stats.total}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs text-muted-foreground font-medium">Available</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-green-600">{stats.available}</p>
+          </CardContent>
+        </Card>
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs text-muted-foreground font-medium">Out of Stock</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-red-600">{stats.outOfStock}</p>
+          </CardContent>
+        </Card>
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs text-muted-foreground font-medium">Low Stock</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <p className="text-2xl font-bold text-yellow-600">{stats.lowStock}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs text-muted-foreground font-medium">Inventory Value</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <p className="text-2xl font-bold">KES {stats.totalValue.toLocaleString()}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Add New Item Form */}
@@ -615,15 +719,90 @@ const DragDropMenuManager: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Draggable Menu Items */}
-      <div className="space-y-2">
-        <h3 className="text-xl font-semibold mb-4 text-holographic">Menu Items (Drag to Reorder)</h3>
-        {menuItems.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <p>No menu items yet. Add your first item above!</p>
+      {/* Search and Filter Bar */}
+      <Card className="border shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search products by name, category, or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filter by category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {uniqueCategories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid3x3 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
+          {(searchQuery || categoryFilter !== 'all') && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Showing {filteredItems.length} of {menuItems.length} products</span>
+              {(searchQuery || categoryFilter !== 'all') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setCategoryFilter('all');
+                  }}
+                  className="h-6 px-2"
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Product List */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Products</h3>
+          <p className="text-sm text-muted-foreground">Drag to reorder</p>
+        </div>
+        {filteredItems.length === 0 ? (
+          <Card className="border shadow-sm">
+            <CardContent className="py-12">
+              <div className="text-center text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">
+                  {menuItems.length === 0 ? 'No products yet' : 'No products match your filters'}
+                </p>
+                <p className="text-sm mt-1">
+                  {menuItems.length === 0 ? 'Add your first product above!' : 'Try adjusting your search or filters'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
-          menuItems.map((item, index) => (
+          filteredItems.map((item, index) => (
             <React.Fragment key={item.id}>
               <DraggableMenuItem
                 item={item}

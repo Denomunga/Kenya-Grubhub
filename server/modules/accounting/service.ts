@@ -1566,18 +1566,39 @@ export class InventoryAccountingService {
   static async getCOGS(startDate: Date, endDate: Date) {
     try {
       const { Order } = await import('../../models/Order');
-      const orders = await Order.find({
-        status: 'Delivered',
-        createdAt: { $gte: startDate, $lte: endDate }
-      }).lean();
+      const { Sale } = await import('../../models/Sale');
+      const [orders, sales] = await Promise.all([
+        Order.find({ status: 'Delivered', createdAt: { $gte: startDate, $lte: endDate } }).lean(),
+        Sale.find({ status: 'Completed', createdAt: { $gte: startDate, $lte: endDate } }).lean()
+      ]);
 
       const { Product } = await import('../../models/Product');
       let totalCOGS = 0;
       let totalRevenue = 0;
       const productCOGS: any[] = [];
 
+      // Process regular orders
       for (const order of orders) {
         for (const item of (order as any).items || []) {
+          if (item.productId) {
+            const product = await Product.findById(item.productId).lean();
+            if (product) {
+              const InventoryItem = (await import('../inventory/model')).InventoryItem;
+              const invItem = await InventoryItem.findOne({ productId: item.productId }).lean();
+              const costPrice = invItem ? (invItem as any).costPrice : (product as any).price * 0.6;
+              const itemCOGS = costPrice * item.quantity;
+              const itemRevenue = item.price * item.quantity;
+              totalCOGS += itemCOGS;
+              totalRevenue += itemRevenue;
+              productCOGS.push({ productId: item.productId, name: item.name, quantity: item.quantity, costPrice, revenue: itemRevenue, cogs: itemCOGS, profit: itemRevenue - itemCOGS, margin: itemRevenue > 0 ? ((itemRevenue - itemCOGS) / itemRevenue * 100) : 0 });
+            }
+          }
+        }
+      }
+
+      // Process POS sales
+      for (const sale of sales) {
+        for (const item of (sale as any).items || []) {
           if (item.productId) {
             const product = await Product.findById(item.productId).lean();
             if (product) {
@@ -1640,13 +1661,29 @@ export class InsightsService {
         insights.push({ type: 'success', icon: 'TrendingDown', message: `Your expenses decreased by ${pct}% this month`, detail: `KES ${thisExp.toLocaleString()} vs KES ${lastExp.toLocaleString()} last month` });
       }
 
-      // Most profitable product
+      // Most profitable product (includes Orders + POS Sales)
       try {
         const { Order } = await import('../../models/Order');
-        const recentOrders = await Order.find({ status: 'Delivered', createdAt: { $gte: lastMonthStart } }).lean();
+        const { Sale } = await import('../../models/Sale');
+        const [recentOrders, recentSales] = await Promise.all([
+          Order.find({ status: 'Delivered', createdAt: { $gte: lastMonthStart } }).lean(),
+          Sale.find({ status: 'Completed', createdAt: { $gte: lastMonthStart } }).lean()
+        ]);
         const productRevenue: Record<string, { name: string; revenue: number; count: number }> = {};
+        
+        // Process regular orders
         for (const order of recentOrders) {
           for (const item of (order as any).items || []) {
+            const key = item.name || item.productId || 'Unknown';
+            if (!productRevenue[key]) productRevenue[key] = { name: key, revenue: 0, count: 0 };
+            productRevenue[key].revenue += item.price * item.quantity;
+            productRevenue[key].count += item.quantity;
+          }
+        }
+        
+        // Process POS sales
+        for (const sale of recentSales) {
+          for (const item of (sale as any).items || []) {
             const key = item.name || item.productId || 'Unknown';
             if (!productRevenue[key]) productRevenue[key] = { name: key, revenue: 0, count: 0 };
             productRevenue[key].revenue += item.price * item.quantity;

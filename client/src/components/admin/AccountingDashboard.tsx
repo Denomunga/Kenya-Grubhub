@@ -24,6 +24,8 @@ import {
   Area,
   BarChart,
   Bar,
+  LineChart,
+  Line,
   PieChart,
   Pie,
   Cell,
@@ -62,6 +64,11 @@ import {
   BarChart3,
   Shield,
   Trash2,
+  Lightbulb,
+  Package,
+  Star,
+  Calendar,
+  AlertTriangle,
 } from 'lucide-react';
 import { InsightActionCard, InsightItem } from '@/components/ui/InsightActionCard';
 import { useToast } from '@/hooks/use-toast';
@@ -155,7 +162,7 @@ export default function AccountingDashboard() {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [cashFlowData, setCashFlowData] = useState<CashFlowData[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'invoices' | 'journal' | 'coa' | 'reports' | 'aging' | 'tax' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'invoices' | 'journal' | 'coa' | 'reports' | 'aging' | 'tax' | 'audit' | 'forecast' | 'inventory'>('overview');
   // New tab data
   const [accounts, setAccounts] = useState<any[]>([]);
   const [incomeStatement, setIncomeStatement] = useState<any>(null);
@@ -167,6 +174,11 @@ export default function AccountingDashboard() {
   const [taxRates, setTaxRates] = useState<any[]>([]);
   const [taxSummary, setTaxSummary] = useState<any>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [insights, setInsights] = useState<any[]>([]);
+  const [cashForecast, setCashForecast] = useState<any>(null);
+  const [stockOverview, setStockOverview] = useState<any>(null);
+  const [cogsData, setCogsData] = useState<any>(null);
+  const [] = useState<any[]>([]);
   const [reportPeriod, setReportPeriod] = useState({ startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] });
   const [reportTab, setReportTab] = useState<'pl' | 'bs' | 'cf' | 'tb'>('pl');
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
@@ -397,6 +409,36 @@ export default function AccountingDashboard() {
     } catch (e) { console.error('Fetch audit error:', e); }
   };
 
+  const fetchInsights = async () => {
+    try {
+      const res = await apiFetch('/api/v1/accounting/insights');
+      if (res.ok) { const d = await res.json(); setInsights(d.data || []); }
+    } catch (e) { console.error('Fetch insights error:', e); }
+  };
+
+  const fetchCashForecast = async () => {
+    try {
+      const res = await apiFetch('/api/v1/accounting/cash-flow-forecast?days=30');
+      if (res.ok) { const d = await res.json(); setCashForecast(d.data); }
+    } catch (e) { console.error('Fetch cash forecast error:', e); }
+  };
+
+  const fetchStockOverview = async () => {
+    try {
+      const res = await apiFetch('/api/v1/accounting/inventory/stock-overview');
+      if (res.ok) { const d = await res.json(); setStockOverview(d.data); }
+    } catch (e) { console.error('Fetch stock overview error:', e); }
+  };
+
+  const fetchCOGS = async () => {
+    try {
+      const qs = `?startDate=${reportPeriod.startDate}&endDate=${reportPeriod.endDate}`;
+      const res = await apiFetch(`/api/v1/accounting/inventory/cogs${qs}`);
+      if (res.ok) { const d = await res.json(); setCogsData(d.data); }
+    } catch (e) { console.error('Fetch COGS error:', e); }
+  };
+
+
   // Fetch data when tab changes
   useEffect(() => {
     if (activeTab === 'coa') fetchAccounts();
@@ -404,6 +446,9 @@ export default function AccountingDashboard() {
     else if (activeTab === 'aging') fetchAging();
     else if (activeTab === 'tax') fetchTax();
     else if (activeTab === 'audit') fetchAudit();
+    else if (activeTab === 'forecast') fetchCashForecast();
+    else if (activeTab === 'inventory') { fetchStockOverview(); fetchCOGS(); }
+    else if (activeTab === 'overview') fetchInsights();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -1419,6 +1464,8 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
             { key: 'coa', label: 'Accounts', icon: Layers, minRole: 'accountant' },
             { key: 'reports', label: 'Reports', icon: BarChart3, minRole: 'accountant' },
             { key: 'aging', label: 'Aging', icon: Clock, minRole: 'accountant' },
+            { key: 'forecast', label: 'Cash Forecast', icon: TrendingUp, minRole: 'accountant' },
+            { key: 'inventory', label: 'Inventory', icon: Package, minRole: 'accountant' },
             { key: 'tax', label: 'Tax', icon: Receipt, minRole: 'accountant' },
             { key: 'audit', label: 'Audit', icon: Shield, minRole: 'admin' },
           ] as const).filter(tab => {
@@ -1515,6 +1562,38 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Smart Insights */}
+          {insights.length > 0 && (
+            <Card className="border shadow-sm bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4 text-yellow-500" />
+                  Smart Insights
+                </CardTitle>
+                <CardDescription>AI-powered business intelligence</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {insights.map((insight: any, idx: number) => {
+                    const Icon = insight.icon === 'TrendingUp' ? TrendingUp : insight.icon === 'TrendingDown' ? TrendingDown : insight.icon === 'Star' ? Star : insight.icon === 'Clock' ? Clock : insight.icon === 'Calendar' ? Calendar : AlertTriangle;
+                    const colorClass = insight.type === 'warning' ? 'bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900 dark:border-yellow-700 dark:text-yellow-200' : insight.type === 'success' ? 'bg-green-100 border-green-300 text-green-800 dark:bg-green-900 dark:border-green-700 dark:text-green-200' : insight.type === 'danger' ? 'bg-red-100 border-red-300 text-red-800 dark:bg-red-900 dark:border-red-700 dark:text-red-200' : 'bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-200';
+                    return (
+                      <div key={idx} className={`p-3 rounded-lg border ${colorClass}`}>
+                        <div className="flex items-start gap-2">
+                          <Icon className="h-4 w-4 mt-0.5 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">{insight.message}</p>
+                            {insight.detail && <p className="text-xs mt-1 opacity-80">{insight.detail}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Monthly Revenue vs Expenses */}
           <Card className="border shadow-sm">
@@ -2595,6 +2674,259 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          CASH FORECAST TAB
+          ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'forecast' && cashForecast && (
+        <div className="space-y-6">
+          {/* Warning Banner */}
+          {cashForecast.warning && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3 dark:bg-red-950 dark:border-red-800">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-900 dark:text-red-100">{cashForecast.warning}</p>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-1">Review your upcoming expenses and expected income to avoid cash shortfall.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs text-muted-foreground">Current Cash</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">KES {cashForecast.currentCash?.toLocaleString() || 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs text-muted-foreground">Expected Income</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-green-600">+{cashForecast.expectedIncome?.toLocaleString() || 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs text-muted-foreground">Expected Expenses</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-red-600">-{cashForecast.expectedExpenses?.toLocaleString() || 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs text-muted-foreground">Projected Balance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className={`text-2xl font-bold ${cashForecast.projectedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  KES {cashForecast.projectedBalance?.toLocaleString() || 0}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Daily Forecast Chart */}
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">30-Day Cash Flow Forecast</CardTitle>
+              <CardDescription>Projected daily cash position</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={cashForecast.dailyForecast || []}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" fontSize={10} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis fontSize={10} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <Tooltip formatter={(value: number) => `KES ${value.toLocaleString()}`} />
+                  <Legend />
+                  <Line type="monotone" dataKey="balance" stroke="#3b82f6" strokeWidth={2} name="Cash Balance" dot={false} />
+                  <Line type="monotone" dataKey="inflow" stroke="#10b981" strokeWidth={1} strokeDasharray="5 5" name="Daily Inflow" dot={false} />
+                  <Line type="monotone" dataKey="outflow" stroke="#ef4444" strokeWidth={1} strokeDasharray="5 5" name="Daily Outflow" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Upcoming Recurring Expenses */}
+          {cashForecast.recurringExpenses?.length > 0 && (
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Upcoming Recurring Expenses</CardTitle>
+                <CardDescription>Scheduled payments in the next 30 days</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {cashForecast.recurringExpenses.map((exp: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium text-sm">{exp.name}</p>
+                          <p className="text-xs text-muted-foreground">Due: {new Date(exp.dueDate).toLocaleDateString()} • {exp.frequency}</p>
+                        </div>
+                      </div>
+                      <p className="font-semibold">KES {exp.amount?.toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          INVENTORY TAB
+          ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'inventory' && (
+        <div className="space-y-6">
+          {/* Stock Overview Cards */}
+          {stockOverview?.summary && (
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-muted-foreground">Total Items</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">{stockOverview.summary.totalItems}</p>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-muted-foreground">Stock Value (Cost)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">KES {stockOverview.summary.totalValue?.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-muted-foreground">Retail Value</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold text-green-600">KES {stockOverview.summary.totalRetailValue?.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm bg-yellow-50 dark:bg-yellow-950">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-muted-foreground">Low Stock Alerts</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold text-yellow-600">{stockOverview.summary.lowStockCount}</p>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm bg-red-50 dark:bg-red-950">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-muted-foreground">Out of Stock</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold text-red-600">{stockOverview.summary.outOfStockCount}</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* COGS & Profitability */}
+          {cogsData && (
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Cost of Goods Sold (COGS) & Profitability</CardTitle>
+                <CardDescription>Period: {reportPeriod.startDate} to {reportPeriod.endDate}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <div className="p-4 bg-blue-50 rounded-lg dark:bg-blue-950">
+                    <p className="text-xs text-muted-foreground mb-1">Total Revenue</p>
+                    <p className="text-xl font-bold">KES {cogsData.totalRevenue?.toLocaleString()}</p>
+                  </div>
+                  <div className="p-4 bg-red-50 rounded-lg dark:bg-red-950">
+                    <p className="text-xs text-muted-foreground mb-1">Total COGS</p>
+                    <p className="text-xl font-bold text-red-600">KES {cogsData.totalCOGS?.toLocaleString()}</p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg dark:bg-green-950">
+                    <p className="text-xs text-muted-foreground mb-1">Gross Profit</p>
+                    <p className="text-xl font-bold text-green-600">KES {cogsData.grossProfit?.toLocaleString()}</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg dark:bg-purple-950">
+                    <p className="text-xs text-muted-foreground mb-1">Gross Margin</p>
+                    <p className="text-xl font-bold text-purple-600">{cogsData.grossMargin?.toFixed(1)}%</p>
+                  </div>
+                </div>
+
+                {/* Top Products by Profit */}
+                <div>
+                  <h3 className="font-semibold mb-3">Top Products by Profit</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead className="text-right">Qty Sold</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                        <TableHead className="text-right">COGS</TableHead>
+                        <TableHead className="text-right">Profit</TableHead>
+                        <TableHead className="text-right">Margin %</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cogsData.products?.slice(0, 10).map((p: any, idx: number) => (
+                        <TableRow key={idx}>
+                          <TableCell className="font-medium">{p.name}</TableCell>
+                          <TableCell className="text-right">{p.quantity}</TableCell>
+                          <TableCell className="text-right">KES {p.revenue?.toLocaleString()}</TableCell>
+                          <TableCell className="text-right text-red-600">KES {p.cogs?.toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-semibold text-green-600">KES {p.profit?.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{p.margin?.toFixed(1)}%</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Low Stock Alerts */}
+          {stockOverview?.lowStockAlerts?.length > 0 && (
+            <Card className="border shadow-sm border-yellow-200 dark:border-yellow-800">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  Low Stock Alerts
+                </CardTitle>
+                <CardDescription>Items at or below minimum stock level</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead className="text-right">Current Stock</TableHead>
+                      <TableHead className="text-right">Min Stock</TableHead>
+                      <TableHead className="text-right">Unit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stockOverview.lowStockAlerts.map((item: any) => (
+                      <TableRow key={item._id}>
+                        <TableCell className="font-medium">{item.productName}</TableCell>
+                        <TableCell className="font-mono text-xs">{item.sku}</TableCell>
+                        <TableCell className="text-right font-semibold text-yellow-600">{item.currentStock}</TableCell>
+                        <TableCell className="text-right">{item.minimumStock}</TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground">{item.unit}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════

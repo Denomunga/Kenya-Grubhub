@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { body, query, param, validationResult } from 'express-validator';
 import { AccountingController, ExpenseController, RecurringExpenseController } from './controller';
 import { DashboardController } from './dashboardController';
-import { AccountCRUDController, ReportsController, AgingController, TaxController, AuditController, InvoiceEnhancedController } from './controller-enhanced';
+import { AccountCRUDController, ReportsController, AgingController, TaxController, AuditController, InvoiceEnhancedController, InventoryAccountingController, InsightsController, CashFlowForecastController, RecurringInvoiceController } from './controller-enhanced';
 import { requireAuth } from '@shared/middleware/auth';
 import { requireRole } from '@shared/middleware/roles';
 import { generalLimiter, authLimiter } from '@shared/middleware/rateLimiter';
@@ -412,6 +412,31 @@ router.put('/recurring-expenses/:id', authLimiter, requireAuth, requireRole(['ad
 router.delete('/recurring-expenses/:id', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']),
   [param('id').isMongoId()], handleValidationErrors, RecurringExpenseController.deleteRecurringExpense);
 router.post('/recurring-expenses/generate-monthly', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), RecurringExpenseController.generateMonthlyExpenses);
+
+// ============================================================
+// INVENTORY ACCOUNTING ROUTES
+// ============================================================
+router.get('/inventory/stock-overview', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), InventoryAccountingController.getStockOverview);
+router.get('/inventory/cogs', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), InventoryAccountingController.getCOGS);
+
+// ============================================================
+// INSIGHTS ROUTES
+// ============================================================
+router.get('/insights', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), InsightsController.getInsights);
+
+// ============================================================
+// CASH FLOW FORECAST ROUTES
+// ============================================================
+router.get('/cash-flow-forecast', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), CashFlowForecastController.getForecast);
+
+// ============================================================
+// RECURRING INVOICE ROUTES
+// ============================================================
+router.get('/recurring-invoices', generalLimiter, requireAuth, requireRole(['admin', 'accounting_manager', 'accounting_person']), RecurringInvoiceController.getAll);
+router.post('/recurring-invoices', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), RecurringInvoiceController.create);
+router.put('/recurring-invoices/:id', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), [param('id').isMongoId()], handleValidationErrors, RecurringInvoiceController.update);
+router.delete('/recurring-invoices/:id', authLimiter, requireAuth, requireRole(['admin']), [param('id').isMongoId()], handleValidationErrors, RecurringInvoiceController.delete);
+router.post('/recurring-invoices/generate-due', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']), RecurringInvoiceController.generateDue);
 
 export default router;
 

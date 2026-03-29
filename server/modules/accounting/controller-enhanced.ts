@@ -6,6 +6,10 @@ import {
   TaxService,
   AuditService,
   InvoiceService,
+  InventoryAccountingService,
+  InsightsService,
+  CashFlowForecastService,
+  RecurringInvoiceService,
 } from './service';
 
 interface AuthRequest extends Request {
@@ -298,6 +302,114 @@ export class InvoiceEnhancedController {
       res.status(200).json({ success: true, data: result });
     } catch (error: any) {
       res.status(400).json({ success: false, error: error?.message || 'Failed to bulk update' });
+    }
+  }
+}
+
+// ============================================================
+// INVENTORY ACCOUNTING CONTROLLER
+// ============================================================
+export class InventoryAccountingController {
+  static async getStockOverview(_req: AuthRequest, res: Response) {
+    try {
+      const data = await InventoryAccountingService.getStockOverview();
+      res.json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error?.message || 'Failed to get stock overview' });
+    }
+  }
+
+  static async getCOGS(req: AuthRequest, res: Response) {
+    try {
+      const { startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      const end = endDate ? new Date(endDate as string) : new Date();
+      const data = await InventoryAccountingService.getCOGS(start, end);
+      res.json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error?.message || 'Failed to calculate COGS' });
+    }
+  }
+}
+
+// ============================================================
+// INSIGHTS CONTROLLER
+// ============================================================
+export class InsightsController {
+  static async getInsights(_req: AuthRequest, res: Response) {
+    try {
+      const insights = await InsightsService.getInsights();
+      res.json({ success: true, data: insights });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error?.message || 'Failed to get insights' });
+    }
+  }
+}
+
+// ============================================================
+// CASH FLOW FORECAST CONTROLLER
+// ============================================================
+export class CashFlowForecastController {
+  static async getForecast(req: AuthRequest, res: Response) {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      const forecast = await CashFlowForecastService.getForecast(days);
+      res.json({ success: true, data: forecast });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error?.message || 'Failed to get cash flow forecast' });
+    }
+  }
+}
+
+// ============================================================
+// RECURRING INVOICE CONTROLLER
+// ============================================================
+export class RecurringInvoiceController {
+  static async getAll(_req: AuthRequest, res: Response) {
+    try {
+      const items = await RecurringInvoiceService.getAll();
+      res.json({ success: true, data: items });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error?.message || 'Failed to get recurring invoices' });
+    }
+  }
+
+  static async create(req: AuthRequest, res: Response) {
+    try {
+      const item = await RecurringInvoiceService.create({ ...req.body, createdBy: req.user!.id });
+      await AuditService.log({ action: 'create', entityType: 'RecurringInvoice', entityId: item._id.toString(), entityRef: item.recurringId, userId: req.user!.id });
+      res.status(201).json({ success: true, data: item });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error?.message || 'Failed to create recurring invoice' });
+    }
+  }
+
+  static async update(req: AuthRequest, res: Response) {
+    try {
+      const item = await RecurringInvoiceService.update(req.params.id, req.body);
+      await AuditService.log({ action: 'update', entityType: 'RecurringInvoice', entityId: item._id.toString(), entityRef: item.recurringId, userId: req.user!.id });
+      res.json({ success: true, data: item });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error?.message || 'Failed to update recurring invoice' });
+    }
+  }
+
+  static async delete(req: AuthRequest, res: Response) {
+    try {
+      const item = await RecurringInvoiceService.delete(req.params.id);
+      await AuditService.log({ action: 'delete', entityType: 'RecurringInvoice', entityId: item._id.toString(), entityRef: item.recurringId, userId: req.user!.id });
+      res.json({ success: true, data: item });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error?.message || 'Failed to delete recurring invoice' });
+    }
+  }
+
+  static async generateDue(req: AuthRequest, res: Response) {
+    try {
+      const result = await RecurringInvoiceService.generateDueInvoices(req.user!.id);
+      res.json({ success: true, data: result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error?.message || 'Failed to generate invoices' });
     }
   }
 }
