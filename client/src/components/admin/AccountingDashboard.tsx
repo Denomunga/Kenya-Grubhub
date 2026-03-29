@@ -204,6 +204,9 @@ export default function AccountingDashboard() {
   const [recurringExpenseDialogOpen, setRecurringExpenseDialogOpen] = useState(false);
   const [viewExpenseDialogOpen, setViewExpenseDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
+  const [viewRecurringDialogOpen, setViewRecurringDialogOpen] = useState(false);
+  const [editRecurringDialogOpen, setEditRecurringDialogOpen] = useState(false);
+  const [selectedRecurringExpense, setSelectedRecurringExpense] = useState<any>(null);
   const [expenseForm, setExpenseForm] = useState({
     expenseType: 'other',
     amount: '',
@@ -951,6 +954,77 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
     }
   };
 
+  const handleViewRecurringExpense = (rec: any) => {
+    setSelectedRecurringExpense(rec);
+    setViewRecurringDialogOpen(true);
+  };
+
+  const handleEditRecurringExpense = (rec: any) => {
+    setSelectedRecurringExpense(rec);
+    setRecurringExpenseForm({
+      expenseType: rec.expenseType || 'rent',
+      amount: String(rec.amount || ''),
+      description: rec.description || rec.name || '',
+      frequency: rec.frequency || 'monthly',
+      startDate: rec.startDate ? new Date(rec.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      endDate: rec.endDate ? new Date(rec.endDate).toISOString().split('T')[0] : '',
+      vendor: rec.vendor || '',
+      paymentMethod: rec.paymentMethod || 'bank_transfer',
+      category: rec.category || 'Operating Expenses',
+      accountCode: rec.accountCode || '5200',
+      autoGenerate: rec.autoGenerate !== false,
+      isActive: rec.isActive !== false,
+    });
+    setEditRecurringDialogOpen(true);
+  };
+
+  const handleUpdateRecurringExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRecurringExpense) return;
+    setSubmittingRecurring(true);
+    try {
+      const res = await apiFetch(`/api/v1/accounting/recurring-expenses/${selectedRecurringExpense._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: recurringExpenseForm.description,
+          ...recurringExpenseForm,
+          amount: parseFloat(recurringExpenseForm.amount),
+          startDate: new Date(recurringExpenseForm.startDate).toISOString(),
+          endDate: recurringExpenseForm.endDate ? new Date(recurringExpenseForm.endDate).toISOString() : undefined,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Recurring expense updated successfully' });
+        setEditRecurringDialogOpen(false);
+        fetchRecurringExpenses();
+      } else {
+        toast({ title: 'Error', description: 'Failed to update recurring expense', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update recurring expense', variant: 'destructive' });
+    } finally {
+      setSubmittingRecurring(false);
+    }
+  };
+
+  const handleDeleteRecurringExpense = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this recurring expense?')) return;
+    try {
+      const res = await apiFetch(`/api/v1/accounting/recurring-expenses/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Recurring expense deleted successfully' });
+        fetchRecurringExpenses();
+      } else {
+        toast({ title: 'Error', description: 'Failed to delete recurring expense', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to delete recurring expense', variant: 'destructive' });
+    }
+  };
+
   // ─── Insights ───────────────────────────────────────────────────────────
 
   const overdueInvoices = invoices.filter(inv => inv.status === 'overdue');
@@ -1597,6 +1671,225 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
         </DialogContent>
       </Dialog>
 
+      {/* View Recurring Expense Dialog */}
+      <Dialog open={viewRecurringDialogOpen} onOpenChange={setViewRecurringDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Recurring Expense Details</DialogTitle>
+          </DialogHeader>
+          {selectedRecurringExpense && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Recurring ID</label>
+                  <p className="text-sm font-mono">{selectedRecurringExpense.recurringId}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Status</label>
+                  <div className="mt-1">
+                    <Badge variant={selectedRecurringExpense.isActive ? 'default' : 'secondary'}>
+                      {selectedRecurringExpense.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Name/Description</label>
+                <p className="text-sm">{selectedRecurringExpense.name || selectedRecurringExpense.description}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Amount</label>
+                  <p className="text-sm font-semibold text-red-600">KES {selectedRecurringExpense.amount?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Frequency</label>
+                  <p className="text-sm capitalize">{selectedRecurringExpense.frequency}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Expense Type</label>
+                  <p className="text-sm capitalize">{selectedRecurringExpense.expenseType}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Payment Method</label>
+                  <p className="text-sm capitalize">{selectedRecurringExpense.paymentMethod?.replace('_', ' ') || '—'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Start Date</label>
+                  <p className="text-sm">{new Date(selectedRecurringExpense.startDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Next Due Date</label>
+                  <p className="text-sm">{selectedRecurringExpense.nextDueDate ? new Date(selectedRecurringExpense.nextDueDate).toLocaleDateString() : '—'}</p>
+                </div>
+              </div>
+              {selectedRecurringExpense.endDate && (
+                <div>
+                  <label className="text-xs text-muted-foreground">End Date</label>
+                  <p className="text-sm">{new Date(selectedRecurringExpense.endDate).toLocaleDateString()}</p>
+                </div>
+              )}
+              {selectedRecurringExpense.vendor && (
+                <div>
+                  <label className="text-xs text-muted-foreground">Vendor</label>
+                  <p className="text-sm">{selectedRecurringExpense.vendor}</p>
+                </div>
+              )}
+              {selectedRecurringExpense.category && (
+                <div>
+                  <label className="text-xs text-muted-foreground">Category</label>
+                  <p className="text-sm">{selectedRecurringExpense.category}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Auto-Generate</label>
+                  <p className="text-sm">{selectedRecurringExpense.autoGenerate ? 'Yes' : 'No'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Account Code</label>
+                  <p className="text-sm font-mono">{selectedRecurringExpense.accountCode || '—'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setViewRecurringDialogOpen(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Recurring Expense Dialog */}
+      <Dialog open={editRecurringDialogOpen} onOpenChange={setEditRecurringDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Recurring Expense</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateRecurringExpense} className="space-y-3">
+            <div>
+              <label className="text-sm font-medium">Description/Name *</label>
+              <Input
+                value={recurringExpenseForm.description}
+                onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, description: e.target.value })}
+                placeholder="e.g., Office Rent"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium">Amount (KES) *</label>
+                <Input
+                  type="number"
+                  value={recurringExpenseForm.amount}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, amount: e.target.value })}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Frequency *</label>
+                <select
+                  value={recurringExpenseForm.frequency}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, frequency: e.target.value })}
+                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background"
+                  required
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium">Expense Type *</label>
+                <select
+                  value={recurringExpenseForm.expenseType}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, expenseType: e.target.value })}
+                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background"
+                  required
+                >
+                  <option value="rent">Rent</option>
+                  <option value="utilities">Utilities</option>
+                  <option value="salaries">Salaries</option>
+                  <option value="subscriptions">Subscriptions</option>
+                  <option value="maintenance">Maintenance</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Payment Method</label>
+                <select
+                  value={recurringExpenseForm.paymentMethod}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, paymentMethod: e.target.value })}
+                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background"
+                >
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="cash">Cash</option>
+                  <option value="mpesa">M-Pesa</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Vendor</label>
+              <Input
+                value={recurringExpenseForm.vendor}
+                onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, vendor: e.target.value })}
+                placeholder="Vendor name (optional)"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium">Start Date *</label>
+                <Input
+                  type="date"
+                  value={recurringExpenseForm.startDate}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, startDate: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">End Date (Optional)</label>
+                <Input
+                  type="date"
+                  value={recurringExpenseForm.endDate}
+                  onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, endDate: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="editIsActive"
+                checked={recurringExpenseForm.isActive}
+                onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, isActive: e.target.checked })}
+              />
+              <label htmlFor="editIsActive" className="text-sm">Active</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="editAutoGenerate"
+                checked={recurringExpenseForm.autoGenerate}
+                onChange={(e) => setRecurringExpenseForm({ ...recurringExpenseForm, autoGenerate: e.target.checked })}
+              />
+              <label htmlFor="editAutoGenerate" className="text-sm">Auto-generate expenses</label>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" type="button" onClick={() => setEditRecurringDialogOpen(false)} disabled={submittingRecurring}>Cancel</Button>
+              <Button type="submit" disabled={submittingRecurring}>{submittingRecurring ? 'Updating...' : 'Update Recurring Expense'}</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* ═══════════════════════════════════════════════════════════════════
           TAB NAVIGATION
           ═══════════════════════════════════════════════════════════════════ */}
@@ -1981,6 +2274,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                       <TableHead>Vendor</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Auto-Gen</TableHead>
+                      <TableHead className="w-20">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2012,11 +2306,44 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                               <span className="text-xs text-muted-foreground">Manual</span>
                             )}
                           </TableCell>
+                          <TableCell>
+                            <div className="flex gap-0.5">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 w-7 p-0" 
+                                title="View"
+                                onClick={() => handleViewRecurringExpense(rec)}
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 w-7 p-0" 
+                                title="Edit"
+                                onClick={() => handleEditRecurringExpense(rec)}
+                              >
+                                <FileText className="h-3.5 w-3.5 text-blue-600" />
+                              </Button>
+                              {isAdmin && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-7 w-7 p-0" 
+                                  title="Delete"
+                                  onClick={() => handleDeleteRecurringExpense(rec._id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                           <RefreshCw className="h-8 w-8 mx-auto mb-2 opacity-30" />
                           No recurring expenses found
                         </TableCell>
