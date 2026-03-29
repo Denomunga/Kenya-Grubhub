@@ -159,6 +159,7 @@ export default function AccountingDashboard() {
   const [stats, setStats] = useState<AccountingStats | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [, setExpenses] = useState<any[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [cashFlowData, setCashFlowData] = useState<CashFlowData[]>([]);
@@ -242,9 +243,10 @@ export default function AccountingDashboard() {
 
   const fetchAccountingData = async () => {
     try {
-      const [statsRes, transactionsRes, invoicesRes, monthlyRes, cashFlowRes, journalRes] = await Promise.all([
+      const [statsRes, transactionsRes, expensesRes, invoicesRes, monthlyRes, cashFlowRes, journalRes] = await Promise.all([
         apiFetch('/api/v1/accounting/stats'),
         apiFetch('/api/v1/accounting/transactions?page=1&limit=50'),
+        apiFetch('/api/v1/accounting/expenses?page=1&limit=50'),
         apiFetch('/api/v1/accounting/invoices'),
         apiFetch('/api/v1/accounting/monthly?months=12'),
         apiFetch('/api/v1/accounting/cashflow?days=30'),
@@ -258,7 +260,31 @@ export default function AccountingDashboard() {
 
       if (transactionsRes.ok) {
         const data = await transactionsRes.json();
-        setTransactions(data.data?.transactions || data.data || []);
+        const txns = data.data?.transactions || data.data || [];
+        
+        // Fetch and merge expenses
+        if (expensesRes.ok) {
+          const expData = await expensesRes.json();
+          const exps = expData.data?.expenses || expData.data || [];
+          setExpenses(exps);
+          
+          // Merge expenses into transactions for display
+          const expensesAsTxns = exps.map((exp: any) => ({
+            ...exp,
+            transactionId: exp.expenseId,
+            transactionNumber: exp.expenseId,
+            transactionDate: exp.expenseDate,
+            type: 'expense',
+            date: exp.expenseDate,
+            category: exp.category || exp.expenseType,
+            accountName: exp.category || exp.expenseType,
+            status: exp.status || 'pending'
+          }));
+          
+          setTransactions([...txns, ...expensesAsTxns]);
+        } else {
+          setTransactions(txns);
+        }
       }
 
       if (invoicesRes.ok) {
