@@ -103,6 +103,7 @@ interface Transaction {
   referenceNumber?: string;
   referenceType?: string;
   accountName: string;
+  expenseId?: string;
 }
 
 interface Invoice {
@@ -201,6 +202,8 @@ export default function AccountingDashboard() {
   const [autoJournalSource, setAutoJournalSource] = useState<'orders' | 'procurement' | null>(null);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [recurringExpenseDialogOpen, setRecurringExpenseDialogOpen] = useState(false);
+  const [viewExpenseDialogOpen, setViewExpenseDialogOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<any>(null);
   const [expenseForm, setExpenseForm] = useState({
     expenseType: 'other',
     amount: '',
@@ -925,6 +928,29 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
     }
   };
 
+  const handleViewExpense = (expense: any) => {
+    setSelectedExpense(expense);
+    setViewExpenseDialogOpen(true);
+  };
+
+  const handleApproveExpense = async (expenseId: string) => {
+    try {
+      const res = await apiFetch(`/api/v1/accounting/expenses/${expenseId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'approved' }),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Expense approved successfully' });
+        fetchAccountingData();
+      } else {
+        toast({ title: 'Error', description: 'Failed to approve expense', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to approve expense', variant: 'destructive' });
+    }
+  };
+
   // ─── Insights ───────────────────────────────────────────────────────────
 
   const overdueInvoices = invoices.filter(inv => inv.status === 'overdue');
@@ -1487,6 +1513,90 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
         </DialogContent>
       </Dialog>
 
+      {/* View Expense Details Dialog */}
+      <Dialog open={viewExpenseDialogOpen} onOpenChange={setViewExpenseDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Expense Details</DialogTitle>
+          </DialogHeader>
+          {selectedExpense && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Expense ID</label>
+                  <p className="text-sm font-mono">{selectedExpense.expenseId || selectedExpense.transactionId}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Status</label>
+                  <div className="mt-1">
+                    <Badge variant={selectedExpense.status === 'approved' ? 'default' : 'secondary'}>
+                      {selectedExpense.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Description</label>
+                <p className="text-sm">{selectedExpense.description}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Amount</label>
+                  <p className="text-sm font-semibold text-red-600">KES {(selectedExpense.amount || selectedExpense.totalAmount)?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Type</label>
+                  <p className="text-sm capitalize">{selectedExpense.expenseType || selectedExpense.type}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Date</label>
+                  <p className="text-sm">{new Date(selectedExpense.expenseDate || selectedExpense.transactionDate || selectedExpense.date).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Payment Method</label>
+                  <p className="text-sm capitalize">{selectedExpense.paymentMethod?.replace('_', ' ') || '—'}</p>
+                </div>
+              </div>
+              {selectedExpense.vendor && (
+                <div>
+                  <label className="text-xs text-muted-foreground">Vendor</label>
+                  <p className="text-sm">{selectedExpense.vendor}</p>
+                </div>
+              )}
+              {selectedExpense.category && (
+                <div>
+                  <label className="text-xs text-muted-foreground">Category</label>
+                  <p className="text-sm">{selectedExpense.category}</p>
+                </div>
+              )}
+              {selectedExpense.referenceNumber && (
+                <div>
+                  <label className="text-xs text-muted-foreground">Reference Number</label>
+                  <p className="text-sm font-mono">{selectedExpense.referenceNumber}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-4">
+            {selectedExpense?.status === 'pending' && selectedExpense?.expenseId && (
+              <Button 
+                onClick={() => {
+                  handleApproveExpense(selectedExpense._id);
+                  setViewExpenseDialogOpen(false);
+                }}
+                className="gap-1"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Approve
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setViewExpenseDialogOpen(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ═══════════════════════════════════════════════════════════════════
           TAB NAVIGATION
           ═══════════════════════════════════════════════════════════════════ */}
@@ -1821,11 +1931,23 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-0.5">
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="View">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-7 w-7 p-0" 
+                                  title="View"
+                                  onClick={() => handleViewExpense(txn)}
+                                >
                                   <Eye className="h-3.5 w-3.5" />
                                 </Button>
-                                {txn.status === 'pending' && (
-                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Approve">
+                                {txn.status === 'pending' && txn.expenseId && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-7 w-7 p-0" 
+                                    title="Approve"
+                                    onClick={() => handleApproveExpense(txn._id)}
+                                  >
                                     <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
                                   </Button>
                                 )}
