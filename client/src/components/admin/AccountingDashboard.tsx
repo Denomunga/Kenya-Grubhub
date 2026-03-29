@@ -178,7 +178,8 @@ export default function AccountingDashboard() {
   const [cashForecast, setCashForecast] = useState<any>(null);
   const [stockOverview, setStockOverview] = useState<any>(null);
   const [cogsData, setCogsData] = useState<any>(null);
-  const [] = useState<any[]>([]);
+  const [recurringExpenses, setRecurringExpenses] = useState<any[]>([]);
+  const [transactionView, setTransactionView] = useState<'transactions' | 'recurring'>('transactions');
   const [reportPeriod, setReportPeriod] = useState({ startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] });
   const [reportTab, setReportTab] = useState<'pl' | 'bs' | 'cf' | 'tb'>('pl');
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
@@ -438,6 +439,12 @@ export default function AccountingDashboard() {
     } catch (e) { console.error('Fetch COGS error:', e); }
   };
 
+  const fetchRecurringExpenses = async () => {
+    try {
+      const res = await apiFetch('/api/v1/accounting/recurring-expenses');
+      if (res.ok) { const d = await res.json(); setRecurringExpenses(d.data?.recurringExpenses || []); }
+    } catch (e) { console.error('Fetch recurring expenses error:', e); }
+  };
 
   // Fetch data when tab changes
   useEffect(() => {
@@ -449,6 +456,7 @@ export default function AccountingDashboard() {
     else if (activeTab === 'forecast') fetchCashForecast();
     else if (activeTab === 'inventory') { fetchStockOverview(); fetchCOGS(); }
     else if (activeTab === 'overview') fetchInsights();
+    else if (activeTab === 'transactions') fetchRecurringExpenses();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -880,6 +888,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
         toast({ title: 'Success', description: 'Recurring expense created successfully' });
         setRecurringExpenseDialogOpen(false);
         fetchAccountingData();
+        fetchRecurringExpenses();
       } else {
         toast({ title: 'Error', description: 'Failed to create recurring expense', variant: 'destructive' });
       }
@@ -1703,92 +1712,174 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
               </div>
             </div>
             <div className="flex flex-wrap gap-3 mt-4">
-              <Input
-                placeholder="Search transactions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-xs h-9"
-              />
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as any)}
-                className="h-9 px-3 border rounded-lg text-sm bg-background"
-              >
-                <option value="all">All Types</option>
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-              </select>
+              <div className="flex gap-1 border rounded-lg p-1">
+                <Button
+                  variant={transactionView === 'transactions' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setTransactionView('transactions')}
+                  className="h-7"
+                >
+                  Transactions
+                </Button>
+                <Button
+                  variant={transactionView === 'recurring' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setTransactionView('recurring')}
+                  className="h-7"
+                >
+                  Recurring Expenses
+                </Button>
+              </div>
+              {transactionView === 'transactions' && (
+                <>
+                  <Input
+                    placeholder="Search transactions..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-xs h-9"
+                  />
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value as any)}
+                    className="h-9 px-3 border rounded-lg text-sm bg-background"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="income">Income</option>
+                    <option value="expense">Expense</option>
+                  </select>
+                </>
+              )}
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Account</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Ref</TableHead>
-                    <TableHead className="text-right">Debit (KES)</TableHead>
-                    <TableHead className="text-right">Credit (KES)</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-16">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedTransactions.length > 0 ? (
-                    paginatedTransactions.map((txn) => {
-                      const amt = txn.totalAmount || txn.amount;
-                      return (
-                        <TableRow key={txn._id}>
-                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                            {new Date(txn.transactionDate || txn.date).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">{txn.transactionNumber || txn.transactionId}</TableCell>
-                          <TableCell className="text-sm">{txn.accountName || txn.category}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{txn.description}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{txn.referenceNumber || txn.reference || '—'}</TableCell>
+            {transactionView === 'transactions' ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Account</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Ref</TableHead>
+                      <TableHead className="text-right">Debit (KES)</TableHead>
+                      <TableHead className="text-right">Credit (KES)</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-16">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedTransactions.length > 0 ? (
+                      paginatedTransactions.map((txn) => {
+                        const amt = txn.totalAmount || txn.amount;
+                        return (
+                          <TableRow key={txn._id}>
+                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                              {new Date(txn.transactionDate || txn.date).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">{txn.transactionNumber || txn.transactionId}</TableCell>
+                            <TableCell className="text-sm">{txn.accountName || txn.category}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{txn.description}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{txn.referenceNumber || txn.reference || '—'}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">
+                              {txn.type === 'expense' ? <span className="text-red-600">{amt.toLocaleString()}</span> : '—'}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm">
+                              {txn.type === 'income' ? <span className="text-emerald-600">{amt.toLocaleString()}</span> : '—'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(txn.status)}`}>
+                                {getStatusIcon(txn.status)}
+                                <span className="ml-1">{txn.status}</span>
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-0.5">
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="View">
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                                {txn.status === 'pending' && (
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Approve">
+                                    <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                          <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          No transactions found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Frequency</TableHead>
+                      <TableHead className="text-right">Amount (KES)</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>Next Due</TableHead>
+                      <TableHead>Vendor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Auto-Gen</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recurringExpenses.length > 0 ? (
+                      recurringExpenses.map((rec: any) => (
+                        <TableRow key={rec._id}>
+                          <TableCell className="font-medium">{rec.name || rec.description}</TableCell>
+                          <TableCell className="text-sm capitalize">{rec.expenseType}</TableCell>
+                          <TableCell className="text-sm capitalize">{rec.frequency}</TableCell>
                           <TableCell className="text-right font-mono text-sm">
-                            {txn.type === 'expense' ? <span className="text-red-600">{amt.toLocaleString()}</span> : '—'}
+                            <span className="text-red-600">{rec.amount?.toLocaleString()}</span>
                           </TableCell>
-                          <TableCell className="text-right font-mono text-sm">
-                            {txn.type === 'income' ? <span className="text-emerald-600">{amt.toLocaleString()}</span> : '—'}
+                          <TableCell className="text-xs text-muted-foreground">
+                            {new Date(rec.startDate).toLocaleDateString()}
                           </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {rec.nextDueDate ? new Date(rec.nextDueDate).toLocaleDateString() : '—'}
+                          </TableCell>
+                          <TableCell className="text-sm">{rec.vendor || '—'}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(txn.status)}`}>
-                              {getStatusIcon(txn.status)}
-                              <span className="ml-1">{txn.status}</span>
+                            <Badge variant={rec.isActive ? 'default' : 'secondary'} className="text-[10px]">
+                              {rec.isActive ? 'Active' : 'Inactive'}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-0.5">
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="View">
-                                <Eye className="h-3.5 w-3.5" />
-                              </Button>
-                              {txn.status === 'pending' && (
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Approve">
-                                  <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-                                </Button>
-                              )}
-                            </div>
+                            {rec.autoGenerate ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Manual</span>
+                            )}
                           </TableCell>
                         </TableRow>
-                      );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                        <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        No transactions found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                          <RefreshCw className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          No recurring expenses found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
             {/* Pagination Controls */}
-            {filteredTransactions.length > txnPerPage && (
+            {transactionView === 'transactions' && filteredTransactions.length > txnPerPage && (
               <div className="flex items-center justify-between mt-4 pt-4 border-t">
                 <span className="text-xs text-muted-foreground">
                   Showing {((txnPage - 1) * txnPerPage) + 1}–{Math.min(txnPage * txnPerPage, filteredTransactions.length)} of {filteredTransactions.length}
