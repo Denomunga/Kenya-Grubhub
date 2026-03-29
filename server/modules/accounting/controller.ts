@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import {
   ChartOfAccountsService,
@@ -32,7 +32,7 @@ interface CreateExpenseData {
   accountCode?: string;
   recurringExpenseId?: string | mongoose.Types.ObjectId;
   referenceNumber?: string;
-  CreatedBy: string;
+  createdBy: mongoose.Types.ObjectId;
 }
 
 interface CreateRecurringExpenseData {
@@ -49,7 +49,7 @@ interface CreateRecurringExpenseData {
   category?: string;
   autoGenerate?: boolean;
   isActive?: boolean;
-  CreatedBy: string;
+  createdBy: mongoose.Types.ObjectId;
 }
 
 async function generateInvoiceNumber(): Promise<string> {
@@ -485,7 +485,7 @@ export class ExpenseController {
         accountCode,
         recurringExpenseId,
         referenceNumber,
-        CreatedBy: req.user.id
+        createdBy: new mongoose.Types.ObjectId(req.user.id)
       };
 
       const expense = await ExpenseService.createExpense(expenseData as Partial<IExpense>);
@@ -820,7 +820,7 @@ export class RecurringExpenseController {
         category,
         autoGenerate: autoGenerate !== undefined ? autoGenerate : true,
         isActive: isActive !== undefined ? isActive : true,
-        CreatedBy: req.user.id
+        createdBy: new mongoose.Types.ObjectId(req.user.id)
       };
 
       const recurringExpense = await RecurringExpenseService.createRecurringExpense(recurringExpenseData);
