@@ -195,6 +195,7 @@ const DragDropMenuManager: React.FC = () => {
   const [editingImageFiles, setEditingImageFiles] = useState<File[]>([]);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<MenuItem | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -469,7 +470,7 @@ const DragDropMenuManager: React.FC = () => {
           <h2 className="text-2xl font-bold tracking-tight">Product Catalog</h2>
           <p className="text-muted-foreground mt-1">Manage your store inventory and pricing</p>
         </div>
-        <Button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="gap-2">
+        <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
           <Plus className="h-4 w-4" />
           Add Product
         </Button>
@@ -527,197 +528,6 @@ const DragDropMenuManager: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Add New Item Form */}
-      <Card className="gradient-mesh border-animated-gradient">
-        <CardContent className="p-6">
-          <h3 className="text-xl font-semibold mb-4 text-holographic">Add New Item</h3>
-          <div className="space-y-4">
-            <Input
-              placeholder="Item name"
-              value={newItem.name}
-              onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-              className="liquid-transition"
-            />
-            <Select
-              value={newItem.category}
-              onValueChange={(value: string) => 
-                setNewItem({ ...newItem, category: value })
-              }
-            >
-              <SelectTrigger className="liquid-transition">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORY_OPTIONS.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="Subcategory (optional)"
-              value={newItem.subcategory || ''}
-              onChange={(e) => setNewItem({ ...newItem, subcategory: e.target.value })}
-              className="liquid-transition"
-            />
-            {showLaptopFieldsForNewItem && (
-              <>
-                <Input
-                  placeholder="Brand (optional)"
-                  value={newItem.brand || ''}
-                  onChange={(e) => setNewItem({ ...newItem, brand: e.target.value })}
-                  className="liquid-transition"
-                />
-                <Select
-                  value={newItem.condition || ''}
-                  onValueChange={(value: "new" | "used" | "refurbished" | "") => 
-                    setNewItem({ ...newItem, condition: value || undefined })
-                  }
-                >
-                  <SelectTrigger className="liquid-transition">
-                    <SelectValue placeholder="Condition (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No condition</SelectItem>
-                    <SelectItem value="new">New</SelectItem>
-                    <SelectItem value="used">Used</SelectItem>
-                    <SelectItem value="refurbished">Refurbished</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  placeholder="Size (optional)"
-                  value={newItem.size || ''}
-                  onChange={(e) => setNewItem({ ...newItem, size: e.target.value })}
-                  className="liquid-transition"
-                />
-                <Input
-                  placeholder="Color (optional)"
-                  value={newItem.color || ''}
-                  onChange={(e) => setNewItem({ ...newItem, color: e.target.value })}
-                  className="liquid-transition"
-                />
-                <Input
-                  type="number"
-                  placeholder="Year (optional)"
-                  value={newItem.year || ''}
-                  onChange={(e) => setNewItem({ ...newItem, year: parseInt(e.target.value) || undefined })}
-                  className="liquid-transition"
-                />
-                <Input
-                  placeholder="Material (optional)"
-                  value={newItem.material || ''}
-                  onChange={(e) => setNewItem({ ...newItem, material: e.target.value })}
-                  className="liquid-transition"
-                />
-                <Input
-                  placeholder="Location (optional)"
-                  value={newItem.location || ''}
-                  onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
-                  className="liquid-transition"
-                />
-              </>
-            )}
-            <Input
-              type="number"
-              placeholder="Stock (optional)"
-              value={newItem.stock || ''}
-              onChange={(e) => setNewItem({ ...newItem, stock: parseFloat(e.target.value) || undefined })}
-              className="liquid-transition"
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Select
-                value={newItem.unit || 'pcs'}
-                onValueChange={(value: string) => setNewItem({ ...newItem, unit: value })}
-              >
-                <SelectTrigger className="liquid-transition">
-                  <SelectValue placeholder="Unit (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {UNIT_OPTIONS.map((u) => (
-                    <SelectItem key={u} value={u}>{u}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="Quantity step (optional)"
-                value={newItem.quantityStep ?? ''}
-                onChange={(e) => setNewItem({ ...newItem, quantityStep: e.target.value ? parseFloat(e.target.value) : undefined })}
-                className="liquid-transition"
-              />
-            </div>
-            <Input
-              placeholder="Tags (comma separated, optional)"
-              value={newItem.tags?.join(', ') || ''}
-              onChange={(e) => setNewItem({ ...newItem, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) })}
-              className="liquid-transition"
-            />
-            <Input
-              placeholder="Description"
-              value={newItem.description}
-              onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-              className="liquid-transition"
-            />
-            <Input
-              type="number"
-              placeholder="Price (KSHS)"
-              value={newItem.price || ''}
-              onChange={(e) => setNewItem({ ...newItem, price: parseInt(e.target.value) || 0 })}
-              className="liquid-transition"
-            />
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Images ({newItem.imageFiles.length}/10)</label>
-              <Input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageChange}
-                className="liquid-transition"
-              />
-              <p className="text-xs text-muted-foreground">
-                Upload up to 10 images. First image will be the primary display image.
-              </p>
-              
-              {/* Image Preview */}
-              {newItem.imageFiles.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-foreground">Selected Images:</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
-                    {newItem.imageFiles.map((file, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-20 object-cover rounded border"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 truncate">
-                          {file.name}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <Button 
-            onClick={handleAddItem} 
-            className="mt-4 luminous-glow"
-            disabled={!newItem.name || !newItem.category}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Item
-          </Button>
-        </CardContent>
-      </Card>
 
       {/* Search and Filter Bar */}
       <Card className="border shadow-sm">
@@ -1131,6 +941,191 @@ const DragDropMenuManager: React.FC = () => {
               onClick={confirmDeleteItem}
             >
               Delete Item
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Product Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Product</DialogTitle>
+            <DialogDescription>Fill in the product details below</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <Input
+                  placeholder="Product name *"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                />
+              </div>
+              <Select
+                value={newItem.category}
+                onValueChange={(value: string) => setNewItem({ ...newItem, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Category *" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_OPTIONS.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Subcategory"
+                value={newItem.subcategory || ''}
+                onChange={(e) => setNewItem({ ...newItem, subcategory: e.target.value })}
+              />
+              {showLaptopFieldsForNewItem && (
+                <>
+                  <Input
+                    placeholder="Brand"
+                    value={newItem.brand || ''}
+                    onChange={(e) => setNewItem({ ...newItem, brand: e.target.value })}
+                  />
+                  <Select
+                    value={newItem.condition || ''}
+                    onValueChange={(value: "new" | "used" | "refurbished" | "") => 
+                      setNewItem({ ...newItem, condition: value || undefined })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Condition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No condition</SelectItem>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="used">Used</SelectItem>
+                      <SelectItem value="refurbished">Refurbished</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="Size"
+                    value={newItem.size || ''}
+                    onChange={(e) => setNewItem({ ...newItem, size: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Color"
+                    value={newItem.color || ''}
+                    onChange={(e) => setNewItem({ ...newItem, color: e.target.value })}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Year"
+                    value={newItem.year || ''}
+                    onChange={(e) => setNewItem({ ...newItem, year: parseInt(e.target.value) || undefined })}
+                  />
+                  <Input
+                    placeholder="Material"
+                    value={newItem.material || ''}
+                    onChange={(e) => setNewItem({ ...newItem, material: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Location"
+                    value={newItem.location || ''}
+                    onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
+                  />
+                </>
+              )}
+              <Input
+                type="number"
+                placeholder="Stock quantity"
+                value={newItem.stock || ''}
+                onChange={(e) => setNewItem({ ...newItem, stock: parseFloat(e.target.value) || undefined })}
+              />
+              <Select
+                value={newItem.unit || 'pcs'}
+                onValueChange={(value: string) => setNewItem({ ...newItem, unit: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  {UNIT_OPTIONS.map((u) => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="Quantity step"
+                value={newItem.quantityStep ?? ''}
+                onChange={(e) => setNewItem({ ...newItem, quantityStep: e.target.value ? parseFloat(e.target.value) : undefined })}
+              />
+              <Input
+                type="number"
+                placeholder="Price (KES) *"
+                value={newItem.price || ''}
+                onChange={(e) => setNewItem({ ...newItem, price: parseInt(e.target.value) || 0 })}
+              />
+            </div>
+            <Input
+              placeholder="Tags (comma separated)"
+              value={newItem.tags?.join(', ') || ''}
+              onChange={(e) => setNewItem({ ...newItem, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) })}
+            />
+            <Input
+              placeholder="Description"
+              value={newItem.description}
+              onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Product Images ({newItem.imageFiles.length}/10)</label>
+              <Input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageChange}
+              />
+              <p className="text-xs text-muted-foreground">
+                Upload up to 10 images. First image will be the primary display.
+              </p>
+              {newItem.imageFiles.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mt-3">
+                  {newItem.imageFiles.map((file, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-20 object-cover rounded border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsAddDialogOpen(false);
+                setNewItem({ name: '', category: 'HP', price: 0, images: [], description: '', imageFiles: [], unit: 'pcs', quantityStep: 1 });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                handleAddItem();
+                setIsAddDialogOpen(false);
+              }}
+              disabled={!newItem.name || !newItem.category}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Product
             </Button>
           </DialogFooter>
         </DialogContent>
