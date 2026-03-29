@@ -1129,26 +1129,53 @@ export class AccountService {
 // ============================================================
 export class EnhancedReportingService {
   static async getIncomeStatement(startDate: Date, endDate: Date) {
-    const entries = await JournalEntry.find({
+    // Get revenue from journal entries (POS sales and orders)
+    const journalEntries = await JournalEntry.find({
       status: 'posted',
-      transactionDate: { $gte: startDate, $lte: endDate }
+      transactionDate: { $gte: startDate, $lte: endDate },
+      $or: [
+        { referenceType: 'Order' },
+        { referenceType: 'POSSale' }
+      ]
     }).lean();
 
     const revenueAccounts: Record<string, { code: string; name: string; amount: number }> = {};
-    const expenseAccounts: Record<string, { code: string; name: string; amount: number }> = {};
 
-    for (const entry of entries) {
+    // Process journal entries for revenue
+    for (const entry of journalEntries) {
       for (const line of entry.lines) {
         const account = await Account.findOne({ code: line.accountCode }).lean();
         if (!account) continue;
         if (account.category === 'revenue') {
-          if (!revenueAccounts[line.accountCode]) revenueAccounts[line.accountCode] = { code: line.accountCode, name: line.accountName, amount: 0 };
+          if (!revenueAccounts[line.accountCode]) {
+            revenueAccounts[line.accountCode] = { code: line.accountCode, name: line.accountName, amount: 0 };
+          }
           revenueAccounts[line.accountCode].amount += (line.credit - line.debit);
-        } else if (account.category === 'expense') {
-          if (!expenseAccounts[line.accountCode]) expenseAccounts[line.accountCode] = { code: line.accountCode, name: line.accountName, amount: 0 };
-          expenseAccounts[line.accountCode].amount += (line.debit - line.credit);
         }
       }
+    }
+
+    // Get expenses from Expense collection (includes regular and recurring expenses)
+    const expenses = await Expense.find({
+      expenseDate: { $gte: startDate, $lte: endDate },
+      status: { $in: ['approved', 'paid'] }
+    }).lean();
+
+    const expenseAccounts: Record<string, { code: string; name: string; amount: number }> = {};
+
+    // Group expenses by account code or category
+    for (const expense of expenses) {
+      const accountCode = expense.accountCode || '5600'; // Default to Miscellaneous Expense
+      const categoryName = expense.category || expense.expenseType || 'Miscellaneous';
+      
+      if (!expenseAccounts[accountCode]) {
+        expenseAccounts[accountCode] = { 
+          code: accountCode, 
+          name: categoryName, 
+          amount: 0 
+        };
+      }
+      expenseAccounts[accountCode].amount += expense.amount;
     }
 
     const totalRevenue = Object.values(revenueAccounts).reduce((s, a) => s + a.amount, 0);
