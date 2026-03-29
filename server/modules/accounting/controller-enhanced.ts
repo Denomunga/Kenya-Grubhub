@@ -457,19 +457,31 @@ export class AutoJournalController {
       const newOrders = orders.filter((o: any) => !existingOrderIds.has(String(o._id)));
       const newSales = sales.filter((s: any) => !existingSaleIds.has(String(s._id)));
       
-      // Get accounts
-      const revenueAccount = await Account.findOne({ code: { $in: ['4000', '4100'] }, status: 'active' });
-      const arAccount = await Account.findOne({ code: { $in: ['1200', '1100'] }, status: 'active' });
+      // Get or create required accounts
+      let revenueAccount = await Account.findOne({ code: { $in: ['4000', '4100'] }, status: 'active' });
+      let arAccount = await Account.findOne({ code: { $in: ['1200', '1100'] }, status: 'active' });
       
-      if (!revenueAccount || !arAccount) {
-        const missing = [];
-        if (!revenueAccount) missing.push('Revenue Account (4000/4100)');
-        if (!arAccount) missing.push('Accounts Receivable (1200/1100)');
-        
-        return res.status(400).json({ 
-          success: false, 
-          error: `Required accounts not found: ${missing.join(', ')}. Please initialize the Chart of Accounts first by going to the Chart of Accounts tab and clicking "Initialize Default Accounts".`,
-          missingAccounts: missing
+      // Auto-create missing accounts
+      if (!revenueAccount) {
+        console.log('Creating missing Sales Revenue account (4000)');
+        revenueAccount = await Account.create({
+          code: '4000',
+          name: 'Sales Revenue',
+          category: 'revenue',
+          normalBalance: 'credit',
+          status: 'active'
+        });
+      }
+      
+      if (!arAccount) {
+        console.log('Creating missing Accounts Receivable account (1200)');
+        arAccount = await Account.create({
+          code: '1200',
+          name: 'Accounts Receivable',
+          category: 'asset',
+          subcategory: 'current_asset',
+          normalBalance: 'debit',
+          status: 'active'
         });
       }
       
