@@ -27,6 +27,7 @@ interface CreateExpenseData {
   description: string;
   vendor?: string;
   paymentMethod: IExpense['paymentMethod'];
+  expenseDate: Date;
   dueDate?: Date;
   category?: string;
   accountCode?: string;
@@ -480,6 +481,7 @@ export class ExpenseController {
         description,
         vendor,
         paymentMethod,
+        expenseDate: new Date(),
         dueDate: dueDate ? new Date(dueDate) : undefined,
         category,
         accountCode,
