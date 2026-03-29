@@ -69,9 +69,16 @@ import {
   Star,
   Calendar,
   AlertTriangle,
+  MoreHorizontal,
 } from 'lucide-react';
 import { InsightActionCard, InsightItem } from '@/components/ui/InsightActionCard';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AccountingStats {
   totalExpenses: number;
@@ -1897,39 +1904,53 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
       </Dialog>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          TAB NAVIGATION
+          TAB NAVIGATION - Overview + More Menu
           ═══════════════════════════════════════════════════════════════════ */}
-      <div className="overflow-x-auto -mx-1 px-1 scrollbar-thin">
-        <div className="flex gap-1 border-b min-w-max">
-          {([
-            { key: 'overview', label: 'Overview', icon: Eye, minRole: 'staff' },
-            { key: 'transactions', label: 'Transactions', icon: CreditCard, minRole: 'staff' },
-            { key: 'invoices', label: 'Invoices', icon: FileText, minRole: 'staff' },
-            { key: 'journal', label: 'Journal', icon: BookOpen, minRole: 'accountant' },
-            { key: 'coa', label: 'Accounts', icon: Layers, minRole: 'accountant' },
-            { key: 'reports', label: 'Reports', icon: BarChart3, minRole: 'accountant' },
-            { key: 'aging', label: 'Aging', icon: Clock, minRole: 'accountant' },
-            { key: 'forecast', label: 'Cash Forecast', icon: TrendingUp, minRole: 'accountant' },
-            { key: 'inventory', label: 'Inventory', icon: Package, minRole: 'accountant' },
-            { key: 'tax', label: 'Tax', icon: Receipt, minRole: 'accountant' },
-            { key: 'audit', label: 'Audit', icon: Shield, minRole: 'admin' },
-          ] as const).filter(tab => {
-            if (tab.minRole === 'admin') return isAdmin;
-            if (tab.minRole === 'accountant') return isAdmin || isAccountant;
-            return isAdmin || isAccountant || isStaff;
-          }).map(tab => (
+      <div className="flex gap-1 border-b items-center">
+        <Button
+          variant={activeTab === 'overview' ? 'default' : 'ghost'}
+          onClick={() => setActiveTab('overview')}
+          size="sm"
+          className="gap-1.5 rounded-b-none"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          Overview
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
-              key={tab.key}
-              variant={activeTab === tab.key ? 'default' : 'ghost'}
-              onClick={() => setActiveTab(tab.key)}
+              variant="ghost"
               size="sm"
-              className="gap-1.5 rounded-b-none whitespace-nowrap"
+              className="gap-1.5 rounded-b-none"
             >
-              <tab.icon className="h-3.5 w-3.5" />
-              {tab.label}
+              <MoreHorizontal className="h-3.5 w-3.5" />
+              More
             </Button>
-          ))}
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {([
+              { key: 'transactions', label: 'Transactions', icon: CreditCard, minRole: 'staff' },
+              { key: 'invoices', label: 'Invoices', icon: FileText, minRole: 'staff' },
+              { key: 'journal', label: 'Journal', icon: BookOpen, minRole: 'accountant' },
+              { key: 'coa', label: 'Chart of Accounts', icon: Layers, minRole: 'accountant' },
+              { key: 'reports', label: 'Reports', icon: BarChart3, minRole: 'accountant' },
+              { key: 'aging', label: 'Aging', icon: Clock, minRole: 'accountant' },
+              { key: 'forecast', label: 'Cash Forecast', icon: TrendingUp, minRole: 'accountant' },
+              { key: 'inventory', label: 'Inventory', icon: Package, minRole: 'accountant' },
+              { key: 'tax', label: 'Tax', icon: Receipt, minRole: 'accountant' },
+              { key: 'audit', label: 'Audit', icon: Shield, minRole: 'admin' },
+            ] as const).filter(tab => {
+              if (tab.minRole === 'admin') return isAdmin;
+              if (tab.minRole === 'accountant') return isAdmin || isAccountant;
+              return isAdmin || isAccountant || isStaff;
+            }).map(tab => (
+              <DropdownMenuItem key={tab.key} onClick={() => setActiveTab(tab.key)}>
+                <tab.icon className="h-4 w-4 mr-2" />
+                {tab.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════

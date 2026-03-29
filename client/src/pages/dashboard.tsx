@@ -1313,7 +1313,6 @@ export default function Dashboard() {
               {[
                 { value: "overview", icon: LayoutGrid, label: "Overview" },
                 { value: "analytics", icon: BarChart3, label: "Analytics" },
-                { value: "orders", icon: ShoppingBag, label: "Orders" },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -1347,6 +1346,12 @@ export default function Dashboard() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-xl shadow-xl border bg-popover">
                 <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Navigation</div>
+                <DropdownMenuItem onSelect={() => setActiveTab("orders")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                  <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-600">
+                    <ShoppingBag className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">Orders</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setActiveTab("pos")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
                   <div className="p-1.5 rounded-md bg-green-500/10 text-green-600">
                     <DollarSign className="h-4 w-4" />

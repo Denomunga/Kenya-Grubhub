@@ -55,9 +55,16 @@ import {
   Activity,
   Calculator,
   Download,
+  MoreHorizontal,
 } from 'lucide-react';
 import { InsightActionCard, InsightItem } from '@/components/ui/InsightActionCard';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface EmployeeStats {
   overview: {
@@ -2155,33 +2162,63 @@ export default function HRDashboard() {
       </Dialog>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          TAB NAVIGATION
+          TAB NAVIGATION - 3 Main + More Menu
           ═══════════════════════════════════════════════════════════════════ */}
-      <div className="flex gap-1 border-b">
+      <div className="flex gap-1 border-b items-center">
         {(() => {
-          const tabs = user?.role === 'admin' || user?.role === 'staff' ? [
+          const mainTabs = user?.role === 'admin' || user?.role === 'staff' ? [
             { key: 'overview' as const, label: 'Overview', icon: Eye },
+          ] : [
+            { key: 'my-contracts' as const, label: 'My Contracts', icon: FileText },
+            { key: 'my-payslips' as const, label: 'My Payslips', icon: DollarSign },
+          ];
+          
+          const moreTabs = user?.role === 'admin' || user?.role === 'staff' ? [
             { key: 'employees' as const, label: 'Employees', icon: Users },
             { key: 'recruitment' as const, label: 'Recruitment', icon: UserPlus },
             { key: 'contracts' as const, label: 'Contracts', icon: FileText },
             { key: 'payslips' as const, label: 'Payslips', icon: DollarSign },
             { key: 'leaves' as const, label: `Leaves${pendingLeaveCount > 0 ? ` (${pendingLeaveCount})` : ''}`, icon: Calendar },
-          ] : [
-            { key: 'my-contracts' as const, label: 'My Contracts', icon: FileText },
-            { key: 'my-payslips' as const, label: 'My Payslips', icon: DollarSign },
-          ];
-          return tabs.map(tab => (
-            <Button
-              key={tab.key}
-              variant={activeTab === tab.key ? 'default' : 'ghost'}
-              onClick={() => setActiveTab(tab.key)}
-              size="sm"
-              className="gap-1.5 rounded-b-none"
-            >
-              <tab.icon className="h-3.5 w-3.5" />
-              {tab.label}
-            </Button>
-          ));
+          ] : [];
+          
+          return (
+            <>
+              {mainTabs.map(tab => (
+                <Button
+                  key={tab.key}
+                  variant={activeTab === tab.key ? 'default' : 'ghost'}
+                  onClick={() => setActiveTab(tab.key)}
+                  size="sm"
+                  className="gap-1.5 rounded-b-none"
+                >
+                  <tab.icon className="h-3.5 w-3.5" />
+                  {tab.label}
+                </Button>
+              ))}
+              {moreTabs.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 rounded-b-none"
+                    >
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                      More
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {moreTabs.map(tab => (
+                      <DropdownMenuItem key={tab.key} onClick={() => setActiveTab(tab.key)}>
+                        <tab.icon className="h-4 w-4 mr-2" />
+                        {tab.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </>
+          );
         })()}
       </div>
 
