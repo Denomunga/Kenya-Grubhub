@@ -1771,7 +1771,13 @@ export class CashFlowForecastService {
 
       // Current cash position (from Account model)
       const cashAccounts = await Account.find({ code: { $in: ['1000', '1010', '1020'] }, status: 'active' }).lean();
-      const currentCash = cashAccounts.reduce((s: number, a: any) => s + (a.balance || 0), 0);
+      const cashBalance = cashAccounts.reduce((s: number, a: any) => s + (a.balance || 0), 0);
+      
+      // Add inventory stock value (current assets)
+      const stockOverview = await InventoryAccountingService.getStockOverview();
+      const inventoryValue = stockOverview.summary?.totalValue || 0;
+      
+      const currentCash = cashBalance + inventoryValue;
 
       // Expected income (unpaid invoices due in forecast period)
       const expectedIncome = await Invoice.aggregate([
