@@ -9,6 +9,7 @@ import { createServer } from "http";
 import { Server as IOServer } from "socket.io";
 import os from "os";
 import type { Request, Response, NextFunction } from "express";
+import { initializeScheduler } from "./scheduler.js";
 
 const app = express();
 
@@ -102,6 +103,9 @@ async function startServer() {
     // Connect to MongoDB
     await connectDatabase();
     log("✅ Database connection verified");
+    
+    // Initialize scheduled tasks (recurring expenses, etc.)
+    initializeScheduler();
   } catch (err) {
     console.error("❌ Database connection failed:", err);
     process.exit(1);
