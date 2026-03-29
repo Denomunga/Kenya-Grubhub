@@ -39,6 +39,9 @@ export class DashboardController {
           totalAssets: summary.assets,
           totalLiabilities: summary.liabilities,
           totalEquity: summary.equity,
+          cashBalance: summary.cashBalance,
+          outstandingPayments: summary.accountsReceivable,
+          accountsPayable: summary.accountsPayable,
           expenseStats: expenseStats.overview,
           expensesByCategory: expenseStats.expensesByCategory
         }

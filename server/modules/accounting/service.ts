@@ -461,7 +461,7 @@ export class FinancialReportingService {
     try {
       const accounts = await Account.find({ status: 'active' });
 
-      const summary = {
+      const summary: any = {
         assets: accounts
           .filter(a => a.category === 'asset')
           .reduce((sum, a) => sum + a.balance, 0),
@@ -477,10 +477,44 @@ export class FinancialReportingService {
         expenses: accounts
           .filter(a => a.category === 'expense')
           .reduce((sum, a) => sum + a.balance, 0),
-        netIncome: 0
+        netIncome: 0,
+        cashBalance: 0,
+        accountsReceivable: 0,
+        accountsPayable: 0
       };
 
+      // Calculate revenue from invoices (paid + partial)
+      const revenueAgg = await Invoice.aggregate([
+        { $match: { status: { $in: ['paid', 'partial'] }, isDeleted: { $ne: true } } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+      ]);
+      const totalRevenue = revenueAgg[0]?.total || 0;
+
+      // Calculate expenses from Expenses collection
+      const expenseAgg = await Expense.aggregate([
+        { $match: { status: { $in: ['pending', 'approved', 'paid'] } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]);
+      const totalExpenses = expenseAgg[0]?.total || 0;
+
+      // Calculate cash balance
+      const cashAccounts = accounts.filter(a => a.code && ['1000', '1010', '1020'].includes(a.code));
+      const cashBalance = cashAccounts.reduce((sum, a) => sum + a.balance, 0);
+
+      // Calculate accounts receivable
+      const arAgg = await Invoice.aggregate([
+        { $match: { status: { $in: ['unpaid', 'overdue', 'partial'] }, isDeleted: { $ne: true } } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+      ]);
+      const accountsReceivable = arAgg[0]?.total || 0;
+
+      // Update summary with actual data
+      summary.revenue = Math.max(summary.revenue, totalRevenue);
+      summary.expenses = Math.max(summary.expenses, totalExpenses);
       summary.netIncome = summary.revenue - summary.expenses;
+      summary.cashBalance = cashBalance;
+      summary.accountsReceivable = accountsReceivable;
+      summary.accountsPayable = summary.liabilities;
 
       return summary;
     } catch (error: any) {
@@ -1773,16 +1807,11 @@ export class CashFlowForecastService {
       const cashAccounts = await Account.find({ code: { $in: ['1000', '1010', '1020'] }, status: 'active' }).lean();
       const cashBalance = cashAccounts.reduce((s: number, a: any) => s + (a.balance || 0), 0);
       
-            // Add revenue from orders and POS sales (completed transactions)
-      const { Order } = await import('../../models/Order');
-      const { Sale } = await import('../../models/Sale');
-      const [orderRevenue, saleRevenue] = await Promise.all([
-        Order.aggregate([{ $match: { status: { $ne: 'Cancelled' } } }, { $group: { _id: null, revenue: { $sum: '$total' } } }]),
-        Sale.aggregate([{ $match: { status: 'Completed' } }, { $group: { _id: null, revenue: { $sum: '$total' } } }])
-      ]);
-      const totalSalesRevenue = (orderRevenue[0]?.revenue || 0) + (saleRevenue[0]?.revenue || 0);
+      // Add inventory stock value (current assets)
+      const stockOverview = await InventoryAccountingService.getStockOverview();
+      const inventoryValue = stockOverview.summary?.totalValue || 0;
       
-      const currentCash = cashBalance + totalSalesRevenue;
+      const currentCash = cashBalance + inventoryValue;
 
       // Expected income (unpaid invoices due in forecast period)
       const expectedIncome = await Invoice.aggregate([
