@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Clock, Package, Edit, Mail, Hash, X } from "lucide-react";
+import { Link } from "wouter";
+import { Clock, Package, Edit, Mail, Hash, X, Calendar } from "lucide-react";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -296,6 +297,12 @@ export default function Profile() {
                   </div>
                 </DialogContent>
               </Dialog>
+              <Link href="/leave">
+                <Button variant="outline" className="w-full mt-2">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Leave
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>

@@ -277,10 +277,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </span>
               )}
             </NavLink>
-            
-            {isAuthenticated && (
-              <NavLink href="/leave">Leave</NavLink>
-            )}
             {(isAdmin || isStaff) && (
               <Link href="/dashboard">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -470,8 +466,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   { href: "/", label: "Home", icon: "🏠", desc: "Welcome page" },
                   { href: "/menu", label: "Products", icon: "🛍️", desc: "Browse items" },
                   { href: "/chat", label: "ASK FOR DISCOUNT", icon: "💬", desc: "Talk to staff", special: true },
-                  ...(isAuthenticated ? [{ href: "/leave", label: "Leave", icon: "📅", desc: "Apply for leave" }] : []),
-                  ...(isAdmin || isStaff ? [{ href: "/dashboard", label: "Dashboard", icon: "📊", desc: "Admin panel", special: true }] : [])
+                ...(isAdmin || isStaff ? [{ href: "/dashboard", label: "Dashboard", icon: "📊", desc: "Admin panel", special: true }] : [])
                 ].map((item, index) => (
                   <motion.div
                     key={item.href}
