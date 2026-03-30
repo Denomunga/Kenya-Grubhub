@@ -22,29 +22,6 @@ const sanitizeInput = (input: string): string => {
     .slice(0, 1000); // Limit length to prevent abuse
 };
 
-const CATEGORY_OPTIONS = [
-  "HP",
-  "Dell",
-  "Lenovo",
-  "Asus",
-  "Apple (MacBooks)",
-  "Toshiba",
-  "Acer",
-  "Microsoft Surface",
-  "Stationery",
-  "Mobilephones",
-  "Others",
-  "Seeds & Planting Materials",
-  "Fertilizers & Soil Enhancers",
-  "Crop Protection Chemicals",
-  "Farm Equipment & Tools",
-  "Animal Nutrition",
-  "Veterinary Medicines",
-  "Animal Care Supplies",
-  "Livestock & Animal Health",
-  "Agrovet (Other)",
-];
-
 const UNIT_OPTIONS = [
   "pcs",
   "kg",
@@ -55,23 +32,6 @@ const UNIT_OPTIONS = [
   "tube",
   "box",
 ];
-
-const AGROVET_CATEGORIES = new Set([
-  "Seeds & Planting Materials",
-  "Fertilizers & Soil Enhancers",
-  "Crop Protection Chemicals",
-  "Farm Equipment & Tools",
-  "Animal Nutrition",
-  "Veterinary Medicines",
-  "Animal Care Supplies",
-  "Livestock & Animal Health",
-  "Agrovet (Other)",
-]);
-
-const isAgrovetCategory = (category?: string) => {
-  if (!category) return false;
-  return AGROVET_CATEGORIES.has(category);
-};
 
 interface DraggableMenuItemProps {
   item: MenuItem;
@@ -425,8 +385,10 @@ const DragDropMenuManager: React.FC = () => {
     toast({ title: 'Success', description: `${updatedItem.name} updated successfully` });
   };
 
-  const showLaptopFieldsForNewItem = !isAgrovetCategory(newItem.category);
-  const showLaptopFieldsForEditingItem = editingItem ? !isAgrovetCategory(editingItem.category) : true;
+  const [productFormMode, setProductFormMode] = useState<'ordinary' | 'simple'>('ordinary');
+  const showLaptopFieldsForNewItem = productFormMode === 'ordinary';
+  const [editingFormMode, setEditingFormMode] = useState<'ordinary' | 'simple'>('ordinary');
+  const showLaptopFieldsForEditingItem = editingFormMode === 'ordinary';
 
   // Filter and search logic
   const filteredItems = useMemo(() => {
@@ -638,21 +600,29 @@ const DragDropMenuManager: React.FC = () => {
                           onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
                           className="liquid-transition"
                         />
-                        <Select
-                          value={editingItem.category}
-                          onValueChange={(value: string) => 
-                            setEditingItem({ ...editingItem, category: value })
-                          }
-                        >
-                          <SelectTrigger className="liquid-transition">
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {CATEGORY_OPTIONS.map((c) => (
-                              <SelectItem key={c} value={c}>{c}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-1">
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Category (type custom name)"
+                              value={editingItem.category}
+                              onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })}
+                              className="flex-1 liquid-transition"
+                            />
+                            <Select
+                              value={editingFormMode}
+                              onValueChange={(value: 'ordinary' | 'simple') => setEditingFormMode(value)}
+                            >
+                              <SelectTrigger className="w-[140px] liquid-transition">
+                                <SelectValue placeholder="Form mode" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ordinary">Ordinary (all)</SelectItem>
+                                <SelectItem value="simple">Simple (reduced)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Select form mode or type custom category</p>
+                        </div>
                         <Input
                           placeholder="Subcategory (optional)"
                           value={editingItem.subcategory || ''}
@@ -1029,19 +999,29 @@ const DragDropMenuManager: React.FC = () => {
                   onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
                 />
               </div>
-              <Select
-                value={newItem.category}
-                onValueChange={(value: string) => setNewItem({ ...newItem, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Category *" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORY_OPTIONS.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-1">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Category * (type custom name)"
+                    value={newItem.category}
+                    onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+                    className="flex-1"
+                  />
+                  <Select
+                    value={productFormMode}
+                    onValueChange={(value: 'ordinary' | 'simple') => setProductFormMode(value)}
+                  >
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Form mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ordinary">Ordinary (all)</SelectItem>
+                      <SelectItem value="simple">Simple (reduced)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-muted-foreground">Select form mode or type custom category</p>
+              </div>
               <Input
                 placeholder="Subcategory"
                 value={newItem.subcategory || ''}
