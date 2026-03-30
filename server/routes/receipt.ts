@@ -1,8 +1,9 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import { Receipt } from "../models/Receipt";
 import { Sale } from "../models/Sale";
 import { User } from "../models/User";
 import rateLimit from 'express-rate-limit';
+import { requireAuth } from "../shared/middleware/auth";
 
 const router = Router();
 
@@ -12,23 +13,6 @@ const apiLimiter = rateLimit({
   max: 1000, // requests per windowMs
   message: 'Too many requests, please try again later.',
 });
-
-// Auth middleware
-const requireAuth = async (req: Request, res: Response, next: any) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  try {
-    const user = await User.findById(req.session.userId).select("-password");
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
-    }
-    req.user = user;
-    next();
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-};
 
 // Save a receipt when printed
 router.post("/save", requireAuth, apiLimiter, async (req, res) => {
@@ -41,6 +25,12 @@ router.post("/save", requireAuth, apiLimiter, async (req, res) => {
 
     if (!saleId || !receiptData) {
       return res.status(400).json({ message: "Sale ID and receipt data are required" });
+    }
+
+    // Fetch user details from database to get name and username
+    const user = await User.findById(req.user.id).select("name username");
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
     }
 
     // Verify the sale exists and is completed
@@ -69,8 +59,8 @@ router.post("/save", requireAuth, apiLimiter, async (req, res) => {
         receipt.receiptData = {
           ...receipt.receiptData,
           cashier: {
-            name: req.user.name,
-            username: req.user.username
+            name: user.name,
+            username: user.username
           }
         } as any;
       }
@@ -83,8 +73,8 @@ router.post("/save", requireAuth, apiLimiter, async (req, res) => {
         receiptData: {
           ...receiptData,
           cashier: {
-            name: req.user.name,
-            username: req.user.username
+            name: user.name,
+            username: user.username
           }
         }
       });
