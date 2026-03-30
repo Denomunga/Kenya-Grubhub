@@ -2347,14 +2347,16 @@ export default function POSSystem() {
       {posMode === 'sell' && isMobile && (
         <>
           <Drawer open={cartDrawerOpen} onOpenChange={setCartDrawerOpen}>
-            <DrawerContent>
-              <DrawerHeader>
+            <DrawerContent className="max-h-[85vh]">
+              <DrawerHeader className="border-b pb-4">
                 <DrawerTitle>Cart & Checkout</DrawerTitle>
               </DrawerHeader>
-              <div className="px-4 pb-6 space-y-4">
-                {cartSummary}
-                {totalsAndPayment}
-              </div>
+              <ScrollArea className="flex-1 overflow-y-auto">
+                <div className="px-4 pb-6 space-y-4 pt-4">
+                  {cartSummary}
+                  {totalsAndPayment}
+                </div>
+              </ScrollArea>
             </DrawerContent>
           </Drawer>
 
