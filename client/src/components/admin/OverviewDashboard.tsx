@@ -260,10 +260,18 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
   // ─── Sales Trend chart data ────────────────────────────────────────────
 
   const salesTrendData = React.useMemo(() => {
+    // For weekly/monthly views, use broader date ranges to show meaningful trends
+    const trendRangeDays = salesTrendPeriod === 'daily' ? rangeDays : 
+                          salesTrendPeriod === 'weekly' ? 42 : // 6 weeks
+                          180; // ~6 months for monthly view
+    
+    const trendRangeStart = salesTrendPeriod === 'daily' ? rangeStart :
+                            new Date(new Date().setDate(new Date().getDate() - trendRangeDays + 1));
+
     if (salesTrendPeriod === 'daily') {
       const buckets: { label: string; revenue: number; key: string }[] = [];
-      for (let i = 0; i < rangeDays; i++) {
-        const d = new Date(rangeStart);
+      for (let i = 0; i < trendRangeDays; i++) {
+        const d = new Date(trendRangeStart);
         d.setDate(d.getDate() + i);
         const key = toLocalDateKey(d);
         const orderRev = (orders || [])
@@ -284,8 +292,8 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
 
     if (salesTrendPeriod === 'weekly') {
       const weeks: Record<string, number> = {};
-      for (let i = 0; i < rangeDays; i++) {
-        const d = new Date(rangeStart);
+      for (let i = 0; i < trendRangeDays; i++) {
+        const d = new Date(trendRangeStart);
         d.setDate(d.getDate() + i);
         const weekStart = new Date(d);
         weekStart.setDate(weekStart.getDate() - weekStart.getDay());
@@ -305,8 +313,8 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
 
     // monthly
     const months: Record<string, number> = {};
-    for (let i = 0; i < rangeDays; i++) {
-      const d = new Date(rangeStart);
+    for (let i = 0; i < trendRangeDays; i++) {
+      const d = new Date(trendRangeStart);
       d.setDate(d.getDate() + i);
       const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const key = toLocalDateKey(d);
@@ -329,9 +337,9 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
 
   const revenueVsExpenses = React.useMemo(() => {
     const result: { label: string; revenue: number; expenses: number }[] = [];
-    for (let i = Math.min(rangeDays, 30) - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
+    for (let i = 0; i < rangeDays; i++) {
+      const d = new Date(rangeStart);
+      d.setDate(d.getDate() + i);
       const key = toLocalDateKey(d);
       const dayOrders = (orders || []).filter(
         (o) => o.status !== 'Cancelled' && toLocalDateKey(new Date(o.date)) === key
@@ -339,7 +347,7 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
       const revenue = dayOrders.reduce((s, o) => s + (o.total || 0), 0) + (posDailyRevenue[key] || 0);
       // Estimate expenses as ~40% of revenue (placeholder until real expense data is integrated)
       const expenses = Math.round(revenue * 0.4);
-      if (i % Math.max(1, Math.floor(Math.min(rangeDays, 30) / 7)) === 0 || rangeDays <= 7) {
+      if (i % Math.max(1, Math.floor(rangeDays / 7)) === 0 || rangeDays <= 7) {
         result.push({
           label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           revenue,
@@ -348,7 +356,7 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
       }
     }
     return result;
-  }, [orders, posDailyRevenue, rangeDays, toLocalDateKey]);
+  }, [orders, posDailyRevenue, rangeDays, rangeStart, toLocalDateKey]);
 
   // ─── Top Products (horizontal bar) ────────────────────────────────────
 
