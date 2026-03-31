@@ -2349,44 +2349,15 @@ export default function POSSystem() {
           <Drawer open={cartDrawerOpen} onOpenChange={(open) => {
             setCartDrawerOpen(open);
             if (open && cart.length > 0) {
-              // Scroll to payment amount input when cart opens
+              // Focus payment input when cart opens, but don't scroll
               requestAnimationFrame(() => {
                 setTimeout(() => {
                   const input = paymentAmountInputRef.current;
                   if (input) {
-                    // Try multiple methods to find and scroll the container
-                    let scrollContainer = input.closest('[data-radix-scroll-area-viewport]');
-                    
-                    // Fallback: find any scrollable parent
-                    if (!scrollContainer) {
-                      let parent = input.parentElement;
-                      while (parent) {
-                        const overflow = window.getComputedStyle(parent).overflowY;
-                        if (overflow === 'auto' || overflow === 'scroll') {
-                          scrollContainer = parent;
-                          break;
-                        }
-                        parent = parent.parentElement;
-                      }
-                    }
-                    
-                    if (scrollContainer) {
-                      // Calculate position to scroll to
-                      const inputRect = input.getBoundingClientRect();
-                      const containerRect = scrollContainer.getBoundingClientRect();
-                      const scrollPosition = scrollContainer.scrollTop + (inputRect.top - containerRect.top) - 100;
-                      
-                      // Scroll the container
-                      scrollContainer.scrollTo({
-                        top: Math.max(0, scrollPosition),
-                        behavior: 'smooth'
-                      });
-                    }
-                    
-                    // Focus the input
-                    input.focus();
+                    // Just focus the input without scrolling
+                    input.focus({ preventScroll: true });
                   }
-                }, 10);
+                }, 150);
               });
             }
           }}>
