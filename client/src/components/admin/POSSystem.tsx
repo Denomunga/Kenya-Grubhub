@@ -2370,7 +2370,7 @@ export default function POSSystem() {
                   // Focus the input
                   input.focus();
                 }
-              }, 10);
+              }, 100);
             }
           }}>
             <DrawerContent className="max-h-[85vh]">
