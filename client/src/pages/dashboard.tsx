@@ -128,7 +128,19 @@ export default function Dashboard() {
   const [commandQuery, setCommandQuery] = React.useState("");
 
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
-  const [notificationReadIds, setNotificationReadIds] = React.useState<Set<string>>(() => new Set());
+  const [notificationReadIds, setNotificationReadIds] = React.useState<Set<string>>(() => {
+    // Load read notification IDs from localStorage
+    try {
+      const stored = localStorage.getItem('notification-read-ids');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return new Set(Array.isArray(parsed) ? parsed : []);
+      }
+    } catch (e) {
+      console.error('Failed to load read notification IDs:', e);
+    }
+    return new Set();
+  });
 
   type PinnedAction = {
     kind: "tab" | "action" | "order" | "product";
@@ -145,11 +157,41 @@ export default function Dashboard() {
   const [selectedProduct, setSelectedProduct] = React.useState<any | null>(null);
 
   type ActivityItem = { id: string; ts: number; label: string; meta?: string; tone?: "info" | "success" | "warning"; tab?: string; orderId?: string };
-  const [activity, setActivity] = React.useState<ActivityItem[]>([]);
+  const [activity, setActivity] = React.useState<ActivityItem[]>(() => {
+    // Load activities from localStorage on mount
+    try {
+      const stored = localStorage.getItem('dashboard-activities');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (e) {
+      console.error('Failed to load activities from localStorage:', e);
+    }
+    return [];
+  });
 
   const unreadCount = React.useMemo(() => {
     return activity.filter((a) => !notificationReadIds.has(a.id)).length;
   }, [activity, notificationReadIds]);
+
+  // Save activities to localStorage whenever they change
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('dashboard-activities', JSON.stringify(activity));
+    } catch (e) {
+      console.error('Failed to save activities to localStorage:', e);
+    }
+  }, [activity]);
+
+  // Save read notification IDs to localStorage whenever they change
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('notification-read-ids', JSON.stringify(Array.from(notificationReadIds)));
+    } catch (e) {
+      console.error('Failed to save read notification IDs:', e);
+    }
+  }, [notificationReadIds]);
 
   React.useEffect(() => {
     setNotificationReadIds((prev) => {

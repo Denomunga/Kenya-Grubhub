@@ -260,6 +260,39 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
   // ─── Sales Trend chart data ────────────────────────────────────────────
 
   const salesTrendData = React.useMemo(() => {
+    // For "Today" + "Daily", show hourly breakdown
+    if (kpiRange === 'today' && salesTrendPeriod === 'daily') {
+      const hourlyBuckets: { label: string; revenue: number; key: string }[] = [];
+      const today = new Date();
+      const todayKey = toLocalDateKey(today);
+      
+      // Get all orders and POS sales for today
+      const todayOrdersData = (orders || []).filter((o) => {
+        if (o.status === 'Cancelled') return false;
+        return toLocalDateKey(new Date(o.date)) === todayKey;
+      });
+      
+      // Create 24 hourly buckets
+      for (let hour = 0; hour < 24; hour++) {
+        const hourRevenue = todayOrdersData
+          .filter((o) => new Date(o.date).getHours() === hour)
+          .reduce((s, o) => s + (o.total || 0), 0);
+        
+        // For POS revenue, we only have daily totals, so distribute evenly across hours with sales
+        // or show all POS revenue in current hour if it's today
+        const isPastHour = hour <= today.getHours();
+        const posContribution = isPastHour ? (posDailyRevenue[todayKey] || 0) / (today.getHours() + 1) : 0;
+        
+        hourlyBuckets.push({
+          label: `${hour.toString().padStart(2, '0')}:00`,
+          revenue: hourRevenue + posContribution,
+          key: `${todayKey}-${hour}`,
+        });
+      }
+      
+      return hourlyBuckets;
+    }
+    
     // For weekly/monthly views, use broader date ranges to show meaningful trends
     const trendRangeDays = salesTrendPeriod === 'daily' ? rangeDays : 
                           salesTrendPeriod === 'weekly' ? 42 : // 6 weeks
@@ -331,7 +364,7 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
         key: mk,
       };
     });
-  }, [orders, posDailyRevenue, rangeStart, rangeDays, salesTrendPeriod, toLocalDateKey]);
+  }, [orders, posDailyRevenue, rangeStart, rangeDays, salesTrendPeriod, kpiRange, toLocalDateKey]);
 
   // ─── Revenue vs Expenses (bar chart) ──────────────────────────────────
 

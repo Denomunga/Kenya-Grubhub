@@ -2348,12 +2348,29 @@ export default function POSSystem() {
         <>
           <Drawer open={cartDrawerOpen} onOpenChange={(open) => {
             setCartDrawerOpen(open);
-            if (open) {
-              // Scroll to and focus payment amount input when cart opens
+            if (open && cart.length > 0) {
+              // Scroll to payment amount input when cart opens
               setTimeout(() => {
-                paymentAmountInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                paymentAmountInputRef.current?.focus();
-              }, 100);
+                const input = paymentAmountInputRef.current;
+                if (input) {
+                  // Find the ScrollArea viewport container
+                  const scrollContainer = input.closest('[data-radix-scroll-area-viewport]');
+                  if (scrollContainer) {
+                    // Calculate position to scroll to
+                    const inputTop = input.offsetTop;
+                    const containerHeight = scrollContainer.clientHeight;
+                    const scrollPosition = Math.max(0, inputTop - containerHeight / 3);
+                    
+                    // Scroll the container
+                    scrollContainer.scrollTo({
+                      top: scrollPosition,
+                      behavior: 'smooth'
+                    });
+                  }
+                  // Focus the input
+                  input.focus();
+                }
+              }, 10);
             }
           }}>
             <DrawerContent className="max-h-[85vh]">
