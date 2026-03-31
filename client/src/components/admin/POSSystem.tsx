@@ -2350,27 +2350,44 @@ export default function POSSystem() {
             setCartDrawerOpen(open);
             if (open && cart.length > 0) {
               // Scroll to payment amount input when cart opens
-              setTimeout(() => {
-                const input = paymentAmountInputRef.current;
-                if (input) {
-                  // Find the ScrollArea viewport container
-                  const scrollContainer = input.closest('[data-radix-scroll-area-viewport]');
-                  if (scrollContainer) {
-                    // Calculate position to scroll to
-                    const inputTop = input.offsetTop;
-                    const containerHeight = scrollContainer.clientHeight;
-                    const scrollPosition = Math.max(0, inputTop - containerHeight / 3);
+              requestAnimationFrame(() => {
+                setTimeout(() => {
+                  const input = paymentAmountInputRef.current;
+                  if (input) {
+                    // Try multiple methods to find and scroll the container
+                    let scrollContainer = input.closest('[data-radix-scroll-area-viewport]');
                     
-                    // Scroll the container
-                    scrollContainer.scrollTo({
-                      top: scrollPosition,
-                      behavior: 'smooth'
-                    });
+                    // Fallback: find any scrollable parent
+                    if (!scrollContainer) {
+                      let parent = input.parentElement;
+                      while (parent) {
+                        const overflow = window.getComputedStyle(parent).overflowY;
+                        if (overflow === 'auto' || overflow === 'scroll') {
+                          scrollContainer = parent;
+                          break;
+                        }
+                        parent = parent.parentElement;
+                      }
+                    }
+                    
+                    if (scrollContainer) {
+                      // Calculate position to scroll to
+                      const inputRect = input.getBoundingClientRect();
+                      const containerRect = scrollContainer.getBoundingClientRect();
+                      const scrollPosition = scrollContainer.scrollTop + (inputRect.top - containerRect.top) - 100;
+                      
+                      // Scroll the container
+                      scrollContainer.scrollTo({
+                        top: Math.max(0, scrollPosition),
+                        behavior: 'smooth'
+                      });
+                    }
+                    
+                    // Focus the input
+                    input.focus();
                   }
-                  // Focus the input
-                  input.focus();
-                }
-              }, 100);
+                }, 200);
+              });
             }
           }}>
             <DrawerContent className="max-h-[85vh]">
