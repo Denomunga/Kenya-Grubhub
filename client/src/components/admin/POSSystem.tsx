@@ -2346,7 +2346,16 @@ export default function POSSystem() {
 
       {posMode === 'sell' && isMobile && (
         <>
-          <Drawer open={cartDrawerOpen} onOpenChange={setCartDrawerOpen}>
+          <Drawer open={cartDrawerOpen} onOpenChange={(open) => {
+            setCartDrawerOpen(open);
+            if (open) {
+              // Scroll to and focus payment amount input when cart opens
+              setTimeout(() => {
+                paymentAmountInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                paymentAmountInputRef.current?.focus();
+              }, 100);
+            }
+          }}>
             <DrawerContent className="max-h-[85vh]">
               <DrawerHeader className="border-b pb-4">
                 <DrawerTitle>Cart & Checkout</DrawerTitle>
