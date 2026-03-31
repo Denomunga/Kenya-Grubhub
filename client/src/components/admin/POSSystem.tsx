@@ -2350,6 +2350,7 @@ export default function POSSystem() {
             setCartDrawerOpen(open);
             if (open && cart.length > 0) {
               // Focus payment input when cart opens
+              focusPaymentOnNextCartChangeRef.current = true;
               setTimeout(() => {
                 paymentAmountInputRef.current?.focus();
               }, 300);
