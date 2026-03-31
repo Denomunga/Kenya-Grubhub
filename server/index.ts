@@ -17,18 +17,6 @@ const app = express();
 app.set('trust proxy', true);
 
 // Security: Express middleware setup
-// allow requests from the frontend dev server during development
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [
-      process.env.CORS_ORIGIN || 
-      process.env.FRONTEND_URL || 
-      'https://kenya-grubhub-gx7x.vercel.app',
-      'https://kenya-grubhub-gx7x-46ng1iexk-denos-projects-1cfdba9d.vercel.app', // Your exact domain
-      'https://kenya-grubhub.onrender.com',  // Add the correct client origin
-      /^https:\/\/kenya-grubhub-gx7x-.*\.vercel\.app$/  // Updated wildcard pattern
-    ].filter(Boolean) // Remove any empty/null values
-  : ['http://localhost:5173', 'http://localhost:3000'];
-
 // Don't parse JSON for multipart/form-data requests
 const jsonParser = express.json({ limit: "10mb" });
 app.use((req, res, next) => {
@@ -179,15 +167,39 @@ async function startServer() {
     try {
       const io = new IOServer(server, { 
         cors: { 
-          origin: allowedOrigins, 
+          origin: function(origin, callback) {
+            const allowedOrigins = process.env.NODE_ENV === 'production' 
+              ? [
+                  process.env.CORS_ORIGIN || 
+                  process.env.FRONTEND_URL || 
+                  'https://kenya-grubhub-gx7x.vercel.app',
+                  /^https:\/\/kenya-grubhub-gx7x.*\.vercel\.app$/,
+                  /^https:\/\/.*-.*\.vercel\.app$/, // Allow all Vercel preview deployments
+                  /^https:\/\/.*\.onrender\.com$/ // Allow Render URLs
+                ]
+              : ['http://localhost:5173', 'http://localhost:3000'];
+            
+            // Allow requests with no origin (mobile apps, curl, etc.)
+            if (!origin) return callback(null, true);
+            
+            for (const allowed of allowedOrigins) {
+              if (typeof allowed === 'string' && origin === allowed) {
+                return callback(null, true);
+              }
+              if (allowed instanceof RegExp && allowed.test(origin)) {
+                return callback(null, true);
+              }
+            }
+            
+            console.log(`Socket.IO CORS blocking origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+          },
           credentials: true,
           methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
           allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token']
         } 
       });
-      console.log('🔧 Socket.io CORS Configuration:', {
-        allowedOrigins
-      });
+      console.log('🔧 Socket.io CORS Configuration: Dynamic origin matching with regex patterns');
       // Store it for access from routes
       (app as any).locals.io = io;
       // Set up a simple ping handler and connection log
