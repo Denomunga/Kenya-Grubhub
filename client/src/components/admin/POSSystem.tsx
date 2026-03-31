@@ -2349,16 +2349,30 @@ export default function POSSystem() {
           <Drawer open={cartDrawerOpen} onOpenChange={(open) => {
             setCartDrawerOpen(open);
             if (open && cart.length > 0) {
-              // Focus payment input when cart opens, but don't scroll
-              requestAnimationFrame(() => {
-                setTimeout(() => {
-                  const input = paymentAmountInputRef.current;
-                  if (input) {
-                    // Just focus the input without scrolling
-                    input.focus({ preventScroll: true });
+              // Focus payment input when cart opens - mobile compatible
+              setTimeout(() => {
+                const input = paymentAmountInputRef.current;
+                if (input) {
+                  // Find the scroll container
+                  const scrollContainer = input.closest('[data-radix-scroll-area-viewport]') as HTMLElement;
+                  
+                  if (scrollContainer) {
+                    // Save current scroll position
+                    const scrollTop = scrollContainer.scrollTop;
+                    
+                    // Focus the input (this might cause scroll on mobile)
+                    input.focus();
+                    
+                    // Immediately restore scroll position
+                    requestAnimationFrame(() => {
+                      scrollContainer.scrollTop = scrollTop;
+                    });
+                  } else {
+                    // Fallback: just focus
+                    input.focus();
                   }
-                }, 150);
-              });
+                }
+              }, 200);
             }
           }}>
             <DrawerContent className="max-h-[85vh]">
