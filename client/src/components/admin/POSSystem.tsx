@@ -2386,7 +2386,7 @@ export default function POSSystem() {
                     // Focus the input
                     input.focus();
                   }
-                }, 200);
+                }, 20);
               });
             }
           }}>
