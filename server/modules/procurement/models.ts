@@ -68,7 +68,6 @@ const SupplierSchema = new Schema<ISupplier>(
   { timestamps: true }
 );
 
-SupplierSchema.index({ email: 1 });
 SupplierSchema.index({ status: 1 });
 SupplierSchema.index({ rating: -1 });
 
@@ -216,7 +215,6 @@ const PurchaseOrderSchema = new Schema<IPurchaseOrder>(
   { timestamps: true }
 );
 
-PurchaseOrderSchema.index({ poNumber: 1 });
 PurchaseOrderSchema.index({ supplierId: 1 });
 PurchaseOrderSchema.index({ status: 1 });
 PurchaseOrderSchema.index({ orderDate: -1 });
