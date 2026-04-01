@@ -48,7 +48,6 @@ const InvoiceSchema = new Schema<IInvoice>(
   { timestamps: true }
 );
 
-InvoiceSchema.index({ invoiceNumber: 1 });
 InvoiceSchema.index({ clientName: 1 });
 InvoiceSchema.index({ dueDate: 1 });
 InvoiceSchema.index({ status: 1 });
@@ -96,7 +95,6 @@ const AccountSchema = new Schema<IAccount>(
   { timestamps: true }
 );
 
-AccountSchema.index({ code: 1 });
 AccountSchema.index({ category: 1 });
 
 export const Account = mongoose.model<IAccount>('Account', AccountSchema);
@@ -171,7 +169,6 @@ const JournalEntrySchema = new Schema<IJournalEntry>(
   { timestamps: true }
 );
 
-JournalEntrySchema.index({ entryNumber: 1 });
 JournalEntrySchema.index({ transactionDate: -1 });
 JournalEntrySchema.index({ status: 1 });
 JournalEntrySchema.index({ referenceId: 1 });
@@ -231,7 +228,6 @@ const TransactionSchema = new Schema<ITransaction>(
   { timestamps: true }
 );
 
-TransactionSchema.index({ transactionNumber: 1 });
 TransactionSchema.index({ transactionType: 1 });
 TransactionSchema.index({ transactionDate: -1 });
 TransactionSchema.index({ status: 1 });
@@ -372,7 +368,6 @@ const ExpenseSchema = new Schema<IExpense>(
 );
 
 // Indexes for efficient queries
-ExpenseSchema.index({ expenseId: 1 });
 ExpenseSchema.index({ expenseType: 1 });
 ExpenseSchema.index({ expenseDate: -1 });
 ExpenseSchema.index({ dueDate: 1 });
@@ -453,7 +448,6 @@ const RecurringExpenseSchema = new Schema<IRecurringExpense>(
 );
 
 // Indexes for efficient queries
-RecurringExpenseSchema.index({ recurringId: 1 });
 RecurringExpenseSchema.index({ expenseType: 1 });
 RecurringExpenseSchema.index({ nextDueDate: 1 });
 RecurringExpenseSchema.index({ isActive: 1 });
@@ -529,7 +523,6 @@ const TaxRateSchema = new Schema<ITaxRate>(
   { timestamps: true }
 );
 
-TaxRateSchema.index({ code: 1 });
 TaxRateSchema.index({ type: 1 });
 
 export const TaxRate = mongoose.model<ITaxRate>('TaxRate', TaxRateSchema);
@@ -581,8 +574,8 @@ const RecurringInvoiceSchema = new Schema<IRecurringInvoice>(
   { timestamps: true }
 );
 
-RecurringInvoiceSchema.index({ recurringId: 1 });
 RecurringInvoiceSchema.index({ nextDueDate: 1 });
 RecurringInvoiceSchema.index({ isActive: 1 });
 
 export const RecurringInvoice = mongoose.model<IRecurringInvoice>('RecurringInvoice', RecurringInvoiceSchema);
+

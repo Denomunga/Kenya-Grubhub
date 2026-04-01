@@ -76,7 +76,6 @@ const ContractSchema = new Schema<IContract>(
 );
 
 // Index for efficient queries
-ContractSchema.index({ contractId: 1 });
 ContractSchema.index({ employeeId: 1 });
 ContractSchema.index({ status: 1 });
 ContractSchema.index({ endDate: 1 });
@@ -223,7 +222,6 @@ const PayslipSchema = new Schema<IPayslip>(
 );
 
 // Index for efficient queries
-PayslipSchema.index({ payslipId: 1 });
 PayslipSchema.index({ employeeId: 1 });
 PayslipSchema.index({ payPeriod: 1 });
 PayslipSchema.index({ status: 1 });

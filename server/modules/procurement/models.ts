@@ -129,7 +129,6 @@ const PurchaseRequestSchema = new Schema<IPurchaseRequest>(
   { timestamps: true }
 );
 
-PurchaseRequestSchema.index({ requestNumber: 1 });
 PurchaseRequestSchema.index({ status: 1 });
 PurchaseRequestSchema.index({ inventoryItemId: 1 });
 PurchaseRequestSchema.index({ priority: 1 });
@@ -298,7 +297,6 @@ const GoodsReceivedSchema = new Schema<IGoodsReceived>(
   { timestamps: true }
 );
 
-GoodsReceivedSchema.index({ grNumber: 1 });
 GoodsReceivedSchema.index({ purchaseOrderId: 1 });
 GoodsReceivedSchema.index({ status: 1 });
 

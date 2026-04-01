@@ -113,8 +113,6 @@ EmployeeSchema.virtual('fullName').get(function() {
 });
 
 // Index for efficient queries
-EmployeeSchema.index({ employeeId: 1 });
-EmployeeSchema.index({ email: 1 });
 EmployeeSchema.index({ department: 1 });
 EmployeeSchema.index({ status: 1 });
 EmployeeSchema.index({ managerId: 1 });
@@ -181,7 +179,6 @@ const JobPostingSchema = new Schema<IJobPosting>(
 );
 
 // Index for efficient queries
-JobPostingSchema.index({ jobId: 1 });
 JobPostingSchema.index({ department: 1 });
 JobPostingSchema.index({ status: 1 });
 JobPostingSchema.index({ closingDate: 1 });
@@ -242,7 +239,6 @@ const JobApplicationSchema = new Schema<IJobApplication>(
 );
 
 // Index for efficient queries
-JobApplicationSchema.index({ applicationId: 1 });
 JobApplicationSchema.index({ jobId: 1 });
 JobApplicationSchema.index({ applicantEmail: 1 });
 JobApplicationSchema.index({ status: 1 });
@@ -326,7 +322,6 @@ const PayrollSchema = new Schema<IPayroll>(
 );
 
 // Index for efficient queries
-PayrollSchema.index({ payrollId: 1 });
 PayrollSchema.index({ employeeId: 1 });
 PayrollSchema.index({ payPeriod: 1 });
 PayrollSchema.index({ payDate: 1 });
