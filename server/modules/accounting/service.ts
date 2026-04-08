@@ -1866,18 +1866,18 @@ export class CashFlowForecastService {
       const now = new Date();
       const forecastEnd = new Date(now.getTime() + days * 86400000);
 
-      // Current cash position (from cash accounts only)
+      // Current cash position includes cash account balances plus completed POS and delivered order receipts.
       const cashAccounts = await Account.find({ code: { $in: ['1000', '1010', '1020'] }, status: 'active' }).lean();
       const cashBalance = cashAccounts.reduce((s: number, a: any) => s + (a.balance || 0), 0);
       
       const posCashAgg = await Sale.aggregate([
-        { $match: { status: 'Completed' } },
+        { $match: { status: 'Completed', createdAt: { $lte: now } } },
         { $group: { _id: null, total: { $sum: '$total' } } }
       ]);
       const posCash = posCashAgg[0]?.total || 0;
 
       const orderCashAgg = await Order.aggregate([
-        { $match: { status: 'Delivered' } },
+        { $match: { status: 'Delivered', createdAt: { $lte: now } } },
         { $group: { _id: null, total: { $sum: '$total' } } }
       ]);
       const orderCash = orderCashAgg[0]?.total || 0;
@@ -1925,6 +1925,8 @@ export class CashFlowForecastService {
 
       return {
         currentCash: Math.round(currentCash),
+        salesCash: Math.round(posCash),
+        orderCash: Math.round(orderCash),
         expectedIncome: Math.round(inflow),
         expectedExpenses: Math.round(outflow),
         projectedBalance: Math.round(projectedBalance),
