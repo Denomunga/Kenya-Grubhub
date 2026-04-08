@@ -1542,6 +1542,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dimensions
       });
 
+      //
+
       console.log(`Product saved to MongoDB: ${name} by ${req.user!.name}`);
       res.status(201).json({ 
         message: "Product created successfully", 
