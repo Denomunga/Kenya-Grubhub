@@ -15,6 +15,7 @@
   RecurringInvoice,
 } from './models';
 import { PurchaseOrder } from '../procurement/models';
+import { Sale } from '../../models/Sale';
 
 /**
  * Accounting Service
@@ -488,7 +489,17 @@ export class FinancialReportingService {
         { $match: { status: { $in: ['paid', 'partial'] }, isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$totalAmount' } } }
       ]);
-      const totalRevenue = revenueAgg[0]?.total || 0;
+      const invoiceRevenue = revenueAgg[0]?.total || 0;
+
+      // Calculate revenue from completed POS sales
+      const posRevenueAgg = await Sale.aggregate([
+        { $match: { status: 'Completed' } },
+        { $group: { _id: null, total: { $sum: '$total' } } }
+      ]);
+      const posRevenue = posRevenueAgg[0]?.total || 0;
+
+      // Combine all revenue sources
+      const totalRevenue = invoiceRevenue + posRevenue;
 
       // Calculate expenses from Expenses collection
       const expenseAgg = await Expense.aggregate([
@@ -499,7 +510,17 @@ export class FinancialReportingService {
 
       // Calculate cash balance
       const cashAccounts = accounts.filter(a => a.code && ['1000', '1010', '1020'].includes(a.code));
-      const cashBalance = cashAccounts.reduce((sum, a) => sum + a.balance, 0);
+      const accountCashBalance = cashAccounts.reduce((sum, a) => sum + a.balance, 0);
+
+      // Calculate cash from completed POS sales (all payment methods represent received cash)
+      const posCashAgg = await Sale.aggregate([
+        { $match: { status: 'Completed' } },
+        { $group: { _id: null, total: { $sum: '$total' } } }
+      ]);
+      const posCashBalance = posCashAgg[0]?.total || 0;
+
+      // Combine cash balances
+      const cashBalance = accountCashBalance + posCashBalance;
 
       // Calculate accounts receivable
       const arAgg = await Invoice.aggregate([
