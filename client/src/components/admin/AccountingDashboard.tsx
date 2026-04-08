@@ -3299,6 +3299,9 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
             <Card className="border shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs text-muted-foreground">Current Cash</CardTitle>
+                <CardDescription className="text-[10px] mt-1">
+                  {cashForecast.salesCash ? `POS: ${(cashForecast.salesCash || 0).toLocaleString()}` : ''} {cashForecast.orderCash && cashForecast.salesCash ? '•' : ''} {cashForecast.orderCash ? `Orders: ${(cashForecast.orderCash || 0).toLocaleString()}` : ''}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">KES {cashForecast.currentCash?.toLocaleString() || 0}</p>
@@ -3307,6 +3310,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
             <Card className="border shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs text-muted-foreground">Expected Income</CardTitle>
+                <CardDescription className="text-[10px] mt-1">From unpaid invoices</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-green-600">+{cashForecast.expectedIncome?.toLocaleString() || 0}</p>
@@ -3315,6 +3319,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
             <Card className="border shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs text-muted-foreground">Expected Expenses</CardTitle>
+                <CardDescription className="text-[10px] mt-1">Recurring + pending</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-red-600">-{cashForecast.expectedExpenses?.toLocaleString() || 0}</p>
@@ -3323,6 +3328,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
             <Card className="border shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs text-muted-foreground">Projected Balance</CardTitle>
+                <CardDescription className="text-[10px] mt-1">30-day outlook</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className={`text-2xl font-bold ${cashForecast.projectedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -3438,31 +3444,40 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
             <Card className="border shadow-sm">
               <CardHeader>
                 <CardTitle className="text-base">Cost of Goods Sold (COGS) & Profitability</CardTitle>
-                <CardDescription>Period: {reportPeriod.startDate} to {reportPeriod.endDate}</CardDescription>
+                <CardDescription>
+                  Period: {reportPeriod.startDate} to {reportPeriod.endDate} • Includes completed POS sales & delivered orders
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                   <div className="p-4 bg-blue-50 rounded-lg dark:bg-blue-950">
                     <p className="text-xs text-muted-foreground mb-1">Total Revenue</p>
                     <p className="text-xl font-bold">KES {cogsData.totalRevenue?.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground mt-2">From POS + Orders</p>
                   </div>
                   <div className="p-4 bg-red-50 rounded-lg dark:bg-red-950">
                     <p className="text-xs text-muted-foreground mb-1">Total COGS</p>
                     <p className="text-xl font-bold text-red-600">KES {cogsData.totalCOGS?.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground mt-2">Cost of inventory sold</p>
                   </div>
                   <div className="p-4 bg-green-50 rounded-lg dark:bg-green-950">
                     <p className="text-xs text-muted-foreground mb-1">Gross Profit</p>
                     <p className="text-xl font-bold text-green-600">KES {cogsData.grossProfit?.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground mt-2">Revenue - COGS</p>
                   </div>
                   <div className="p-4 bg-purple-50 rounded-lg dark:bg-purple-950">
                     <p className="text-xs text-muted-foreground mb-1">Gross Margin</p>
                     <p className="text-xl font-bold text-purple-600">{cogsData.grossMargin?.toFixed(1)}%</p>
+                    <p className="text-[10px] text-muted-foreground mt-2">Profit / Revenue ratio</p>
                   </div>
                 </div>
 
                 {/* Top Products by Profit */}
                 <div>
-                  <h3 className="font-semibold mb-3">Top Products by Profit</h3>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Top Products by Profit
+                  </h3>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -3475,16 +3490,24 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {cogsData.products?.slice(0, 10).map((p: any, idx: number) => (
-                        <TableRow key={idx}>
-                          <TableCell className="font-medium">{p.name}</TableCell>
-                          <TableCell className="text-right">{p.quantity}</TableCell>
-                          <TableCell className="text-right">KES {p.revenue?.toLocaleString()}</TableCell>
-                          <TableCell className="text-right text-red-600">KES {p.cogs?.toLocaleString()}</TableCell>
-                          <TableCell className="text-right font-semibold text-green-600">KES {p.profit?.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{p.margin?.toFixed(1)}%</TableCell>
+                      {cogsData.products && cogsData.products.length > 0 ? (
+                        cogsData.products.slice(0, 10).map((p: any, idx: number) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-medium">{p.name}</TableCell>
+                            <TableCell className="text-right">{p.quantity}</TableCell>
+                            <TableCell className="text-right">KES {p.revenue?.toLocaleString()}</TableCell>
+                            <TableCell className="text-right text-red-600">KES {p.cogs?.toLocaleString()}</TableCell>
+                            <TableCell className="text-right font-semibold text-green-600">KES {p.profit?.toLocaleString()}</TableCell>
+                            <TableCell className="text-right font-medium">{p.margin?.toFixed(1)}%</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                            No sales data available for the selected period. Complete a POS sale or deliver an order to see profitability metrics.
+                          </TableCell>
                         </TableRow>
-                      ))}
+                      )}
                     </TableBody>
                   </Table>
                 </div>
