@@ -1488,7 +1488,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // JSON route for menu creation (with validation middleware)
   app.post("/api/menu", requireAuth, validateMenuItem, handleValidationErrors, async (req: Request, res: Response) => {
     try {
+      console.log('🔍 Menu POST - req.user:', req.user);
       if (!req.user || (req.user.role !== "admin" )) {
+        console.log('❌ Menu POST - Access denied. User:', req.user?.role);
         return res.status(403).json({ message: "Admin/staff access required" });
       }
 
