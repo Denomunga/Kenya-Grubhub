@@ -1725,6 +1725,22 @@ export class InventoryAccountingService {
       console.log(`[COGS] Found ${orders.length} delivered orders and ${sales.length} completed sales`);
       console.log(`[COGS] Found ${inventoryItems.length} inventory items and ${products.length} products`);
 
+      // Log all inventory items with cost prices
+      if (inventoryItems.length > 0) {
+        console.log(`[COGS] Inventory Items with Cost Prices:`);
+        for (const invItem of inventoryItems.slice(0, 5)) {
+          console.log(`  - Product ${(invItem as any).productId}: costPrice = ${(invItem as any).costPrice}`);
+        }
+      }
+
+      // Log all products with cost prices
+      if (products.length > 0) {
+        console.log(`[COGS] Products with Cost Prices:`);
+        for (const prod of products.slice(0, 5)) {
+          console.log(`  - ${(prod as any).name} (${(prod as any)._id}): price=${(prod as any).price}, costPrice=${(prod as any).costPrice}`);
+        }
+      }
+
       // Log sample data to verify structure
       if (orders.length > 0) {
         console.log(`[COGS] Sample Order:`, JSON.stringify(orders[0], null, 2).substring(0, 500));
@@ -1771,12 +1787,18 @@ export class InventoryAccountingService {
           
           // Get cost price from inventory or product, with fallback
           let costPrice = costPriceMap.get(productIdStr);
-          if (costPrice === undefined) {
+          let costPriceSource = 'unknown';
+          
+          if (costPrice !== undefined && costPrice !== null && costPrice > 0) {
+            costPriceSource = 'InventoryItem';
+          } else {
             const product = productMap.get(productIdStr);
-            if (product) {
-              costPrice = (product as any).costPrice || (product as any).price * 0.6;
+            if (product && (product as any).costPrice !== undefined && (product as any).costPrice !== null && (product as any).costPrice > 0) {
+              costPrice = (product as any).costPrice;
+              costPriceSource = 'Product.costPrice';
             } else {
               costPrice = (item.price || 0) * 0.6;
+              costPriceSource = 'Fallback (60% of item price)';
             }
           }
 
@@ -1793,6 +1815,11 @@ export class InventoryAccountingService {
           // Aggregate by product
           const productKey = productIdStr;
           const productName = item.name || (productMap.get(productIdStr) as any)?.name || 'Unknown';
+          
+          // Log cost price resolution for first few items
+          if (processedItemsCount <= 3) {
+            console.log(`[COGS] Item "${productName}": costPrice=${costPrice} (from ${costPriceSource}), sellingPrice=${price}, qty=${quantity}`);
+          }
           
           if (productCOGS.has(productKey)) {
             const existing = productCOGS.get(productKey);
@@ -1813,7 +1840,8 @@ export class InventoryAccountingService {
               cogs: itemCOGS,
               profit: itemRevenue - itemCOGS,
               margin: itemRevenue > 0 ? ((itemRevenue - itemCOGS) / itemRevenue * 100) : 0,
-              sources: [source]
+              sources: [source],
+              costPriceSource
             });
           }
         }
