@@ -1699,60 +1699,104 @@ export class InventoryAccountingService {
     try {
       const { Order } = await import('../../models/Order');
       const { Sale } = await import('../../models/Sale');
-      const [orders, sales] = await Promise.all([
-        Order.find({ status: 'Delivered', createdAt: { $gte: startDate, $lte: endDate } }).lean(),
-        Sale.find({ status: 'Completed', createdAt: { $gte: startDate, $lte: endDate } }).lean()
+      const InventoryItem = (await import('../inventory/model')).InventoryItem;
+      const { Product } = await import('../../models/Product');
+
+      // Adjust end date to include the entire day
+      const adjustedEnd = new Date(endDate.getTime() + 86400000 - 1);
+
+      // Fetch all data in parallel
+      const [orders, sales, inventoryItems, products] = await Promise.all([
+        Order.find({ status: 'Delivered', createdAt: { $gte: startDate, $lte: adjustedEnd } }).lean(),
+        Sale.find({ status: 'Completed', createdAt: { $gte: startDate, $lte: adjustedEnd } }).lean(),
+        InventoryItem.find({}).lean(),
+        Product.find({}).lean()
       ]);
 
-      const { Product } = await import('../../models/Product');
+      console.log(`[COGS] Date Range: ${startDate.toISOString()} to ${adjustedEnd.toISOString()}`);
+      console.log(`[COGS] Found ${orders.length} delivered orders and ${sales.length} completed sales`);
+      console.log(`[COGS] Found ${inventoryItems.length} inventory items and ${products.length} products`);
+
+      // Create lookup maps for efficient O(1) access
+      const costPriceMap = new Map();
+      for (const invItem of inventoryItems) {
+        if ((invItem as any).productId) {
+          costPriceMap.set((invItem as any).productId.toString(), (invItem as any).costPrice);
+        }
+      }
+
+      const productMap = new Map();
+      for (const product of products) {
+        if ((product as any)._id) {
+          productMap.set((product as any)._id.toString(), product);
+        }
+      }
+
       let totalCOGS = 0;
       let totalRevenue = 0;
-      const productCOGS: any[] = [];
+      const productCOGS: Map<string, any> = new Map();
 
-      // Process regular orders
+      // Helper function to process items and accumulate COGS
+      const processItems = (items: any[]) => {
+        for (const item of items || []) {
+          if (item.productId) {
+            const productIdStr = item.productId.toString();
+            let costPrice = costPriceMap.get(productIdStr);
+
+            // Fallback to 60% of selling price if cost not found
+            if (costPrice === undefined) {
+              costPrice = (item.price || 0) * 0.6;
+            }
+
+            const itemCOGS = costPrice * item.quantity;
+            const itemRevenue = item.price * item.quantity;
+            totalCOGS += itemCOGS;
+            totalRevenue += itemRevenue;
+
+            // Aggregate by product
+            const productKey = productIdStr;
+            if (productCOGS.has(productKey)) {
+              const existing = productCOGS.get(productKey);
+              existing.quantity += item.quantity;
+              existing.revenue += itemRevenue;
+              existing.cogs += itemCOGS;
+              existing.profit = existing.revenue - existing.cogs;
+              existing.margin = existing.revenue > 0 ? ((existing.revenue - existing.cogs) / existing.revenue * 100) : 0;
+            } else {
+              productCOGS.set(productKey, {
+                productId: item.productId,
+                name: item.name,
+                quantity: item.quantity,
+                costPrice,
+                revenue: itemRevenue,
+                cogs: itemCOGS,
+                profit: itemRevenue - itemCOGS,
+                margin: itemRevenue > 0 ? ((itemRevenue - itemCOGS) / itemRevenue * 100) : 0
+              });
+            }
+          }
+        }
+      };
+
+      // Process orders and sales
       for (const order of orders) {
-        for (const item of (order as any).items || []) {
-          if (item.productId) {
-            const product = await Product.findById(item.productId).lean();
-            if (product) {
-              const InventoryItem = (await import('../inventory/model')).InventoryItem;
-              const invItem = await InventoryItem.findOne({ productId: item.productId }).lean();
-              const costPrice = invItem ? (invItem as any).costPrice : (product as any).price * 0.6;
-              const itemCOGS = costPrice * item.quantity;
-              const itemRevenue = item.price * item.quantity;
-              totalCOGS += itemCOGS;
-              totalRevenue += itemRevenue;
-              productCOGS.push({ productId: item.productId, name: item.name, quantity: item.quantity, costPrice, revenue: itemRevenue, cogs: itemCOGS, profit: itemRevenue - itemCOGS, margin: itemRevenue > 0 ? ((itemRevenue - itemCOGS) / itemRevenue * 100) : 0 });
-            }
-          }
-        }
+        processItems((order as any).items);
+      }
+      for (const sale of sales) {
+        processItems((sale as any).items);
       }
 
-      // Process POS sales
-      for (const sale of sales) {
-        for (const item of (sale as any).items || []) {
-          if (item.productId) {
-            const product = await Product.findById(item.productId).lean();
-            if (product) {
-              const InventoryItem = (await import('../inventory/model')).InventoryItem;
-              const invItem = await InventoryItem.findOne({ productId: item.productId }).lean();
-              const costPrice = invItem ? (invItem as any).costPrice : (product as any).price * 0.6;
-              const itemCOGS = costPrice * item.quantity;
-              const itemRevenue = item.price * item.quantity;
-              totalCOGS += itemCOGS;
-              totalRevenue += itemRevenue;
-              productCOGS.push({ productId: item.productId, name: item.name, quantity: item.quantity, costPrice, revenue: itemRevenue, cogs: itemCOGS, profit: itemRevenue - itemCOGS, margin: itemRevenue > 0 ? ((itemRevenue - itemCOGS) / itemRevenue * 100) : 0 });
-            }
-          }
-        }
-      }
+      // Convert map to sorted array
+      const products_sorted = Array.from(productCOGS.values()).sort((a, b) => b.profit - a.profit);
+
+      console.log(`[COGS] Calculation complete: Revenue=${totalRevenue}, COGS=${totalCOGS}, Profit=${totalRevenue - totalCOGS}, Products=${products_sorted.length}`);
 
       return {
         totalCOGS: Math.round(totalCOGS * 100) / 100,
         totalRevenue: Math.round(totalRevenue * 100) / 100,
         grossProfit: Math.round((totalRevenue - totalCOGS) * 100) / 100,
         grossMargin: totalRevenue > 0 ? Math.round((totalRevenue - totalCOGS) / totalRevenue * 10000) / 100 : 0,
-        products: productCOGS.sort((a, b) => b.profit - a.profit),
+        products: products_sorted,
         period: { startDate, endDate },
       };
     } catch (err) {
