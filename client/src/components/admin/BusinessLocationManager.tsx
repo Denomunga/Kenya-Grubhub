@@ -66,7 +66,7 @@ export default function BusinessLocationManager() {
   const fetchBusinessLocation = async () => {
     try {
       // Get JWT token from localStorage for API authentication
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`${API_BASE_URL}/api/business-location`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -186,7 +186,7 @@ export default function BusinessLocationManager() {
       const url = location ? `${API_BASE_URL}/api/business-location/${location.id}` : `${API_BASE_URL}/api/business-location`;
       
       // Get JWT token from localStorage for API authentication
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const sanitizedData = {
         ...formData,
         name: sanitizeInput(formData.name),

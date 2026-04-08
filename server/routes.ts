@@ -3308,8 +3308,8 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
     }
   });
 
-  // CSRF token endpoint
-  app.get("/api/csrf-token", requireAuth, async (req: Request, res: Response) => {
+  // CSRF token endpoint - public access for pre-auth initialization
+  app.get("/api/csrf-token", async (req: Request, res: Response) => {
     try {
       const sessionId = req.sessionID;
       const token = randomBytes(32).toString('hex');
