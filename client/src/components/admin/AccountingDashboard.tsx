@@ -90,6 +90,7 @@ interface AccountingStats {
   totalAssets?: number;
   totalLiabilities?: number;
   totalEquity?: number;
+  cashBalance: number;
   expensesByCategory?: Array<{ category: string; amount: number }>;
 }
 
@@ -338,6 +339,7 @@ export default function AccountingDashboard() {
         totalAssets: 8200000,
         totalLiabilities: 1560000,
         totalEquity: 6640000,
+        cashBalance: 4200000,
         expensesByCategory: [
           { category: 'Salaries', amount: 980000 },
           { category: 'Cost of Goods', amount: 620000 },
@@ -587,7 +589,7 @@ export default function AccountingDashboard() {
     const unpaid = invoices.filter(i => i.status === 'unpaid' || i.status === 'overdue' || i.status === 'partial');
     return unpaid.reduce((sum, i) => sum + (i.amount - i.paidAmount), 0);
   }, [invoices]);
-  const cashBalance = useMemo(() => (stats?.totalAssets ?? 0) - (stats?.totalLiabilities ?? 0), [stats]);
+  const cashBalance = useMemo(() => stats?.cashBalance ?? 0, [stats]);
 
   const expensePieData = useMemo(() => {
     if (stats?.expensesByCategory && stats.expensesByCategory.length > 0) {
@@ -1157,11 +1159,11 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl font-bold text-emerald-700">
-              {((stats?.totalRevenue ?? 0) / 1000000).toFixed(1)}M
+              KES {(stats?.totalRevenue ?? 0).toLocaleString()}
             </div>
             <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-0.5">
               <ArrowUpRight className="h-2.5 w-2.5 text-emerald-500" />
-              KES {(stats?.totalRevenue ?? 0).toLocaleString()}
+              Revenue in KES
             </p>
           </CardContent>
         </Card>
@@ -1174,11 +1176,11 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl font-bold text-red-600">
-              {((stats?.totalExpenses ?? 0) / 1000000).toFixed(1)}M
+              KES {(stats?.totalExpenses ?? 0).toLocaleString()}
             </div>
             <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-0.5">
               <ArrowDownRight className="h-2.5 w-2.5 text-red-500" />
-              KES {(stats?.totalExpenses ?? 0).toLocaleString()}
+              Expenses in KES
             </p>
           </CardContent>
         </Card>
@@ -1191,7 +1193,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           </CardHeader>
           <CardContent className="pb-3">
             <div className={`text-xl font-bold ${(stats?.profit ?? 0) > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-              {((stats?.profit ?? stats?.netIncome ?? 0) / 1000000).toFixed(1)}M
+              KES {(stats?.profit ?? stats?.netIncome ?? 0).toLocaleString()}
             </div>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               Margin: {stats?.profitMargin ?? 0}%
@@ -1207,10 +1209,10 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl font-bold">
-              {(cashBalance / 1000000).toFixed(1)}M
+              KES {cashBalance.toLocaleString()}
             </div>
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              KES {cashBalance.toLocaleString()}
+              Cash balance in KES
             </p>
           </CardContent>
         </Card>
@@ -1225,7 +1227,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           </CardHeader>
           <CardContent className="pb-3">
             <div className={`text-xl font-bold ${accountsPayable > 0 ? 'text-orange-700' : ''}`}>
-              {(accountsPayable / 1000).toFixed(0)}K
+              KES {accountsPayable.toLocaleString()}
             </div>
             <p className="text-[10px] text-orange-600 mt-0.5">
               {accountsPayable > 0 ? 'Owed to suppliers' : 'All clear'}
@@ -1243,7 +1245,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           </CardHeader>
           <CardContent className="pb-3">
             <div className={`text-xl font-bold ${accountsReceivable > 0 ? 'text-blue-700' : ''}`}>
-              {(accountsReceivable / 1000).toFixed(0)}K
+              KES {accountsReceivable.toLocaleString()}
             </div>
             <p className="text-[10px] text-blue-600 mt-0.5">
               {overdueInvoices.length > 0 ? `${overdueInvoices.length} overdue` : 'Owed to you'}

@@ -15,6 +15,7 @@
   RecurringInvoice,
 } from './models';
 import { PurchaseOrder } from '../procurement/models';
+import { Order } from '../../models/Order';
 import { Sale } from '../../models/Sale';
 
 /**
@@ -498,8 +499,15 @@ export class FinancialReportingService {
       ]);
       const posRevenue = posRevenueAgg[0]?.total || 0;
 
+      // Calculate revenue from delivered orders
+      const orderRevenueAgg = await Order.aggregate([
+        { $match: { status: 'Delivered' } },
+        { $group: { _id: null, total: { $sum: '$total' } } }
+      ]);
+      const orderRevenue = orderRevenueAgg[0]?.total || 0;
+
       // Combine all revenue sources
-      const totalRevenue = invoiceRevenue + posRevenue;
+      const totalRevenue = invoiceRevenue + posRevenue + orderRevenue;
 
       // Calculate expenses from Expenses collection
       const expenseAgg = await Expense.aggregate([
@@ -519,8 +527,15 @@ export class FinancialReportingService {
       ]);
       const posCashBalance = posCashAgg[0]?.total || 0;
 
+      // Calculate cash from delivered orders
+      const orderCashAgg = await Order.aggregate([
+        { $match: { status: 'Delivered' } },
+        { $group: { _id: null, total: { $sum: '$total' } } }
+      ]);
+      const orderCashBalance = orderCashAgg[0]?.total || 0;
+
       // Combine cash balances
-      const cashBalance = accountCashBalance + posCashBalance;
+      const cashBalance = accountCashBalance + posCashBalance + orderCashBalance;
 
       // Calculate accounts receivable
       const arAgg = await Invoice.aggregate([
@@ -1851,15 +1866,23 @@ export class CashFlowForecastService {
       const now = new Date();
       const forecastEnd = new Date(now.getTime() + days * 86400000);
 
-      // Current cash position (from Account model)
+      // Current cash position (from cash accounts only)
       const cashAccounts = await Account.find({ code: { $in: ['1000', '1010', '1020'] }, status: 'active' }).lean();
       const cashBalance = cashAccounts.reduce((s: number, a: any) => s + (a.balance || 0), 0);
       
-      // Add inventory stock value (current assets)
-      const stockOverview = await InventoryAccountingService.getStockOverview();
-      const inventoryValue = stockOverview.summary?.totalValue || 0;
-      
-      const currentCash = cashBalance + inventoryValue;
+      const posCashAgg = await Sale.aggregate([
+        { $match: { status: 'Completed' } },
+        { $group: { _id: null, total: { $sum: '$total' } } }
+      ]);
+      const posCash = posCashAgg[0]?.total || 0;
+
+      const orderCashAgg = await Order.aggregate([
+        { $match: { status: 'Delivered' } },
+        { $group: { _id: null, total: { $sum: '$total' } } }
+      ]);
+      const orderCash = orderCashAgg[0]?.total || 0;
+
+      const currentCash = cashBalance + posCash + orderCash;
 
       // Expected income (unpaid invoices due in forecast period)
       const expectedIncome = await Invoice.aggregate([
