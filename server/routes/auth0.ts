@@ -6,18 +6,47 @@ import { User } from '../models/User';
 
 const router = express.Router();
 
-// Verify Auth0 tokens
-const checkJwt = expressjwt({
-  secret: jwksRsa.expressJwtSecret({
-    cache: true,
-    rateLimit: true,
-    jwksRequestsPerMinute: 5,
-    jwksUri: `https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`
-  }),
-  audience: process.env.AUTH0_AUDIENCE,
-  issuer: `https://${process.env.AUTH0_DOMAIN}/`,
-  algorithms: ['RS256']
-});
+// Lazy initialization of Auth0 JWT verification middleware
+let checkJwtInstance: any = null;
+
+function getCheckJwt() {
+  if (!checkJwtInstance) {
+    const domain = process.env.AUTH0_DOMAIN;
+    const audience = process.env.AUTH0_AUDIENCE;
+    
+    if (!domain || !audience) {
+      console.error('❌ Auth0 configuration missing:', { domain: !!domain, audience: !!audience });
+      throw new Error('Auth0 not configured: AUTH0_DOMAIN and AUTH0_AUDIENCE required');
+    }
+    
+    const jwksUri = `https://${domain}/.well-known/jwks.json`;
+    console.log('🔧 Initializing Auth0 JWT middleware:', { domain, audience, jwksUri });
+    
+    checkJwtInstance = expressjwt({
+      secret: jwksRsa.expressJwtSecret({
+        cache: true,
+        rateLimit: true,
+        jwksRequestsPerMinute: 5,
+        jwksUri
+      }),
+      audience,
+      issuer: `https://${domain}/`,
+      algorithms: ['RS256']
+    });
+  }
+  return checkJwtInstance;
+}
+
+// Middleware wrapper that ensures Auth0 is configured
+const checkJwt = (req: any, res: any, next: any) => {
+  try {
+    const middleware = getCheckJwt();
+    return middleware(req, res, next);
+  } catch (error: any) {
+    console.error('❌ Auth0 middleware error:', error.message);
+    return res.status(500).json({ error: 'Auth0 not configured', message: error.message });
+  }
+};
 
 // Sync Auth0 user with your database
 router.post('/sync-auth0', checkJwt, async (req: any, res: express.Response) => {
