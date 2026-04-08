@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye, GitCompare, Heart, Plus, Star } from "lucide-react";
+import { Eye, GitCompare, Heart, Plus, Star, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
@@ -10,6 +10,125 @@ import { formatPriceKSHS } from "@/lib/format";
 import { useShop } from "@/lib/shop";
 
 const AnimatedCard = motion.create(Card);
+
+// Configuration for added fields that should be displayed
+const ADDED_FIELDS_CONFIG = [
+  { key: 'category', label: 'Category', type: 'badge', variant: 'outline' },
+  { key: 'subcategory', label: 'Subcategory', type: 'badge', variant: 'secondary' },
+  { key: 'brand', label: 'Brand', type: 'badge', variant: 'outline' },
+  { key: 'condition', label: 'Condition', type: 'badge', variant: 'default', conditionVariant: true },
+  { key: 'year', label: 'Year', type: 'badge', variant: 'outline' },
+  { key: 'size', label: 'Size', type: 'badge', variant: 'outline' },
+  { key: 'color', label: 'Color', type: 'badge', variant: 'outline' },
+  { key: 'stock', label: 'Stock', type: 'conditional-badge', threshold: 5 },
+  { key: 'location', label: 'Location', type: 'text', icon: MapPin },
+  { key: 'material', label: 'Material', type: 'text' },
+  { key: 'dimensions', label: 'Dimensions', type: 'text', formatter: (dims: any) => `${dims.length}L × ${dims.width}W × ${dims.height}H cm` },
+  { key: 'weight', label: 'Weight', type: 'text', formatter: (weight: number) => `${weight} kg` },
+  { key: 'tags', label: 'Tags', type: 'tags', maxDisplay: 3 },
+  { key: 'specifications', label: 'Key Specs', type: 'specs', maxDisplay: 2 }
+];
+
+// Function to render added fields dynamically
+const renderAddedField = (field: any, item: MenuItem) => {
+  const value = item[field.key as keyof MenuItem];
+  
+  // Skip if value is null, undefined, or empty
+  if (value === null || value === undefined || value === '') return null;
+  if (Array.isArray(value) && value.length === 0) return null;
+  if (typeof value === 'object' && Object.keys(value).length === 0) return null;
+
+  let displayValue: any;
+
+  switch (field.type) {
+    case 'badge':
+      // For badges, ensure we only pass string/number values
+      displayValue = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+      if (!displayValue) return null;
+      
+      if (field.conditionVariant && typeof value === 'string') {
+        const variant = value === 'new' ? 'default' : 'secondary';
+        return (
+          <Badge key={field.key} variant={variant} className="text-xs">
+            {displayValue}
+          </Badge>
+        );
+      }
+      return (
+        <Badge key={field.key} variant={field.variant} className="text-xs">
+          {displayValue}
+        </Badge>
+      );
+
+    case 'conditional-badge':
+      if (typeof value === 'number' && value <= (field.threshold || 0)) {
+        return (
+          <Badge key={field.key} variant="destructive" className="text-xs">
+            Only {value} left
+          </Badge>
+        );
+      }
+      return null;
+
+    case 'text':
+      displayValue = field.formatter ? field.formatter(value) : value;
+      const Icon = field.icon;
+      return (
+        <div key={field.key} className="flex items-center gap-1 text-xs text-muted-foreground">
+          {Icon && <Icon className="h-3 w-3" />}
+          {field.label}: {displayValue}
+        </div>
+      );
+
+    case 'tags':
+      if (Array.isArray(value)) {
+        const tags = value.slice(0, field.maxDisplay || 3);
+        const remaining = value.length - tags.length;
+        return (
+          <div key={field.key} className="flex flex-wrap gap-1">
+            {tags.map((tag: string, index: number) => (
+              <span key={index} className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full border border-border">
+                {tag}
+              </span>
+            ))}
+            {remaining > 0 && (
+              <span className="text-xs text-muted-foreground">+{remaining} more</span>
+            )}
+          </div>
+        );
+      }
+      return null;
+
+    case 'specs':
+      if (typeof value === 'object' && value !== null) {
+        const specs = Object.entries(value).slice(0, field.maxDisplay || 2);
+        const remaining = Object.keys(value).length - specs.length;
+        return (
+          <div key={field.key} className="space-y-1">
+            <div className="text-xs font-medium text-muted-foreground">{field.label}:</div>
+            <div className="flex flex-wrap gap-2">
+              {specs.map(([key, val]) => {
+                const formattedKey = key.replace(/([A-Z])/g, ' $1').trim();
+                if (String(val).length > 15) return null;
+                return (
+                  <span key={key} className="text-xs bg-muted/30 text-foreground px-2 py-1 rounded border border-border">
+                    <span className="font-medium capitalize">{formattedKey}:</span> {String(val)}
+                  </span>
+                );
+              })}
+              {remaining > 0 && (
+                <span className="text-xs text-primary">+{remaining} more specs</span>
+              )}
+            </div>
+          </div>
+        );
+      }
+      return null;
+
+    default:
+      return null;
+  }
+};
 
 // Simple slideshow component for product images
 const ProductImageSlideshow = ({ images, productName }: { images: string[], productName: string }) => {
@@ -81,6 +200,19 @@ interface MenuItem {
   images?: string[];
   image?: string;
   category?: string;
+  subcategory?: string;
+  brand?: string;
+  condition?: "new" | "used" | "refurbished";
+  year?: number;
+  size?: string;
+  color?: string;
+  stock?: number;
+  location?: string;
+  material?: string;
+  weight?: number;
+  dimensions?: { length: number; width: number; height: number; };
+  tags?: string[];
+  specifications?: Record<string, any>;
   isPopular?: boolean;
 }
 
@@ -243,10 +375,14 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
                     <span className="text-lg font-bold text-primary tabular-nums">{formatPriceKSHS(item.price)}</span>
                   </div>
                   <p className="text-muted-foreground text-sm mb-4 line-clamp-2 leading-relaxed">{item.description}</p>
+                  
+                  {/* Dynamically render added fields that have values */}
+                  <div className="space-y-2 mb-3">
+                    {ADDED_FIELDS_CONFIG.map(field => renderAddedField(field, item)).filter(Boolean)}
+                  </div>
+                  
                   <div className="flex justify-between items-center">
-                    <Badge variant="outline" className="text-xs bg-muted/40 border-border text-foreground px-3 py-1">
-                      {item.category || 'Main Course'}
-                    </Badge>
+                    <div></div>
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}

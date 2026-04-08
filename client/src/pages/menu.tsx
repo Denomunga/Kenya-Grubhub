@@ -39,6 +39,186 @@ import { SEOMetaTags } from "@/components/seo/SEOMetaTags";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { useShop } from "@/lib/shop";
 
+// Configuration for added fields that should be displayed
+const ADDED_FIELDS_CONFIG = [
+  { key: 'category', label: 'Category', type: 'badge', variant: 'outline' },
+  { key: 'subcategory', label: 'Subcategory', type: 'badge', variant: 'secondary' },
+  { key: 'brand', label: 'Brand', type: 'badge', variant: 'outline' },
+  { key: 'condition', label: 'Condition', type: 'badge', variant: 'default', conditionVariant: true },
+  { key: 'year', label: 'Year', type: 'badge', variant: 'outline' },
+  { key: 'size', label: 'Size', type: 'badge', variant: 'outline' },
+  { key: 'color', label: 'Color', type: 'badge', variant: 'outline' },
+  { key: 'stock', label: 'Stock', type: 'conditional-badge', threshold: 5 },
+  { key: 'location', label: 'Location', type: 'text', icon: MapPin },
+  { key: 'material', label: 'Material', type: 'text' },
+  { key: 'dimensions', label: 'Dimensions', type: 'text', formatter: (dims: any) => `${dims.length}L × ${dims.width}W × ${dims.height}H cm` },
+  { key: 'weight', label: 'Weight', type: 'text', formatter: (weight: number) => `${weight} kg` },
+  { key: 'tags', label: 'Tags', type: 'tags', maxDisplay: 3 },
+  { key: 'specifications', label: 'Key Specs', type: 'specs', maxDisplay: 3 }
+];
+
+// Function to render added fields dynamically
+const renderAddedField = (field: any, item: MenuItem) => {
+  const value = item[field.key as keyof MenuItem];
+  
+  // Skip if value is null, undefined, or empty
+  if (value === null || value === undefined || value === '') return null;
+  if (Array.isArray(value) && value.length === 0) return null;
+  if (typeof value === 'object' && Object.keys(value).length === 0) return null;
+
+  switch (field.type) {
+    case 'badge':
+      // For badges, ensure we only pass string/number values
+      const displayValue = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+      if (!displayValue) return null;
+      
+      if (field.conditionVariant && typeof value === 'string') {
+        const variant = value === 'new' ? 'default' : 'secondary';
+        return (
+          <Badge key={field.key} variant={variant} className="text-xs">
+            {displayValue}
+          </Badge>
+        );
+      }
+      return (
+        <Badge key={field.key} variant={field.variant} className="text-xs">
+          {displayValue}
+        </Badge>
+      );
+
+    case 'conditional-badge':
+      if (typeof value === 'number' && value <= (field.threshold || 0)) {
+        return (
+          <Badge key={field.key} variant="destructive" className="text-xs">
+            Only {value} left
+          </Badge>
+        );
+      }
+      return null;
+
+    case 'text':
+      const Icon = field.icon;
+      const textDisplayValue = field.formatter ? field.formatter(value) : String(value);
+      return (
+        <div key={field.key} className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+          {Icon && <Icon className="h-3 w-3" />}
+          {textDisplayValue}
+        </div>
+      );
+
+    case 'tags':
+      if (Array.isArray(value)) {
+        const tags = value.slice(0, field.maxDisplay || 3);
+        const remaining = value.length - tags.length;
+        return (
+          <div key={field.key} className="flex flex-wrap gap-1 mb-3">
+            {tags.map((tag: string, index: number) => (
+              <span key={index} className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full border border-border">
+                {tag}
+              </span>
+            ))}
+            {remaining > 0 && (
+              <span className="text-xs text-muted-foreground">+{remaining} more</span>
+            )}
+          </div>
+        );
+      }
+      return null;
+
+    case 'specs':
+      if (typeof value === 'object' && value !== null) {
+        const specs = Object.entries(value).slice(0, field.maxDisplay || 3);
+        const remaining = Object.keys(value).length - specs.length;
+        return (
+          <div key={field.key} className="space-y-1 mb-3">
+            <div className="text-xs font-medium text-muted-foreground mb-1">{field.label}:</div>
+            <div className="flex flex-wrap gap-2">
+              {specs.map(([key, val]) => {
+                const formattedKey = key.replace(/([A-Z])/g, ' $1').trim();
+                const valStr = String(val);
+                if (valStr.length > 20) return null;
+                return (
+                  <span key={key} className="text-xs bg-muted/30 text-foreground px-2 py-1 rounded border border-border">
+                    <span className="font-medium capitalize">{formattedKey}:</span> {valStr}
+                  </span>
+                );
+              })}
+              {remaining > 0 && (
+                <span className="text-xs text-primary">+{remaining} more specs</span>
+              )}
+            </div>
+          </div>
+        );
+      }
+      return null;
+
+    default:
+      return null;
+  }
+};
+
+// Function to render added fields dynamically for product details
+const renderAddedFieldForDetails = (field: any, item: MenuItem) => {
+  const value = item[field.key as keyof MenuItem];
+  
+  // Skip if value is null, undefined, or empty
+  if (value === null || value === undefined || value === '') return null;
+  if (Array.isArray(value) && value.length === 0) return null;
+  if (typeof value === 'object' && Object.keys(value).length === 0) return null;
+
+  let displayValue: any;
+
+  switch (field.type) {
+    case 'badge':
+      // For badges, ensure we only pass string/number values
+      displayValue = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+      if (!displayValue) return null;
+      
+      if (field.conditionVariant && typeof value === 'string') {
+        const badgeClass = value === 'new' ? 'bg-green-500/15 text-green-800 dark:text-green-200 border border-green-500/20' :
+                          value === 'used' ? 'bg-orange-500/15 text-orange-800 dark:text-orange-200 border border-orange-500/20' :
+                          'bg-blue-500/15 text-blue-800 dark:text-blue-200 border border-blue-500/20';
+        return (
+          <div key={field.key} className="flex justify-between items-center">
+            <span className="text-sm font-medium text-muted-foreground">{field.label}</span>
+            <Badge className={badgeClass}>
+              {displayValue}
+            </Badge>
+          </div>
+        );
+      }
+      return (
+        <div key={field.key} className="flex justify-between items-center">
+          <span className="text-sm font-medium text-muted-foreground">{field.label}</span>
+          <Badge variant={field.variant} className="bg-background">
+            {displayValue}
+          </Badge>
+        </div>
+      );
+
+    case 'conditional-badge':
+      // Stock is handled separately in product details
+      return null;
+
+    case 'text':
+      displayValue = field.formatter ? field.formatter(value) : value;
+      return (
+        <div key={field.key} className="flex justify-between items-center">
+          <span className="text-sm font-medium text-muted-foreground">{field.label}</span>
+          <span className="font-medium">{displayValue}</span>
+        </div>
+      );
+
+    case 'tags':
+    case 'specs':
+      // Tags and specs are handled separately in product details
+      return null;
+
+    default:
+      return null;
+  }
+};
+
 // Helper small form component to post a review for the currently open product
 function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct }: { 
   itemId: string; 
@@ -966,7 +1146,7 @@ export default function Menu() {
            <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
              <TabsList className="bg-muted w-full overflow-x-auto flex-nowrap p-1">
                {categories.map(cat => (
-                 <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm px-3 py-2 min-w-[80px] sm:min-w-[100px]">
+                 <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm px-3 py-2 min-w-20 sm:min-w-[100px]">
                    {cat}
                  </TabsTrigger>
                ))}
@@ -1061,106 +1241,10 @@ export default function Menu() {
                   </div>
                   <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{item.description}</p>
                   
-                  {/* Additional Product Information */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <Badge variant="outline" className="bg-muted/50">{item.category}</Badge>
-                    {item.subcategory && (
-                      <Badge variant="secondary" className="text-xs">{item.subcategory}</Badge>
-                    )}
-                    {item.brand && (
-                      <Badge variant="outline" className="text-xs">{item.brand}</Badge>
-                    )}
-                    {item.condition && (
-                      <Badge 
-                        variant={item.condition === 'new' ? 'default' : 'secondary'} 
-                        className="text-xs"
-                      >
-                        {item.condition}
-                      </Badge>
-                    )}
-                    {item.year && (
-                      <Badge variant="outline" className="text-xs">{item.year}</Badge>
-                    )}
-                    {item.size && (
-                      <Badge variant="outline" className="text-xs">{item.size}</Badge>
-                    )}
-                    {item.color && (
-                      <Badge variant="outline" className="text-xs">{item.color}</Badge>
-                    )}
-                    {item.stock !== undefined && item.stock <= 5 && (
-                      <Badge variant="destructive" className="text-xs">
-                        Only {item.stock} left
-                      </Badge>
-                    )}
+                  {/* Dynamically render added fields that have values */}
+                  <div className="space-y-2 mb-3">
+                    {ADDED_FIELDS_CONFIG.map(field => renderAddedField(field, item)).filter(Boolean)}
                   </div>
-                  
-                  {/* Location for delivery */}
-                  {item.location && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-                      <MapPin className="h-3 w-3" />
-                      {item.location}
-                    </div>
-                  )}
-                  
-                  {/* Material for products */}
-                  {item.material && (
-                    <div className="text-xs text-muted-foreground mb-2">
-                      Material: {item.material}
-                    </div>
-                  )}
-                  
-                  {/* Dimensions for shipping */}
-                  {item.dimensions && (
-                    <div className="text-xs text-muted-foreground mb-2">
-                      Dimensions: {item.dimensions.length}L × {item.dimensions.width}W × {item.dimensions.height}H cm
-                    </div>
-                  )}
-                  
-                  {/* Weight for shipping */}
-                  {item.weight && (
-                    <div className="text-xs text-muted-foreground mb-2">
-                      Weight: {item.weight} kg
-                    </div>
-                  )}
-                  
-                  {/* Tags */}
-                  {item.tags && item.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {item.tags.slice(0, 3).map((tag, index) => (
-                        <span key={index} className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full border border-border">
-                          {tag}
-                        </span>
-                      ))}
-                      {item.tags.length > 3 && (
-                        <span className="text-xs text-muted-foreground">+{item.tags.length - 3} more</span>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Key Specifications - Show 2-3 most important specs */}
-                  {item.specifications && Object.keys(item.specifications).length > 0 && (
-                    <div className="space-y-1 mb-3">
-                      <div className="text-xs font-medium text-muted-foreground mb-1">Key Specs:</div>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(item.specifications)
-                          .slice(0, 3)
-                          .map(([key, value]) => {
-                            // Format key for display
-                            const formattedKey = key.replace(/([A-Z])/g, ' $1').trim();
-                            // Show only important specs with short values
-                            if (String(value).length > 20) return null;
-                            return (
-                              <span key={key} className="text-xs bg-muted/30 text-foreground px-2 py-1 rounded border border-border">
-                                <span className="font-medium capitalize">{formattedKey}:</span> {String(value)}
-                              </span>
-                            );
-                          })}
-                        {Object.keys(item.specifications).length > 3 && (
-                          <span className="text-xs text-primary">+{Object.keys(item.specifications).length - 3} more specs</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
                   
                   {/* Stock status for all items */}
                   {item.stock !== undefined && (
@@ -1578,32 +1662,8 @@ export default function Menu() {
                       </span>
                     </div>
 
-                    {selectedProductForDetail.brand && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-muted-foreground">Brand</span>
-                        <span className="font-medium">{selectedProductForDetail.brand}</span>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-muted-foreground">Category</span>
-                      <Badge variant="outline" className="bg-background">
-                        {selectedProductForDetail.category}
-                      </Badge>
-                    </div>
-
-                    {selectedProductForDetail.condition && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-muted-foreground">Condition</span>
-                        <Badge className={`
-                          ${selectedProductForDetail.condition === 'new' ? 'bg-green-500/15 text-green-800 dark:text-green-200 border border-green-500/20' :
-                            selectedProductForDetail.condition === 'used' ? 'bg-orange-500/15 text-orange-800 dark:text-orange-200 border border-orange-500/20' :
-                            'bg-blue-500/15 text-blue-800 dark:text-blue-200 border border-blue-500/20'}
-                        `}>
-                          {selectedProductForDetail.condition}
-                        </Badge>
-                      </div>
-                    )}
+                    {/* Dynamically render added fields that have values */}
+                    {ADDED_FIELDS_CONFIG.map(field => renderAddedFieldForDetails(field, selectedProductForDetail)).filter(Boolean)}
                   </div>
 
                   {/* Ask About Price Button */}
