@@ -149,33 +149,6 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
 
   const [salesTrendPeriod, setSalesTrendPeriod] = React.useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [autoRefreshCountdown, setAutoRefreshCountdown] = React.useState(300);
-  
-  // Chart drag-to-scroll state
-  const chartScrollRef = React.useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [dragStart, setDragStart] = React.useState(0);
-
-  const handleChartMouseDown = (e: React.MouseEvent) => {
-    if (!chartScrollRef.current) return;
-    setIsDragging(true);
-    setDragStart(e.clientX - (chartScrollRef.current.scrollLeft || 0));
-  };
-
-  const handleChartMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !chartScrollRef.current) return;
-    e.preventDefault();
-    const x = e.clientX - dragStart;
-    chartScrollRef.current.scrollLeft = x;
-  };
-
-  const handleChartMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  React.useEffect(() => {
-    document.addEventListener('mouseup', handleChartMouseUp);
-    return () => document.removeEventListener('mouseup', handleChartMouseUp);
-  }, []);
 
   // Auto-refresh countdown
   React.useEffect(() => {
@@ -620,35 +593,25 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <div 
-              ref={chartScrollRef}
-              className={`overflow-x-auto -mx-4 px-4 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-              onMouseDown={handleChartMouseDown}
-              onMouseMove={handleChartMouseMove}
-              style={{ userSelect: 'none' }}
-            >
-              <div style={{ minWidth: Math.max(100, salesTrendData.length * 60) + 'px' }}>
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={salesTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="label" fontSize={11} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                    <YAxis fontSize={11} tick={{ fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip
-                      formatter={(value: number) => [formatPriceKSHS(value), 'Revenue']}
-                      contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2.5}
-                      dot={{ r: 3, fill: 'hsl(var(--primary))' }}
-                      activeDot={{ r: 5 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={salesTrendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="label" fontSize={11} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis fontSize={11} tick={{ fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  formatter={(value: number) => [formatPriceKSHS(value), 'Revenue']}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: 'hsl(var(--primary))' }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
