@@ -805,8 +805,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return serverItem;
       } else {
         const errorData = await resp.json();
+        let errorMessage = errorData.message || 'Failed to create menu item';
+        
+        // Include validation error details if available
+        if (errorData.errors && Array.isArray(errorData.errors)) {
+          const validationErrors = errorData.errors
+            .map((e: any) => `${e.field}: ${e.message}`)
+            .join(', ');
+          errorMessage = `${errorMessage} - ${validationErrors}`;
+        }
+        
         console.error('❌ Failed to create menu item:', errorData);
-        throw new Error(errorData.message || 'Failed to create menu item');
+        throw new Error(errorMessage);
       }
     } catch (err) {
       console.error('❌ Error in addMenuItem:', err);

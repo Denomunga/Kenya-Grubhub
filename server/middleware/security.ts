@@ -120,6 +120,7 @@ export const validateMenuItem = [
     .withMessage('Item name must be 2-100 characters')
     .trim(),
   body('description')
+    .optional()
     .isLength({ min: 5, max: 500 })
     .withMessage('Description must be 5-500 characters')
     .trim(),
