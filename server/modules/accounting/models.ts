@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { BankStatement as BankStatementModel } from './models/bankReconciliation';
 
 /**
  * Chart of Accounts Model
@@ -578,4 +579,7 @@ RecurringInvoiceSchema.index({ nextDueDate: 1 });
 RecurringInvoiceSchema.index({ isActive: 1 });
 
 export const RecurringInvoice = mongoose.model<IRecurringInvoice>('RecurringInvoice', RecurringInvoiceSchema);
+
+export { BankStatement as BankStatementModel } from './models/bankReconciliation';
+export const BankStatement = BankStatementModel;
 

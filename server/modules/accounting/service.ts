@@ -21,7 +21,7 @@ import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
+const pdf = require('pdf-parse');
 
 
 /**
@@ -103,7 +103,7 @@ export class ChartOfAccountsService {
         await account.save();
       }
 
-      console.log(`✓ Initialized ${defaultAccounts.length} default accounts`);
+      console.log(`? Initialized ${defaultAccounts.length} default accounts`);
     } catch (error: any) {
       throw new Error(`Failed to initialize accounts: ${error?.message || String(error)}`);
     }
@@ -991,9 +991,9 @@ export class RecurringExpenseService {
 
           generatedExpenses.push(expense);
 
-          console.log(`✓ Generated expense ${expense.expenseId} for recurring expense ${recurringExpense.recurringId}`);
+          console.log(`? Generated expense ${expense.expenseId} for recurring expense ${recurringExpense.recurringId}`);
         } catch (expenseError: any) {
-          console.error(`✗ Failed to generate expense for ${recurringExpense.recurringId}: ${expenseError?.message || String(expenseError)}`);
+          console.error(`? Failed to generate expense for ${recurringExpense.recurringId}: ${expenseError?.message || String(expenseError)}`);
         }
       }
 
@@ -1120,7 +1120,7 @@ export class RecurringExpenseService {
         createdExpenses.push(expense);
       }
 
-      console.log(`✓ Initialized ${createdExpenses.length} default recurring expenses`);
+      console.log(`? Initialized ${createdExpenses.length} default recurring expenses`);
       return createdExpenses;
     } catch (error: any) {
       throw new Error(`Failed to initialize recurring expenses: ${error?.message || String(error)}`);
@@ -1656,7 +1656,7 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
     const dataBuffer = fs.readFileSync(tempFilePath);
 
 // Then in the method:
-const pdfData = await pdfParse(dataBuffer);
+const pdfData = await pdf(dataBuffer);
     const extractedText = pdfData.text;
 
     // 3. Use regex to extract invoice fields (customize patterns for your invoice format)

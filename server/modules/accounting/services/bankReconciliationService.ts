@@ -1,5 +1,6 @@
 import csv from 'csv-parser';
-import { BankStatement, IBankTransaction } from '../models/bankReconciliation';
+import { BankStatement } from '../models';
+import { IBankTransaction } from '../models/bankReconciliation';
 import { Invoice } from '../models';
 import { Expense } from '../models';
 import { Account } from '../models';
