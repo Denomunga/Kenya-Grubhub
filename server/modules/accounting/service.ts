@@ -1643,19 +1643,23 @@ export class InvoiceService {
 static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, userId: string) {
   try {
     
-   // Use pdf2json to extract text
-    const pdfParser = new PDFParser();
+   const pdfParser = new PDFParser();
     
     const pdfData = await new Promise<any>((resolve, reject) => {
-      pdfParser.on('pdfParser_dataReady', (data) => resolve(data));
-      pdfParser.on('pdfParser_dataError', (err) => reject(err));
+      pdfParser.on('pdfParser_dataReady', resolve);
+      pdfParser.on('pdfParser_dataError', reject);
       pdfParser.parseBuffer(fileBuffer);
     });
 
-    // Extract text from all pages
+    // Extract text
     const extractedText = pdfData.Pages.map((page: any) => 
       page.Texts.map((text: any) => decodeURIComponent(text.R[0].T)).join(' ')
     ).join('\n');
+
+    // 🔴 DEBUG: Log the extracted text
+    console.log('=== EXTRACTED TEXT ===');
+    console.log(extractedText);
+    console.log('=== END ===');
 
     // 2. Regex patterns for invoice fields
     const patterns = {
