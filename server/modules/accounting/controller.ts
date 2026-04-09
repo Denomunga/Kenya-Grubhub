@@ -91,8 +91,58 @@ export class AccountingController {
       });
     }
   }
-
   
+/**
+ * Upload and process an invoice PDF using AI (Zerox)
+ * POST /api/v1/accounting/invoices/upload
+ * Expects multipart/form-data with field name "invoice" (PDF file)
+ */
+  
+  static async uploadInvoicePdf(req: AuthRequest, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    // Multer should have attached the file
+    const file = (req as any).file;
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No PDF file uploaded'
+      });
+    }
+
+    if (file.mimetype !== 'application/pdf') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only PDF files are allowed'
+      });
+    }
+
+    // Process the invoice using the AI service
+    const invoice = await InvoiceService.processInvoiceFromPdf(
+      file.buffer,
+      file.originalname,
+      req.user.id
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Invoice created from PDF successfully',
+      data: invoice
+    });
+  } catch (error: any) {
+    console.error('Upload invoice PDF error:', error);
+    res.status(500).json({
+      success: false,
+      error: error?.message || 'Failed to process invoice PDF'
+    });
+  }
+}
 
 
   // In dashboardController.ts or accountingController.ts

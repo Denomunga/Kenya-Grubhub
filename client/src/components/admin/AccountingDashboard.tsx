@@ -70,6 +70,7 @@ import {
   Calendar,
   AlertTriangle,
   MoreHorizontal,
+  Upload,
 } from 'lucide-react';
 import { InsightActionCard, InsightItem } from '@/components/ui/InsightActionCard';
 import { useToast } from '@/hooks/use-toast';
@@ -79,6 +80,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import BankReconciliationTab from '@/components/admin/component/BankReconciliationTab';
 
 interface AccountingStats {
   totalExpenses: number;
@@ -172,8 +174,13 @@ export default function AccountingDashboard() {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [cashFlowData, setCashFlowData] = useState<CashFlowData[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'invoices' | 'journal' | 'coa' | 'reports' | 'aging' | 'tax' | 'audit' | 'forecast' | 'inventory'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'invoices' | 'journal' | 'coa' | 'reports' | 'aging' | 'tax' | 'audit' | 'forecast' | 'inventory'| 'reconciliation'>('overview');
   // New tab data
+  //pdf
+const [uploadInvoiceDialogOpen, setUploadInvoiceDialogOpen] = useState(false);
+const [uploadingInvoice, setUploadingInvoice] = useState(false);
+const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
+
   const [accounts, setAccounts] = useState<any[]>([]);
   const [incomeStatement, setIncomeStatement] = useState<any>(null);
   const [balanceSheet, setBalanceSheet] = useState<any>(null);
@@ -838,6 +845,40 @@ export default function AccountingDashboard() {
     setRecurringExpenseDialogOpen(true);
   };
 
+  const handleUploadInvoicePdf = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!selectedPdfFile) {
+    toast({ title: 'No file selected', description: 'Please choose a PDF invoice to upload', variant: 'destructive' });
+    return;
+  }
+  setUploadingInvoice(true);
+  const formData = new FormData();
+  formData.append('invoice', selectedPdfFile);
+
+  try {
+    const res = await apiFetch('/api/v1/accounting/invoices/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    if (res.ok) {
+      toast({ title: 'Success', description: 'Invoice created from PDF successfully' });
+      setUploadInvoiceDialogOpen(false);
+      setSelectedPdfFile(null);
+      // Refresh invoices list and stats
+      await fetchAccountingData();
+      // Optionally refetch invoices specifically if needed
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast({ title: 'Upload failed', description: err.error || 'Failed to process PDF', variant: 'destructive' });
+    }
+  } catch (error) {
+    console.error('PDF upload error:', error);
+    toast({ title: 'Error', description: 'Network error while uploading PDF', variant: 'destructive' });
+  } finally {
+    setUploadingInvoice(false);
+  }
+};
+
 
 const handleSubmitInvoice = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -1265,6 +1306,10 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           <RefreshCw className="h-3.5 w-3.5" />
           Refresh
         </Button>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setUploadInvoiceDialogOpen(true)}>
+  <Upload className="h-3.5 w-3.5" />
+  Upload PDF
+</Button>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleAutoJournal('orders')}>
           <BookOpen className="h-3.5 w-3.5" />
           Auto-Journal: Orders
@@ -1941,6 +1986,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
               { key: 'inventory', label: 'Inventory', icon: Package, minRole: 'accountant' },
               { key: 'tax', label: 'Tax', icon: Receipt, minRole: 'accountant' },
               { key: 'audit', label: 'Audit', icon: Shield, minRole: 'admin' },
+              { key: 'reconciliation', label: 'Reconciliation', icon: RefreshCw, minRole: 'accountant' }, // 👈
             ] as const).filter(tab => {
               if (tab.minRole === 'admin') return isAdmin;
               if (tab.minRole === 'accountant') return isAdmin || isAccountant;
@@ -2427,6 +2473,9 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                 <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('excel')}>
                   <Download className="h-3.5 w-3.5" /> Export
                 </Button>
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => setUploadInvoiceDialogOpen(true)}>
+  <Upload className="h-3.5 w-3.5" /> Upload PDF
+</Button>
                 <Button size="sm" className="gap-1" onClick={() => setInvoiceDialogOpen(true)}>
                   <Plus className="h-3.5 w-3.5" /> New Invoice
                 </Button>
@@ -3555,6 +3604,11 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
+          BANK RECONCILIATION TAB
+          ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'reconciliation' && <BankReconciliationTab />}
+
+      {/* ═══════════════════════════════════════════════════════════════════
           CREATE ACCOUNT DIALOG
           ═══════════════════════════════════════════════════════════════════ */}
       <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
@@ -3642,6 +3696,44 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           </form>
         </DialogContent>
       </Dialog>
+      {/* ═══════════════════════════════════════════════════════════════════
+    UPLOAD INVOICE PDF DIALOG
+    ═══════════════════════════════════════════════════════════════════ */}
+<Dialog open={uploadInvoiceDialogOpen} onOpenChange={(open) => {
+  setUploadInvoiceDialogOpen(open);
+  if (!open) setSelectedPdfFile(null);
+}}>
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle>Upload Invoice PDF</DialogTitle>
+      <DialogDescription>
+        Upload a PDF invoice. The system will automatically extract invoice number, client name, total amount, and due date.
+      </DialogDescription>
+    </DialogHeader>
+    <form onSubmit={handleUploadInvoicePdf} className="space-y-4">
+      <div>
+        <label className="text-sm font-medium">PDF File</label>
+        <Input
+          type="file"
+          accept="application/pdf"
+          onChange={(e) => setSelectedPdfFile(e.target.files?.[0] || null)}
+          required
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Supported: PDF invoices from any vendor. Data extraction works best with clear text.
+        </p>
+      </div>
+      <div className="flex justify-end gap-2 pt-4">
+        <Button variant="outline" type="button" onClick={() => setUploadInvoiceDialogOpen(false)} disabled={uploadingInvoice}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={uploadingInvoice}>
+          {uploadingInvoice ? 'Processing...' : 'Upload & Create Invoice'}
+        </Button>
+      </div>
+    </form>
+  </DialogContent>
+</Dialog>
     </div>
   );
 }

@@ -70,6 +70,7 @@
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^19.2.0",
+    "react-dropzone": "^15.0.0",
     "react-hook-form": "^7.66.1",
     "react-resizable-panels": "^2.1.9",
     "react-router-dom": "^7.9.6",

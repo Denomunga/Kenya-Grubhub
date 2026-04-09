@@ -6,9 +6,17 @@ import { AccountCRUDController, ReportsController, AgingController, TaxControlle
 import { requireAuth } from '@shared/middleware/auth';
 import { requireRole } from '@shared/middleware/roles';
 import { generalLimiter, authLimiter } from '@shared/middleware/rateLimiter';
+import multer from 'multer'; // ✅ ADD THIS IMPORT
+import { BankReconciliationController } from './bankReconciliationController';
+
+
+
+const upload = multer({ storage: multer.memoryStorage() }); // ✅ ADD MULTER CONFIG
+
 
 
 const router = Router();
+
 
 // Middleware for handling validation errors
 const handleValidationErrors = (req: Request, res: Response, next: Function) => {
@@ -21,6 +29,59 @@ const handleValidationErrors = (req: Request, res: Response, next: Function) => 
   }
   next();
 };
+
+
+
+
+
+
+
+
+
+
+
+
+// Bank reconciliation routes
+router.post(
+  '/reconciliation/upload',
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  upload.single('statement'),
+  BankReconciliationController.uploadStatement
+);
+
+router.post(
+  '/reconciliation/:statementId/auto-match',
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  BankReconciliationController.autoMatch
+);
+
+router.post(
+  '/reconciliation/:statementId/transactions/:transactionId/match',
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  BankReconciliationController.manualMatch
+);
+
+router.post(
+  '/reconciliation/:statementId/adjustment',
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  BankReconciliationController.createAdjustment
+);
+
+router.get(
+  '/reconciliation/status/:bankAccountCode',
+  requireAuth,
+  requireRole(['admin', 'accounting_manager', 'accounting_person']),
+  BankReconciliationController.getReconciliationStatus
+);
+
+
+
+
+
 
 // ============================================================
 // INITIALIZATION ENDPOINTS
@@ -48,6 +109,56 @@ router.post(
   requireRole(['admin']),
   AccountingController.initializeAccounts
 );
+
+
+// ============================================================
+// INVOICE ENDPOINTS (including PDF upload)
+// ============================================================
+
+/**
+ * Create a new invoice (manual entry)
+ * POST /api/v1/accounting/invoices
+ */
+router.post(
+  '/invoices',
+  authLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  [
+    body('clientName').trim().notEmpty().withMessage('Client name is required'),
+    body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be a positive number'),
+    body('dueDate').isISO8601().withMessage('Invalid due date'),
+    body('description').optional().trim().isLength({ max: 500 }),
+    body('status').optional().isIn(['unpaid', 'paid', 'overdue', 'partial'])
+  ],
+  handleValidationErrors,
+  AccountingController.createInvoice
+);
+
+/**
+ * Upload and process an invoice PDF (AI extraction using Zerox)
+ * POST /api/v1/accounting/invoices/upload
+ * Expects multipart/form-data with field name "invoice"
+ */
+router.post(
+  '/invoices/upload',
+  authLimiter,
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  upload.single('invoice'), // Multer middleware
+  AccountingController.uploadInvoicePdf
+);
+
+
+
+
+
+
+
+
+
+
+
 
 // ============================================================
 // ACCOUNT ENDPOINTS

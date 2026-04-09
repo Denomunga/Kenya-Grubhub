@@ -17,6 +17,10 @@
 import { PurchaseOrder } from '../procurement/models';
 import { Order } from '../../models/Order';
 import { Sale } from '../../models/Sale';
+import fs from 'fs';
+import path from 'path';
+const pdfParse = require('pdf-parse');
+
 
 /**
  * Accounting Service
@@ -1458,6 +1462,10 @@ export class AuditService {
 // ============================================================
 export class InvoiceService {
   // --- Auto tax calculation helper ---
+
+
+
+  
   static async calculateTax(amount: number): Promise<{ taxRate: number; taxAmount: number; totalAmount: number }> {
     try {
       const vatRate = await TaxRate.findOne({ code: 'VAT', isActive: true }).lean();
@@ -1627,6 +1635,107 @@ export class InvoiceService {
     );
     return { modifiedCount: result.modifiedCount };
   }
+
+ 
+  // Inside InvoiceService class, replace the existing processInvoiceFromPdf method
+
+static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, userId: string) {
+  let tempFilePath: string | null = null;
+  try {
+    // 1. Save buffer to a temporary file (pdf-parse can also work with buffer directly, but we'll keep for compatibility)
+    const tempDir = path.join(process.cwd(), 'tmp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    tempFilePath = path.join(tempDir, `${Date.now()}-${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}`);
+    fs.writeFileSync(tempFilePath, fileBuffer);
+
+    // 2. Extract text from PDF using pdf-parse
+    const dataBuffer = fs.readFileSync(tempFilePath);
+
+// Then in the method:
+const pdfData = await pdfParse(dataBuffer);
+    const extractedText = pdfData.text;
+
+    // 3. Use regex to extract invoice fields (customize patterns for your invoice format)
+    const patterns = {
+      invoiceNumber: /(?:Invoice\s*#?|Invoice Number|INV-\d+)[:\s]*([A-Z0-9\-]+)/i,
+      invoiceDate: /(?:Invoice Date|Date|Issue Date)[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
+      clientName: /(?:Bill To|Customer|Client|Sold To)[:\s]*([A-Za-z0-9\s,]+?)(?:\n|$)/i,
+      totalAmount: /(?:Total|Grand Total|Amount Due|Balance Due)[:\s]*[\$]?([\d,]+\.?\d*)/i,
+      description: /(?:Description|Notes)[:\s]*(.+?)(?:\n\n|\n$)/i
+    };
+
+    const extracted: any = {};
+    for (const [key, regex] of Object.entries(patterns)) {
+      const match = extractedText.match(regex);
+      extracted[key] = match ? match[1].trim() : null;
+    }
+
+    // Clean up amount (remove commas, convert to number)
+    if (extracted.totalAmount) {
+      extracted.totalAmount = parseFloat(extracted.totalAmount.replace(/,/g, ''));
+    }
+
+    // Validate required fields
+    if (!extracted.clientName || !extracted.totalAmount) {
+      throw new Error('Could not extract client name or total amount from invoice. Please check the PDF format.');
+    }
+
+    // 4. Prepare invoice data
+    const amount = extracted.totalAmount;
+    const { taxRate, taxAmount, totalAmount } = await InvoiceService.calculateTax(amount);
+
+    // Generate invoice number if not extracted
+    const invoiceNumber = extracted.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+    // Parse date (fallback to today)
+    let dueDate = new Date();
+    if (extracted.invoiceDate) {
+      const parsed = new Date(extracted.invoiceDate);
+      if (!isNaN(parsed.getTime())) dueDate = parsed;
+    }
+
+    // 5. Create invoice document
+    const invoice = new Invoice({
+      invoiceNumber,
+      clientName: extracted.clientName,
+      amount,
+      taxRate,
+      taxAmount,
+      totalAmount,
+      dueDate,
+      description: extracted.description || `Auto-uploaded from ${originalName}`,
+      status: 'unpaid',
+      paidAmount: 0,
+      createdBy: userId,
+    });
+
+    await invoice.save();
+
+    // 6. Create journal entry
+    await InvoiceService.createInvoiceJournalEntry(invoice, userId);
+
+    // 7. Audit log
+    await AuditLog.create({
+      action: 'CREATE',
+      entityType: 'Invoice',
+      entityId: invoice._id.toString(),
+      entityRef: invoice.invoiceNumber,
+      userId,
+      metadata: { source: 'pdf_upload', extracted, extractedTextPreview: extractedText.substring(0, 500) },
+    });
+
+    return invoice;
+  } catch (error: any) {
+    throw new Error(`Failed to process invoice PDF: ${error?.message || String(error)}`);
+  } finally {
+    // Clean up temporary file
+    if (tempFilePath && fs.existsSync(tempFilePath)) {
+      fs.unlinkSync(tempFilePath);
+    }
+  }
+}
 }
 
 // ============================================================
