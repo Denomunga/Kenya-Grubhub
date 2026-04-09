@@ -251,8 +251,7 @@ const FeaturedProducts = ({ items, isLoading }: FeaturedProductsProps) => {
   const { wishlist, compare, toggleWishlist, toggleCompare } = useShop();
 
   return (
-    <section className="py-16 relative overflow-hidden">
-      <div className="absolute inset-0 bg-linear-to-br from-background via-background to-muted/40"></div>
+    <section className="py-16 relative">
       <div className="container mx-auto px-4 relative z-10">
         <motion.div 
           className="text-center mb-16"
