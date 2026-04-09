@@ -7,7 +7,7 @@ import { requireAuth } from '@shared/middleware/auth';
 import { requireRole } from '@shared/middleware/roles';
 import { generalLimiter, authLimiter } from '@shared/middleware/rateLimiter';
 import multer from 'multer'; // ✅ ADD THIS IMPORT
-import { BankReconciliationController } from './bankReconciliationController';
+import { BankReconciliationController } from './controler/bankReconciliationController';
 
 
 
