@@ -1693,7 +1693,7 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
     await invoice.save();
     await InvoiceService.createInvoiceJournalEntry(invoice, userId);
     await AuditLog.create({
-      action: 'CREATE',
+      action: 'create',
       entityType: 'Invoice',
       entityId: invoice._id.toString(),
       entityRef: invoice.invoiceNumber,
