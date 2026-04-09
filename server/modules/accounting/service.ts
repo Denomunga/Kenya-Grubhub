@@ -514,6 +514,63 @@ export class FinancialReportingService {
       // Combine all revenue sources
       const totalRevenue = invoiceRevenue + posRevenue + orderRevenue;
 
+      // Calculate TODAY'S revenue from invoice payments (journal entries with referenceType: 'Payment')
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const todayInvoiceRevenueAgg = await JournalEntry.aggregate([
+        {
+          $match: {
+            referenceType: 'Payment',
+            transactionDate: { $gte: today, $lt: tomorrow },
+            status: 'posted'
+          }
+        },
+        { $unwind: '$lines' },
+        {
+          $match: {
+            'lines.debit': { $gt: 0 },
+            'lines.accountCode': { $in: ['1000', '1010', '1020'] } // Cash/Bank accounts
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: '$lines.debit' }
+          }
+        }
+      ]);
+      const todayInvoiceRevenue = todayInvoiceRevenueAgg[0]?.total || 0;
+
+      // Calculate TODAY'S revenue from POS sales
+      const todayPosRevenueAgg = await Sale.aggregate([
+        {
+          $match: {
+            status: 'Completed',
+            createdAt: { $gte: today, $lt: tomorrow }
+          }
+        },
+        { $group: { _id: null, total: { $sum: '$total' } } }
+      ]);
+      const todayPosRevenue = todayPosRevenueAgg[0]?.total || 0;
+
+      // Calculate TODAY'S revenue from delivered orders
+      const todayOrderRevenueAgg = await Order.aggregate([
+        {
+          $match: {
+            status: 'Delivered',
+            updatedAt: { $gte: today, $lt: tomorrow }
+          }
+        },
+        { $group: { _id: null, total: { $sum: '$total' } } }
+      ]);
+      const todayOrderRevenue = todayOrderRevenueAgg[0]?.total || 0;
+
+      // Combine today's revenue sources
+      const revenueToday = todayInvoiceRevenue + todayPosRevenue + todayOrderRevenue;
+
       // Calculate expenses from Expenses collection
       const expenseAgg = await Expense.aggregate([
         { $match: { status: { $in: ['pending', 'approved', 'paid'] } } },
@@ -551,6 +608,7 @@ export class FinancialReportingService {
 
       // Update summary with actual data
       summary.revenue = Math.max(summary.revenue, totalRevenue);
+      summary.revenueToday = revenueToday;
       summary.expenses = Math.max(summary.expenses, totalExpenses);
       summary.netIncome = summary.revenue - summary.expenses;
       summary.cashBalance = cashBalance;

@@ -34,6 +34,7 @@ export class DashboardController {
         success: true,
         data: {
           totalRevenue: summary.revenue,
+          revenueToday: summary.revenueToday,
           totalExpenses: summary.expenses,
           netIncome: summary.netIncome,
           totalAssets: summary.assets,

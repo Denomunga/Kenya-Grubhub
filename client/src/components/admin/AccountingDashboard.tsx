@@ -92,6 +92,7 @@ import BankReconciliationTab from '@/components/admin/component/BankReconciliati
 interface AccountingStats {
   totalExpenses: number;
   totalRevenue: number;
+  revenueToday: number;
   profit: number;
   netIncome?: number;
   outstandingPayments: number;
@@ -354,6 +355,7 @@ const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
       setStats({
         totalExpenses: 2450000,
         totalRevenue: 5890000,
+        revenueToday: 125000,
         profit: 3440000,
         netIncome: 3440000,
         outstandingPayments: 890000,
@@ -1230,10 +1232,27 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           SMART CARDS (6 cards)
           ═══════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {/* Revenue Today */}
+        <Card className="border shadow-sm hover:shadow-md transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Revenue Today</CardTitle>
+            <TrendingUp className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent className="pb-3">
+            <div className="text-xl font-bold text-blue-700">
+              KES {(stats?.revenueToday ?? 0).toLocaleString()}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-0.5">
+              <ArrowUpRight className="h-2.5 w-2.5 text-blue-500" />
+              Today's revenue
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Revenue */}
         <Card className="border shadow-sm hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Revenue</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">Total Revenue</CardTitle>
             <TrendingUp className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent className="pb-3">
@@ -1242,7 +1261,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
             </div>
             <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-0.5">
               <ArrowUpRight className="h-2.5 w-2.5 text-emerald-500" />
-              Revenue in KES
+              Total revenue in KES
             </p>
           </CardContent>
         </Card>
