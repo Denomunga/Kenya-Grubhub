@@ -19,6 +19,8 @@ import { Order } from '../../models/Order';
 import { Sale } from '../../models/Sale';
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
 
 
