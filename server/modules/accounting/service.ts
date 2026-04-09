@@ -17,8 +17,7 @@
 import { PurchaseOrder } from '../procurement/models';
 import { Order } from '../../models/Order';
 import { Sale } from '../../models/Sale';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+import PDFParser from 'pdf2json';
 // import fs from 'fs';
 // import path from 'path';
 // const pdfParse = require('pdf-parse');
@@ -1644,11 +1643,19 @@ export class InvoiceService {
 static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, userId: string) {
   try {
     
-    // Dynamically import pdf-parse (works in ESM)
-   // Use require via createRequire (works in ESM)
-    const pdfParse = require('pdf-parse');
-    const pdfData = await pdfParse(fileBuffer);
-    const extractedText = pdfData.text;
+   // Use pdf2json to extract text
+    const pdfParser = new PDFParser();
+    
+    const pdfData = await new Promise<any>((resolve, reject) => {
+      pdfParser.on('pdfParser_dataReady', (data) => resolve(data));
+      pdfParser.on('pdfParser_dataError', (err) => reject(err));
+      pdfParser.parseBuffer(fileBuffer);
+    });
+
+    // Extract text from all pages
+    const extractedText = pdfData.Pages.map((page: any) => 
+      page.Texts.map((text: any) => decodeURIComponent(text.R[0].T)).join(' ')
+    ).join('\n');
 
     // 2. Regex patterns for invoice fields
     const patterns = {
