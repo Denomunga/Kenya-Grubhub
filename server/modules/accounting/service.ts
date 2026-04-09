@@ -1643,7 +1643,7 @@ export class InvoiceService {
 static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, userId: string) {
   try {
     
-   const pdfParser = new PDFParser();
+  const pdfParser = new PDFParser();
     
     const pdfData = await new Promise<any>((resolve, reject) => {
       pdfParser.on('pdfParser_dataReady', resolve);
@@ -1651,15 +1651,16 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
       pdfParser.parseBuffer(fileBuffer);
     });
 
-    // Extract text
-    const extractedText = pdfData.Pages.map((page: any) => 
+    // Extract raw text
+    let extractedText = pdfData.Pages.map((page: any) => 
       page.Texts.map((text: any) => decodeURIComponent(text.R[0].T)).join(' ')
     ).join('\n');
 
-    // 🔴 DEBUG: Log the extracted text
-    console.log('=== EXTRACTED TEXT ===');
-    console.log(extractedText);
-    console.log('=== END ===');
+    // 🔑 KEY FIX: Remove all whitespace (spaces, newlines, tabs)
+    const compactText = extractedText.replace(/\s/g, '');
+
+    // Debug (optional, remove in production)
+    console.log('Compact text (first 500 chars):', compactText.substring(0, 500));
 
     // 2. Regex patterns for invoice fields
     const patterns = {
