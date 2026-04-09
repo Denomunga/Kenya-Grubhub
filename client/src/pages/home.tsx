@@ -319,13 +319,12 @@ export default function Home() {
 
         {/* Testimonials Section */}
         <motion.section
-          className="py-28 relative overflow-hidden"
+          className="py-28"
           initial={{ opacity: 0 }}
           whileInView={!prefersReducedMotion ? { opacity: 1 } : {}}
           transition={{ duration: 0.8 }}
         >
-          <div className="absolute inset-0 bg-linear-to-br from-muted/20 via-muted/10 to-background pointer-events-none"></div>
-          <div className="container mx-auto px-4 relative z-10">
+          <div className="container mx-auto px-4">
             <motion.div 
               className="text-center mb-16"
               initial={{ opacity: 0, y: 30 }}
