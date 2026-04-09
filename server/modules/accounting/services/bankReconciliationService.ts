@@ -106,6 +106,10 @@ export class BankReconciliationService {
       Return the best matching candidate as JSON: { entityType, entityId, entityRef, confidence (0-100) }.
       If none good, return null.
     `;
+    if (!openai) {
+      throw new Error('OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.');
+    }
+
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [{ role: 'user', content: prompt }],
