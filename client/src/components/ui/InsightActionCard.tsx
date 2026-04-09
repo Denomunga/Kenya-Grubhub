@@ -37,42 +37,42 @@ const severityConfig: Record<InsightSeverity, {
 }> = {
   critical: {
     icon: AlertTriangle,
-    bg: 'bg-red-50',
-    border: 'border-red-200',
-    iconColor: 'text-red-600',
-    titleColor: 'text-red-800',
-    descColor: 'text-red-600',
-    metricColor: 'text-red-700',
+    bg: 'bg-red-50 dark:bg-red-950/30',
+    border: 'border-red-200 dark:border-red-800',
+    iconColor: 'text-red-600 dark:text-red-400',
+    titleColor: 'text-red-800 dark:text-red-200',
+    descColor: 'text-red-600 dark:text-red-300',
+    metricColor: 'text-red-700 dark:text-red-300',
     pulse: true,
   },
   warning: {
     icon: AlertCircle,
-    bg: 'bg-amber-50',
-    border: 'border-amber-200',
-    iconColor: 'text-amber-600',
-    titleColor: 'text-amber-800',
-    descColor: 'text-amber-600',
-    metricColor: 'text-amber-700',
+    bg: 'bg-amber-50 dark:bg-amber-950/30',
+    border: 'border-amber-200 dark:border-amber-800',
+    iconColor: 'text-amber-600 dark:text-amber-400',
+    titleColor: 'text-amber-800 dark:text-amber-200',
+    descColor: 'text-amber-600 dark:text-amber-300',
+    metricColor: 'text-amber-700 dark:text-amber-300',
     pulse: false,
   },
   info: {
     icon: Info,
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    iconColor: 'text-blue-600',
-    titleColor: 'text-blue-800',
-    descColor: 'text-blue-600',
-    metricColor: 'text-blue-700',
+    bg: 'bg-blue-50 dark:bg-blue-950/30',
+    border: 'border-blue-200 dark:border-blue-800',
+    iconColor: 'text-blue-600 dark:text-blue-400',
+    titleColor: 'text-blue-800 dark:text-blue-200',
+    descColor: 'text-blue-600 dark:text-blue-300',
+    metricColor: 'text-blue-700 dark:text-blue-300',
     pulse: false,
   },
   success: {
     icon: CheckCircle,
-    bg: 'bg-green-50',
-    border: 'border-green-200',
-    iconColor: 'text-green-600',
-    titleColor: 'text-green-800',
-    descColor: 'text-green-600',
-    metricColor: 'text-green-700',
+    bg: 'bg-green-50 dark:bg-green-950/30',
+    border: 'border-green-200 dark:border-green-800',
+    iconColor: 'text-green-600 dark:text-green-400',
+    titleColor: 'text-green-800 dark:text-green-200',
+    descColor: 'text-green-600 dark:text-green-300',
+    metricColor: 'text-green-700 dark:text-green-300',
     pulse: false,
   },
 };
@@ -81,9 +81,9 @@ export function InsightActionCard({ insights, title = 'Action Required' }: Insig
   if (insights.length === 0) return null;
 
   return (
-    <Card className="border-l-4 border-l-orange-400 shadow-md">
+    <Card className="border-l-4 border-l-orange-400 dark:border-l-orange-500 shadow-md">
       <CardContent className="pt-4 pb-3">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
           {title}
         </h3>
         <div className="space-y-3">
