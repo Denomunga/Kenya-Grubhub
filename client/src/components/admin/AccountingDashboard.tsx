@@ -2556,6 +2556,8 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                   {invoices.length > 0 ? (
                     invoices.map((invoice) => {
                       const balance = invoice.amount - invoice.paidAmount;
+                      const displayPaidAmount = invoice.status === 'paid' ? invoice.amount : invoice.paidAmount;
+                      const displayBalance = invoice.status === 'paid' ? 0 : balance;
                       const daysUntilDue = Math.ceil((new Date(invoice.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                       const isOverdue = daysUntilDue < 0 && invoice.status !== 'paid';
 
@@ -2569,9 +2571,9 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                           <TableCell className="font-mono text-xs font-medium">{invoice.invoiceNumber}</TableCell>
                           <TableCell className="text-sm">{invoice.supplierName || invoice.clientName}</TableCell>
                           <TableCell className="text-right text-sm font-mono">{invoice.amount.toLocaleString()}</TableCell>
-                          <TableCell className="text-right text-sm font-mono text-emerald-600">{invoice.paidAmount.toLocaleString()}</TableCell>
+                          <TableCell className="text-right text-sm font-mono text-emerald-600">{displayPaidAmount.toLocaleString()}</TableCell>
                           <TableCell className="text-right text-sm font-mono font-medium text-orange-600">
-                            {balance.toLocaleString()}
+                            {displayBalance.toLocaleString()}
                           </TableCell>
                           <TableCell className="text-xs">{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
                           <TableCell>
@@ -3776,11 +3778,11 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground">Paid Amount</label>
-                  <p className="font-mono font-medium text-emerald-600">KES {selectedInvoice.paidAmount.toLocaleString()}</p>
+                  <p className="font-mono font-medium text-emerald-600">KES {(selectedInvoice.status === 'paid' ? selectedInvoice.amount : selectedInvoice.paidAmount).toLocaleString()}</p>
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground">Balance Due</label>
-                  <p className="font-mono font-medium text-orange-600">KES {(selectedInvoice.amount - selectedInvoice.paidAmount).toLocaleString()}</p>
+                  <p className="font-mono font-medium text-orange-600">KES {(selectedInvoice.status === 'paid' ? 0 : selectedInvoice.amount - selectedInvoice.paidAmount).toLocaleString()}</p>
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground">Due Date</label>
