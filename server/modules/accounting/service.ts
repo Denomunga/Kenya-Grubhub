@@ -1711,38 +1711,25 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
 static extractInvoiceData(compactText: string): any {
   const extracted: any = {};
 
-  // Helper: get value between two labels
-  function getValue(startLabel: string, endLabels: string[]): string | null {
-    const startIdx = compactText.indexOf(startLabel);
-    if (startIdx === -1) return null;
-    let endIdx = compactText.length;
-    for (const label of endLabels) {
-      const idx = compactText.indexOf(label, startIdx + startLabel.length);
-      if (idx !== -1 && idx < endIdx) endIdx = idx;
-    }
-    return compactText.substring(startIdx + startLabel.length, endIdx).trim();
-  }
+  // Extract invoice number
+  const invNumMatch = compactText.match(/InvoiceNumber:([A-Z0-9\-]+)/);
+  extracted.invoiceNumber = invNumMatch ? invNumMatch[1] : null;
 
-  // Extract fields
-  extracted.invoiceNumber = getValue('InvoiceNumber:', ['InvoiceDate', 'DueDate', 'BillTo', 'Item', 'Total']);
-  extracted.invoiceDate = getValue('InvoiceDate:', ['DueDate', 'BillTo', 'Item', 'Total']);
-  extracted.dueDate = getValue('DueDate:', ['BillTo', 'Item', 'Total']);
-  extracted.clientName = getValue('BillTo:', ['Item', 'Subtotal', 'Total', 'PaymentTerms', 'Bank']);
-  extracted.totalAmount = getValue('Total:', ['PaymentTerms', 'Bank', 'KES', '']);
+  // Extract invoice date
+  const invDateMatch = compactText.match(/InvoiceDate:(\d{4}-\d{2}-\d{2})/);
+  extracted.invoiceDate = invDateMatch ? invDateMatch[1] : null;
 
-  // Clean up clientName: remove any trailing numbers (like "123BusinessRd")
-  if (extracted.clientName) {
-    // Remove everything after the first digit if it's part of address
-    const match = extracted.clientName.match(/^([A-Za-z\s]+)/);
-    if (match) extracted.clientName = match[1].trim();
-    else extracted.clientName = extracted.clientName.replace(/[0-9].*$/, '').trim();
-  }
+  // Extract due date
+  const dueDateMatch = compactText.match(/DueDate:(\d{4}-\d{2}-\d{2})/);
+  extracted.dueDate = dueDateMatch ? dueDateMatch[1] : null;
 
-  // Parse totalAmount: remove non-numeric except comma/dot
-  if (extracted.totalAmount) {
-    const match = extracted.totalAmount.match(/[\d,]+\.?\d*/);
-    extracted.totalAmount = match ? parseFloat(match[0].replace(/,/g, '')) : null;
-  }
+  // Extract client name (first word after "BillTo:")
+  const clientMatch = compactText.match(/BillTo:([A-Za-z]+)/);
+  extracted.clientName = clientMatch ? clientMatch[1] : null;
+
+  // Extract total amount
+  const totalMatch = compactText.match(/Total:([\d,]+)/);
+  extracted.totalAmount = totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : null;
 
   return extracted;
 }
