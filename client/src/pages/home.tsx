@@ -396,13 +396,12 @@ export default function Home() {
 
       {/* News & Events */}
       <motion.section
-        className="py-24 relative overflow-hidden"
+        className="py-24 relative"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
       >
-        <div className="absolute inset-0 bg-linear-to-br from-background via-muted/10 to-muted/20 pointer-events-none"></div>
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto px-4">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 30 }}
@@ -501,12 +500,11 @@ export default function Home() {
 
       {/* Location & Info */}
       <motion.section
-        className="py-24 grid md:grid-cols-2 min-h-[600px] max-w-7xl mx-auto relative"
+        className="py-24 grid md:grid-cols-2 min-h-[600px] max-w-7xl mx-auto"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
       >
-        <div className="absolute inset-0 bg-linear-to-br from-muted/10 via-background to-background pointer-events-none -z-10"></div>
         <motion.div
           className="bg-linear-to-br from-blue-600 to-blue-700 text-white p-14 flex flex-col justify-center relative overflow-hidden rounded-2xl m-6 shadow-xl card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow"
           initial={{ x: -100 }}
