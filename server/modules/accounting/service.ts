@@ -1655,21 +1655,28 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
       page.Texts.map((text: any) => decodeURIComponent(text.R[0].T)).join(' ')
     ).join('\n');
 
-    // Remove all whitespace (spaces, newlines, tabs)
+    // Remove all whitespace
     const compactText = extractedText.replace(/\s/g, '');
 
-    console.log('Compact text (first 500 chars):', compactText.substring(0, 500));
-
-    // Extract fields using label-based parsing
+    // Extract fields using improved regex
     const extracted = this.extractInvoiceData(compactText);
 
     if (!extracted.clientName || !extracted.totalAmount) {
-      throw new Error(`Could not extract client name or total amount. Compact text length: ${compactText.length}.`);
+      throw new Error(`Could not extract client name or total amount.`);
     }
 
     const amount = extracted.totalAmount;
     const { taxRate, taxAmount, totalAmount } = await InvoiceService.calculateTax(amount);
-    const invoiceNumber = extracted.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    
+    // Generate or use extracted invoice number, ensuring uniqueness
+    let invoiceNumber = extracted.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    
+    // Check for duplicate
+    const existing = await Invoice.findOne({ invoiceNumber });
+    if (existing) {
+      invoiceNumber = `${invoiceNumber}-${Date.now()}`;
+    }
+
     let dueDate = new Date();
     if (extracted.invoiceDate) {
       const parsed = new Date(extracted.invoiceDate);
@@ -1692,14 +1699,20 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
 
     await invoice.save();
     await InvoiceService.createInvoiceJournalEntry(invoice, userId);
-    await AuditLog.create({
-      action: 'create',
-      entityType: 'Invoice',
-      entityId: invoice._id.toString(),
-      entityRef: invoice.invoiceNumber,
-      userId,
-      metadata: { source: 'pdf_upload', extracted, extractedTextPreview: extractedText.substring(0, 500) },
-    });
+    
+    // Audit log (non‑blocking)
+    try {
+      await AuditLog.create({
+        action: 'create',
+        entityType: 'Invoice',
+        entityId: invoice._id.toString(),
+        entityRef: invoice.invoiceNumber,
+        userId,
+        metadata: { source: 'pdf_upload', extracted, extractedTextPreview: extractedText.substring(0, 500) },
+      });
+    } catch (auditErr) {
+      console.error('Audit log failed (non‑critical):', auditErr);
+    }
 
     return invoice;
   } catch (error: any) {
@@ -1711,24 +1724,24 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
 static extractInvoiceData(compactText: string): any {
   const extracted: any = {};
 
-  // Extract invoice number
-  const invNumMatch = compactText.match(/InvoiceNumber:([A-Z0-9\-]+)/);
+  // Extract invoice number – stop before next label
+  const invNumMatch = compactText.match(/InvoiceNumber:(.*?)(?:InvoiceDate|DueDate|BillTo|Item|Total|$)/);
   extracted.invoiceNumber = invNumMatch ? invNumMatch[1] : null;
 
   // Extract invoice date
-  const invDateMatch = compactText.match(/InvoiceDate:(\d{4}-\d{2}-\d{2})/);
+  const invDateMatch = compactText.match(/InvoiceDate:(.*?)(?:DueDate|BillTo|Item|Total|$)/);
   extracted.invoiceDate = invDateMatch ? invDateMatch[1] : null;
 
   // Extract due date
-  const dueDateMatch = compactText.match(/DueDate:(\d{4}-\d{2}-\d{2})/);
+  const dueDateMatch = compactText.match(/DueDate:(.*?)(?:BillTo|Item|Total|$)/);
   extracted.dueDate = dueDateMatch ? dueDateMatch[1] : null;
 
-  // Extract client name (first word after "BillTo:")
-  const clientMatch = compactText.match(/BillTo:([A-Za-z]+)/);
+  // Extract client name – stop before digit or next label
+  const clientMatch = compactText.match(/BillTo:(.*?)(?:\d|Item|Subtotal|Total|PaymentTerms|Bank|$)/);
   extracted.clientName = clientMatch ? clientMatch[1] : null;
 
-  // Extract total amount
-  const totalMatch = compactText.match(/Total:([\d,]+)/);
+  // Extract total amount – stop before next label
+  const totalMatch = compactText.match(/Total:(.*?)(?:PaymentTerms|Bank|KES|$)/);
   extracted.totalAmount = totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : null;
 
   return extracted;
