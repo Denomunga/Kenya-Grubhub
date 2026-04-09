@@ -278,16 +278,17 @@ export default function Home() {
       </div>
       
       <main className="relative z-10">
-        <div className="container mx-auto px-4 py-1 sm:py-2 lg:py-4">
+        <div className="container mx-auto px-4 py-8 sm:py-12 lg:py-16 relative">
+          <div className="absolute inset-0 bg-linear-to-b from-background via-background to-muted/30 -z-10"></div>
           <div className="relative z-32">
             {/* Search Component */}
-            <ProductSearch 
+            <ProductSearch
               products={menu}
               onFilteredProducts={setSearchedProducts}
               className="mb-4 sm:mb-6 mt-0 sm:mt-0 max-w-4xl mx-auto"
             />
-            
-            <CategoryFilter 
+
+            <CategoryFilter
               activeCategory={activeCategory}
               onCategoryChange={setActiveCategory}
               categories={categories}
@@ -295,18 +296,18 @@ export default function Home() {
           </div>
         </div>
 
-        <FeaturedProducts 
+        <FeaturedProducts
           items={featuredItems}
           isLoading={isLoading}
         />
 
         <div className="container mx-auto px-4">
           {/* View Full Menu Button - Integrated with Featured Dishes */}
-          <div className="text-center mt-12 mb-8 relative z-20">
-            <Button 
-              asChild 
-              variant="default" 
-              size="lg" 
+          <div className="text-center mb-16 relative z-20">
+            <Button
+              asChild
+              variant="default"
+              size="lg"
               className="group bg-blue-600 hover:bg-blue-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 px-10 py-4 text-lg font-semibold border-0 relative z-30 pointer-events-auto rounded-full hover:scale-105 active:scale-95"
             >
               <Link href="/menu">
@@ -315,23 +316,16 @@ export default function Home() {
               </Link>
             </Button>
           </div>
-          
-          {/* Professional divider */}
-          <div className="relative py-16">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-full max-w-4xl h-px bg-linear-to-r from-transparent via-blue-200 to-transparent"></div>
-            </div>
-          </div>
         </div>
-        
+
         {/* Testimonials Section */}
-        <motion.section 
+        <motion.section
           className="py-24 relative overflow-hidden"
           initial={{ opacity: 0 }}
           whileInView={!prefersReducedMotion ? { opacity: 1 } : {}}
           transition={{ duration: 0.6 }}
         >
-          <div className="absolute inset-0 bg-linear-to-br from-primary/3 via-secondary/2 to-background pointer-events-none"></div>
+          <div className="absolute inset-0 bg-linear-to-br from-muted/30 via-muted/20 to-background pointer-events-none"></div>
           <div className="container mx-auto px-4 relative z-10">
             <motion.div 
               className="text-center mb-16"
@@ -507,13 +501,14 @@ export default function Home() {
       </motion.section>
 
       {/* Location & Info */}
-      <motion.section 
-        className="py-20 grid md:grid-cols-2 min-h-[600px] max-w-7xl mx-auto"
+      <motion.section
+        className="py-20 grid md:grid-cols-2 min-h-[600px] max-w-7xl mx-auto relative"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
       >
-        <motion.div 
+        <div className="absolute inset-0 bg-linear-to-br from-muted/20 via-background to-background pointer-events-none -z-10"></div>
+        <motion.div
           className="bg-blue-600 text-white p-12 flex flex-col justify-center relative overflow-hidden rounded-3xl m-4 shadow-2xl card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow"
           initial={{ x: -100 }}
           whileInView={{ x: 0 }}
