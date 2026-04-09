@@ -278,14 +278,14 @@ export default function Home() {
       </div>
       
       <main className="relative z-10">
-        <div className="container mx-auto px-4 py-8 sm:py-12 lg:py-16 relative">
-          <div className="absolute inset-0 bg-linear-to-b from-background via-background to-muted/30 -z-10"></div>
+        <div className="container mx-auto px-6 py-12 sm:py-16 lg:py-20 relative">
+          <div className="absolute inset-0 bg-linear-to-b from-background via-background to-muted/20 -z-10"></div>
           <div className="relative z-32">
             {/* Search Component */}
             <ProductSearch
               products={menu}
               onFilteredProducts={setSearchedProducts}
-              className="mb-4 sm:mb-6 mt-0 sm:mt-0 max-w-4xl mx-auto"
+              className="mb-6 sm:mb-8 max-w-4xl mx-auto"
             />
 
             <CategoryFilter
@@ -301,14 +301,14 @@ export default function Home() {
           isLoading={isLoading}
         />
 
-        <div className="container mx-auto px-4">
-          {/* View Full Menu Button - Integrated with Featured Dishes */}
-          <div className="text-center mb-16 relative z-20">
+        <div className="container mx-auto px-6">
+          {/* View Full Menu Button */}
+          <div className="text-center py-16 relative z-20">
             <Button
               asChild
               variant="default"
               size="lg"
-              className="group bg-blue-600 hover:bg-blue-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 px-10 py-4 text-lg font-semibold border-0 relative z-30 pointer-events-auto rounded-full hover:scale-105 active:scale-95"
+              className="group bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-12 py-4 text-base font-medium border-0 relative z-30 pointer-events-auto rounded-xl hover:scale-105 active:scale-95"
             >
               <Link href="/menu">
                 View All Products
@@ -320,12 +320,12 @@ export default function Home() {
 
         {/* Testimonials Section */}
         <motion.section
-          className="py-24 relative overflow-hidden"
+          className="py-28 relative overflow-hidden"
           initial={{ opacity: 0 }}
           whileInView={!prefersReducedMotion ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.8 }}
         >
-          <div className="absolute inset-0 bg-linear-to-br from-muted/30 via-muted/20 to-background pointer-events-none"></div>
+          <div className="absolute inset-0 bg-linear-to-br from-muted/20 via-muted/10 to-background pointer-events-none"></div>
           <div className="container mx-auto px-4 relative z-10">
             <motion.div 
               className="text-center mb-16"
@@ -394,15 +394,15 @@ export default function Home() {
           </div>
         </motion.section>
       </main>
-      
+
       {/* News & Events */}
-      <motion.section 
-        className="py-20 bg-muted/20 relative overflow-hidden"
+      <motion.section
+        className="py-24 relative overflow-hidden"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.8 }}
       >
-        <div className="absolute inset-0 bg-linear-to-br from-background via-muted/30 to-background"></div>
+        <div className="absolute inset-0 bg-linear-to-br from-background via-muted/10 to-muted/20 pointer-events-none"></div>
         <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             className="text-center mb-16"
@@ -502,14 +502,14 @@ export default function Home() {
 
       {/* Location & Info */}
       <motion.section
-        className="py-20 grid md:grid-cols-2 min-h-[600px] max-w-7xl mx-auto relative"
+        className="py-24 grid md:grid-cols-2 min-h-[600px] max-w-7xl mx-auto relative"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.8 }}
       >
-        <div className="absolute inset-0 bg-linear-to-br from-muted/20 via-background to-background pointer-events-none -z-10"></div>
+        <div className="absolute inset-0 bg-linear-to-br from-muted/10 via-background to-background pointer-events-none -z-10"></div>
         <motion.div
-          className="bg-blue-600 text-white p-12 flex flex-col justify-center relative overflow-hidden rounded-3xl m-4 shadow-2xl card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow"
+          className="bg-linear-to-br from-blue-600 to-blue-700 text-white p-14 flex flex-col justify-center relative overflow-hidden rounded-2xl m-6 shadow-xl card-3d border-animated-gradient depth-layer-3 hover-lift liquid-transition-slow"
           initial={{ x: -100 }}
           whileInView={{ x: 0 }}
           transition={{ duration: 0.6 }}
