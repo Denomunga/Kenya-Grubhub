@@ -17,9 +17,11 @@
 import { PurchaseOrder } from '../procurement/models';
 import { Order } from '../../models/Order';
 import { Sale } from '../../models/Sale';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 // import fs from 'fs';
 // import path from 'path';
-const pdfParse = require('pdf-parse');
+// const pdfParse = require('pdf-parse');
 
 
 /**
@@ -1641,7 +1643,10 @@ export class InvoiceService {
 
 static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, userId: string) {
   try {
-    // 1. Extract text directly from the buffer (no temp file needed)
+    
+    // Dynamically import pdf-parse (works in ESM)
+   // Use require via createRequire (works in ESM)
+    const pdfParse = require('pdf-parse');
     const pdfData = await pdfParse(fileBuffer);
     const extractedText = pdfData.text;
 
