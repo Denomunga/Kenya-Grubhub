@@ -227,17 +227,16 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
 
   return (
     <div className={`${className} space-y-5`}>
-        <div className="space-y-5">
+        <div className="space-y-6">
 
           {/* Main Search Bar */}
-          <div className="relative group">
-            <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-purple-600 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none"></div>
+          <div className="relative">
             <div className="relative flex gap-3">
               <div className="relative flex-1">
                 <Popover open={showSuggestions && suggestions.length > 0} onOpenChange={setShowSuggestions}>
                   <PopoverTrigger asChild>
                     <div className="relative">
-                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-4 w-4" />
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                       <Input
                         type="text"
                         placeholder="Search products..."
@@ -257,16 +256,16 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                           setTimeout(() => setShowSuggestions(false), 200);
                         }}
                         onFocus={() => setShowSuggestions(true)}
-                        className="pl-12 h-10 text-base border border-border/60 shadow-lg bg-background/70 backdrop-blur focus:ring-4 focus:ring-primary/20 transition-all"
+                        className="pl-12 h-11 text-base border border-border/40 bg-background focus:ring-2 focus:ring-primary/10 focus:border-primary/30 transition-all"
                         aria-label="Search products"
                       />
-                      {isLoading && <Loader2 className="absolute right-12 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-blue-500" />}
+                      {isLoading && <Loader2 className="absolute right-12 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
                       {filters.query && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => updateFilter('query', '')}
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted"
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted/50"
                           aria-label="Clear search"
                         >
                           <X className="h-4 w-4" />
@@ -284,7 +283,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                       {suggestions.map((suggestion, index) => (
                         <button
                           key={index}
-                          className="w-full text-left px-4 py-2 hover:bg-muted focus:bg-muted focus:outline-none"
+                          className="w-full text-left px-4 py-2 hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
                           onClick={() => {
                             updateFilter('query', suggestion);
                             setShowSuggestions(false);
@@ -303,10 +302,10 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
               <Button
                 variant="outline"
                 onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                className={`h-10 px-4 shadow-lg transition-all ${
-                  isAdvancedOpen 
-                    ? 'bg-linear-to-r from-blue-500 to-purple-600 text-white' 
-                    : 'bg-background/70 backdrop-blur hover:bg-background text-foreground'
+                className={`h-11 px-4 transition-all border-border/40 ${
+                  isAdvancedOpen
+                    ? 'bg-linear-to-r from-blue-600 to-blue-700 text-white border-0'
+                    : 'bg-background hover:bg-muted/50 text-foreground'
                 }`}
               >
                 <Filter className="h-5 w-5 mr-2" />
@@ -317,7 +316,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ products, onFilteredProdu
                 <Button
                   variant="outline"
                   onClick={clearFilters}
-                  className="h-10 px-4 shadow-lg bg-background/70 backdrop-blur hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all"
+                  className="h-11 px-4 bg-background hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all border-border/40"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Clear
