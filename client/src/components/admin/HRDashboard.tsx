@@ -1194,8 +1194,8 @@ export default function HRDashboard() {
       metric: `${stats.overview.activeEmployees} active`,
       description: 'All HR processes are running smoothly',
       action: {
-        label: 'View Overview',
-        onClick: () => setActiveTab('overview'),
+        label: 'View Employees',
+        onClick: () => setActiveTab('employees'),
         variant: 'outline',
       },
     });

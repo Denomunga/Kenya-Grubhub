@@ -1200,7 +1200,7 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
       description: 'All financial metrics are within acceptable ranges',
       action: {
         label: 'View Reports',
-        onClick: () => setActiveTab('overview'),
+        onClick: () => setActiveTab('reports'),
         variant: 'outline',
       },
     });
