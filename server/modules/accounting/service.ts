@@ -1642,8 +1642,7 @@ export class InvoiceService {
 
 static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, userId: string) {
   try {
-    
-  const pdfParser = new PDFParser();
+    const pdfParser = new PDFParser();
     
     const pdfData = await new Promise<any>((resolve, reject) => {
       pdfParser.on('pdfParser_dataReady', resolve);
@@ -1656,38 +1655,18 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
       page.Texts.map((text: any) => decodeURIComponent(text.R[0].T)).join(' ')
     ).join('\n');
 
-    // 🔑 KEY FIX: Remove all whitespace (spaces, newlines, tabs)
+    // Remove all whitespace (spaces, newlines, tabs)
     const compactText = extractedText.replace(/\s/g, '');
 
-    // Debug (optional, remove in production)
     console.log('Compact text (first 500 chars):', compactText.substring(0, 500));
 
-    // 2. Regex patterns for invoice fields
-    const patterns = {
-      invoiceNumber: /(?:Invoice\s*#?|Invoice Number|INV-\d+)[:\s]*([A-Z0-9\-]+)/i,
-      invoiceDate: /(?:Invoice Date|Date|Issue Date)[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-      clientName: /(?:Bill To|Customer|Client|Sold To)[:\s]*([A-Za-z0-9\s,]+?)(?:\n|$)/i,
-      totalAmount: /(?:Total|Grand Total|Amount Due|Balance Due)[:\s]*[\$]?([\d,]+\.?\d*)/i,
-      description: /(?:Description|Notes)[:\s]*(.+?)(?:\n\n|\n$)/i
-    };
+    // Extract fields using label-based parsing
+    const extracted = this.extractInvoiceData(compactText);
 
-    const extracted: any = {};
-    for (const [key, regex] of Object.entries(patterns)) {
-      const match = extractedText.match(regex);
-      extracted[key] = match ? match[1].trim() : null;
-    }
-
-    // Clean up amount
-    if (extracted.totalAmount) {
-      extracted.totalAmount = parseFloat(extracted.totalAmount.replace(/,/g, ''));
-    }
-
-    // Validate required fields
     if (!extracted.clientName || !extracted.totalAmount) {
-      throw new Error('Could not extract client name or total amount from invoice. Please check the PDF format.');
+      throw new Error(`Could not extract client name or total amount. Compact text length: ${compactText.length}.`);
     }
 
-    // Prepare invoice data
     const amount = extracted.totalAmount;
     const { taxRate, taxAmount, totalAmount } = await InvoiceService.calculateTax(amount);
     const invoiceNumber = extracted.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
@@ -1697,7 +1676,6 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
       if (!isNaN(parsed.getTime())) dueDate = parsed;
     }
 
-    // Create invoice
     const invoice = new Invoice({
       invoiceNumber,
       clientName: extracted.clientName,
@@ -1706,7 +1684,7 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
       taxAmount,
       totalAmount,
       dueDate,
-      description: extracted.description || `Auto-uploaded from ${originalName}`,
+      description: `Auto-uploaded from ${originalName}`,
       status: 'unpaid',
       paidAmount: 0,
       createdBy: userId,
@@ -1714,8 +1692,6 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
 
     await invoice.save();
     await InvoiceService.createInvoiceJournalEntry(invoice, userId);
-
-    // Audit log
     await AuditLog.create({
       action: 'CREATE',
       entityType: 'Invoice',
@@ -1729,6 +1705,46 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
   } catch (error: any) {
     throw new Error(`Failed to process invoice PDF: ${error?.message || String(error)}`);
   }
+}
+
+// Add this helper method inside InvoiceService class
+static extractInvoiceData(compactText: string): any {
+  const extracted: any = {};
+
+  // Helper: get value between two labels
+  function getValue(startLabel: string, endLabels: string[]): string | null {
+    const startIdx = compactText.indexOf(startLabel);
+    if (startIdx === -1) return null;
+    let endIdx = compactText.length;
+    for (const label of endLabels) {
+      const idx = compactText.indexOf(label, startIdx + startLabel.length);
+      if (idx !== -1 && idx < endIdx) endIdx = idx;
+    }
+    return compactText.substring(startIdx + startLabel.length, endIdx).trim();
+  }
+
+  // Extract fields
+  extracted.invoiceNumber = getValue('InvoiceNumber:', ['InvoiceDate', 'DueDate', 'BillTo', 'Item', 'Total']);
+  extracted.invoiceDate = getValue('InvoiceDate:', ['DueDate', 'BillTo', 'Item', 'Total']);
+  extracted.dueDate = getValue('DueDate:', ['BillTo', 'Item', 'Total']);
+  extracted.clientName = getValue('BillTo:', ['Item', 'Subtotal', 'Total', 'PaymentTerms', 'Bank']);
+  extracted.totalAmount = getValue('Total:', ['PaymentTerms', 'Bank', 'KES', '']);
+
+  // Clean up clientName: remove any trailing numbers (like "123BusinessRd")
+  if (extracted.clientName) {
+    // Remove everything after the first digit if it's part of address
+    const match = extracted.clientName.match(/^([A-Za-z\s]+)/);
+    if (match) extracted.clientName = match[1].trim();
+    else extracted.clientName = extracted.clientName.replace(/[0-9].*$/, '').trim();
+  }
+
+  // Parse totalAmount: remove non-numeric except comma/dot
+  if (extracted.totalAmount) {
+    const match = extracted.totalAmount.match(/[\d,]+\.?\d*/);
+    extracted.totalAmount = match ? parseFloat(match[0].replace(/,/g, '')) : null;
+  }
+
+  return extracted;
 }
 }
 
