@@ -17,8 +17,9 @@
 import { PurchaseOrder } from '../procurement/models';
 import { Order } from '../../models/Order';
 import { Sale } from '../../models/Sale';
-import fs from 'fs';
-import path from 'path';
+// import fs from 'fs';
+// import path from 'path';
+const pdfParse = require('pdf-parse');
 
 
 /**
@@ -1639,23 +1640,12 @@ export class InvoiceService {
   // Inside InvoiceService class, replace the existing processInvoiceFromPdf method
 
 static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, userId: string) {
-  let tempFilePath: string | null = null;
   try {
-    // 1. Save buffer to a temporary file (pdf-parse can also work with buffer directly, but we'll keep for compatibility)
-    const tempDir = path.join(process.cwd(), 'tmp');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    tempFilePath = path.join(tempDir, `${Date.now()}-${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}`);
-    fs.writeFileSync(tempFilePath, fileBuffer);
-
-    // 2. Extract text from PDF using pdf-parse
-    const dataBuffer = fs.readFileSync(tempFilePath);
-    const pdf = await import('pdf-parse');
-    const pdfData = await (pdf as any)(dataBuffer);
+    // 1. Extract text directly from the buffer (no temp file needed)
+    const pdfData = await pdfParse(fileBuffer);
     const extractedText = pdfData.text;
 
-    // 3. Use regex to extract invoice fields (customize patterns for your invoice format)
+    // 2. Regex patterns for invoice fields
     const patterns = {
       invoiceNumber: /(?:Invoice\s*#?|Invoice Number|INV-\d+)[:\s]*([A-Z0-9\-]+)/i,
       invoiceDate: /(?:Invoice Date|Date|Issue Date)[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
@@ -1670,7 +1660,7 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
       extracted[key] = match ? match[1].trim() : null;
     }
 
-    // Clean up amount (remove commas, convert to number)
+    // Clean up amount
     if (extracted.totalAmount) {
       extracted.totalAmount = parseFloat(extracted.totalAmount.replace(/,/g, ''));
     }
@@ -1680,21 +1670,17 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
       throw new Error('Could not extract client name or total amount from invoice. Please check the PDF format.');
     }
 
-    // 4. Prepare invoice data
+    // Prepare invoice data
     const amount = extracted.totalAmount;
     const { taxRate, taxAmount, totalAmount } = await InvoiceService.calculateTax(amount);
-
-    // Generate invoice number if not extracted
     const invoiceNumber = extracted.invoiceNumber || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-
-    // Parse date (fallback to today)
     let dueDate = new Date();
     if (extracted.invoiceDate) {
       const parsed = new Date(extracted.invoiceDate);
       if (!isNaN(parsed.getTime())) dueDate = parsed;
     }
 
-    // 5. Create invoice document
+    // Create invoice
     const invoice = new Invoice({
       invoiceNumber,
       clientName: extracted.clientName,
@@ -1710,11 +1696,9 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
     });
 
     await invoice.save();
-
-    // 6. Create journal entry
     await InvoiceService.createInvoiceJournalEntry(invoice, userId);
 
-    // 7. Audit log
+    // Audit log
     await AuditLog.create({
       action: 'CREATE',
       entityType: 'Invoice',
@@ -1727,11 +1711,6 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
     return invoice;
   } catch (error: any) {
     throw new Error(`Failed to process invoice PDF: ${error?.message || String(error)}`);
-  } finally {
-    // Clean up temporary file
-    if (tempFilePath && fs.existsSync(tempFilePath)) {
-      fs.unlinkSync(tempFilePath);
-    }
   }
 }
 }
