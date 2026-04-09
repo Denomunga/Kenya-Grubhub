@@ -492,7 +492,7 @@ export class FinancialReportingService {
 
       // Calculate revenue from invoices (paid + partial)
       const revenueAgg = await Invoice.aggregate([
-        { $match: { status: { $in: ['paid', 'partial'] }, isDeleted: { $ne: true } } },
+        { $match: { status: { $in: ['paid', 'partial'] } } },
         { $group: { _id: null, total: { $sum: '$totalAmount' } } }
       ]);
       const invoiceRevenue = revenueAgg[0]?.total || 0;
@@ -544,7 +544,7 @@ export class FinancialReportingService {
 
       // Calculate accounts receivable
       const arAgg = await Invoice.aggregate([
-        { $match: { status: { $in: ['unpaid', 'overdue', 'partial'] }, isDeleted: { $ne: true } } },
+        { $match: { status: { $in: ['unpaid', 'overdue', 'partial'] } } },
         { $group: { _id: null, total: { $sum: '$totalAmount' } } }
       ]);
       const accountsReceivable = arAgg[0]?.total || 0;
@@ -1571,7 +1571,7 @@ export class InvoiceService {
   }
 
   static async getInvoices(filters: any = {}, page = 1, limit = 50) {
-    const query: any = { isDeleted: { $ne: true } };
+    const query: any = {};
     if (filters.status) query.status = filters.status;
     if (filters.clientName) query.clientName = { $regex: filters.clientName, $options: 'i' };
     if (filters.startDate || filters.endDate) {
@@ -1581,7 +1581,7 @@ export class InvoiceService {
     }
     // Auto-update aging: mark overdue invoices
     await Invoice.updateMany(
-      { status: 'unpaid', dueDate: { $lt: new Date() }, isDeleted: { $ne: true } },
+      { status: 'unpaid', dueDate: { $lt: new Date() } },
       { status: 'overdue' }
     );
     const skip = (page - 1) * limit;
@@ -1591,19 +1591,19 @@ export class InvoiceService {
   }
 
   static async getInvoiceById(id: string) {
-    const invoice = await Invoice.findOne({ _id: id, isDeleted: { $ne: true } }).populate('createdBy', 'firstName lastName');
+    const invoice = await Invoice.findOne({ _id: id }).populate('createdBy', 'firstName lastName');
     if (!invoice) throw new Error('Invoice not found');
     return invoice;
   }
 
   static async updateInvoice(id: string, data: any) {
-    const invoice = await Invoice.findOneAndUpdate({ _id: id, isDeleted: { $ne: true } }, { ...data, updatedAt: new Date() }, { new: true, runValidators: true });
+    const invoice = await Invoice.findOneAndUpdate({ _id: id }, { ...data, updatedAt: new Date() }, { new: true, runValidators: true });
     if (!invoice) throw new Error('Invoice not found');
     return invoice;
   }
 
   static async recordPayment(id: string, amount: number, userId?: string) {
-    const invoice = await Invoice.findOne({ _id: id, isDeleted: { $ne: true } });
+    const invoice = await Invoice.findOne({ _id: id });
     if (!invoice) throw new Error('Invoice not found');
     invoice.paidAmount = (invoice.paidAmount || 0) + amount;
     if (invoice.paidAmount >= (invoice.totalAmount || invoice.amount)) invoice.status = 'paid';
@@ -1618,23 +1618,40 @@ export class InvoiceService {
     return invoice;
   }
 
-  // Soft delete instead of hard delete
+  // Hard delete invoices
   static async deleteInvoice(id: string) {
-    const invoice = await Invoice.findOne({ _id: id, isDeleted: { $ne: true } });
+    const invoice = await Invoice.findOne({ _id: id });
     if (!invoice) throw new Error('Invoice not found');
     if (invoice.status === 'paid') throw new Error('Cannot delete a paid invoice');
-    invoice.isDeleted = true;
-    (invoice as any).deletedAt = new Date();
-    await invoice.save();
-    return invoice;
+    await Invoice.deleteOne({ _id: id });
+    return { message: 'Invoice deleted successfully' };
   }
 
   static async bulkUpdateStatus(ids: string[], status: string) {
     const result = await Invoice.updateMany(
-      { _id: { $in: ids }, isDeleted: { $ne: true } },
+      { _id: { $in: ids } },
       { status, updatedAt: new Date() }
     );
     return { modifiedCount: result.modifiedCount };
+  }
+
+  static async sendReminder(invoiceId: string, userId: string) {
+    const invoice = await Invoice.findOne({ _id: invoiceId });
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    // Log the reminder action
+    await AuditLog.create({
+      action: 'post',
+      entityType: 'Invoice',
+      entityId: invoice._id.toString(),
+      entityRef: invoice.invoiceNumber,
+      userId,
+      metadata: { reminderSent: true, reminderDate: new Date() },
+    });
+
+    return { success: true, message: 'Reminder sent successfully', invoice };
   }
 
  
@@ -2081,10 +2098,10 @@ export class InsightsService {
       } catch {}
 
       // Overdue invoices warning
-      const overdueCount = await Invoice.countDocuments({ status: 'overdue', isDeleted: { $ne: true } });
+      const overdueCount = await Invoice.countDocuments({ status: 'overdue' });
       if (overdueCount > 0) {
         const overdueTotal = await Invoice.aggregate([
-          { $match: { status: 'overdue', isDeleted: { $ne: true } } },
+          { $match: { status: 'overdue' } },
           { $group: { _id: null, total: { $sum: '$amount' } } }
         ]);
         insights.push({ type: 'danger', icon: 'Clock', message: `You have ${overdueCount} overdue invoice(s)`, detail: `Total outstanding: KES ${(overdueTotal[0]?.total || 0).toLocaleString()}` });
@@ -2134,7 +2151,7 @@ export class CashFlowForecastService {
 
       // Expected income (unpaid invoices due in forecast period)
       const expectedIncome = await Invoice.aggregate([
-        { $match: { status: { $in: ['unpaid', 'partial'] }, dueDate: { $lte: forecastEnd }, isDeleted: { $ne: true } } },
+        { $match: { status: { $in: ['unpaid', 'partial'] }, dueDate: { $lte: forecastEnd } } },
         { $group: { _id: null, total: { $sum: { $subtract: [{ $ifNull: ['$totalAmount', '$amount'] }, { $ifNull: ['$paidAmount', 0] }] } } } }
       ]);
 

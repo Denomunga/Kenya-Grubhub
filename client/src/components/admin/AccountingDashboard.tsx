@@ -5,6 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -208,6 +215,7 @@ const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
   const [submittingExpense, setSubmittingExpense] = useState(false);
   const [submittingRecurring, setSubmittingRecurring] = useState(false);
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<'all' | 'paid' | 'unpaid' | 'overdue' | 'partial'>('all');
   const [txnPage, setTxnPage] = useState(1);
   const txnPerPage = 15;
   const [searchTerm, setSearchTerm] = useState('');
@@ -255,6 +263,8 @@ const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
     description: '',
     status: 'unpaid',
   });
+  const [viewInvoiceDialogOpen, setViewInvoiceDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [submittingInvoice, setSubmittingInvoice] = useState(false);
   const { user, isAdmin, isAccountant, isStaff } = useHybridAuth();
 
@@ -262,13 +272,18 @@ const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
     if (user) fetchAccountingData();
   }, [user]);
 
+  useEffect(() => {
+    if (user) fetchAccountingData();
+  }, [invoiceStatusFilter]);
+
   const fetchAccountingData = async () => {
     try {
+      const statusParam = invoiceStatusFilter !== 'all' ? `?status=${invoiceStatusFilter}` : '';
       const [statsRes, transactionsRes, expensesRes, invoicesRes, monthlyRes, cashFlowRes, journalRes, recurringRes] = await Promise.all([
         apiFetch('/api/v1/accounting/stats'),
         apiFetch('/api/v1/accounting/transactions?page=1&limit=50'),
         apiFetch('/api/v1/accounting/expenses?page=1&limit=50'),
-        apiFetch('/api/v1/accounting/invoices'),
+        apiFetch(`/api/v1/accounting/invoices${statusParam}`),
         apiFetch('/api/v1/accounting/monthly?months=12'),
         apiFetch('/api/v1/accounting/cashflow?days=30'),
         apiFetch('/api/v1/accounting/journal-entries?page=1&limit=20'),
@@ -582,6 +597,29 @@ const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
       });
       if (res.ok) { toast({ title: `${selectedInvoices.length} invoices updated` }); setSelectedInvoices([]); fetchAccountingData(); }
       else { toast({ title: 'Error', description: 'Bulk update failed', variant: 'destructive' }); }
+    } catch { toast({ title: 'Error', description: 'Network error', variant: 'destructive' }); }
+  };
+
+  const handleSendReminder = async (invoiceId: string) => {
+    try {
+      const res = await apiFetch(`/api/v1/accounting/invoices/${invoiceId}/reminder`, {
+        method: 'POST',
+      });
+      if (res.ok) { toast({ title: 'Reminder sent successfully' }); }
+      else { toast({ title: 'Error', description: 'Failed to send reminder', variant: 'destructive' }); }
+    } catch { toast({ title: 'Error', description: 'Network error', variant: 'destructive' }); }
+  };
+
+  const handleViewInvoice = async (invoiceId: string) => {
+    try {
+      const res = await apiFetch(`/api/v1/accounting/invoices/${invoiceId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedInvoice(data.data);
+        setViewInvoiceDialogOpen(true);
+      } else {
+        toast({ title: 'Error', description: 'Failed to fetch invoice details', variant: 'destructive' });
+      }
     } catch { toast({ title: 'Error', description: 'Network error', variant: 'destructive' }); }
   };
 
@@ -2470,6 +2508,18 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                     </Button>
                   </>
                 )}
+                <Select value={invoiceStatusFilter} onValueChange={(value: any) => setInvoiceStatusFilter(value)}>
+                  <SelectTrigger className="h-8 w-[140px]">
+                    <SelectValue placeholder="Filter status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="unpaid">Unpaid</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button variant="outline" size="sm" className="gap-1" onClick={() => handleExport('excel')}>
                   <Download className="h-3.5 w-3.5" /> Export
                 </Button>
@@ -2510,8 +2560,9 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                       const isOverdue = daysUntilDue < 0 && invoice.status !== 'paid';
 
                       return (
-                        <TableRow key={invoice._id} className={isOverdue ? 'bg-red-50/50' : ''}>
-                          <TableCell>
+                        <TableRow key={invoice._id} className={isOverdue ? 'bg-red-50/50 cursor-pointer hover:bg-muted/50' : 'cursor-pointer hover:bg-muted/50'}
+                          onClick={() => handleViewInvoice(invoice._id)}>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <input type="checkbox" checked={selectedInvoices.includes(invoice._id)}
                               onChange={() => toggleInvoiceSelect(invoice._id)} />
                           </TableCell>
@@ -2540,18 +2591,19 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
                             <div className="flex gap-0.5">
                               {invoice.status !== 'paid' && (
                                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Record Payment"
-                                  onClick={() => { setPaymentInvoiceId(invoice._id); setPaymentDialogOpen(true); }}>
+                                  onClick={(e) => { e.stopPropagation(); setPaymentInvoiceId(invoice._id); setPaymentDialogOpen(true); }}>
                                   <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
                                 </Button>
                               )}
                               {isOverdue && (
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Send Reminder">
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Send Reminder"
+                                  onClick={(e) => { e.stopPropagation(); handleSendReminder(invoice._id); }}>
                                   <Send className="h-3.5 w-3.5 text-red-500" />
                                 </Button>
                               )}
                               {isAdmin && (
                                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Delete"
-                                  onClick={() => handleDeleteInvoice(invoice._id)}>
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteInvoice(invoice._id); }}>
                                   <Trash2 className="h-3.5 w-3.5 text-red-400" />
                                 </Button>
                               )}
@@ -3696,6 +3748,76 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* VIEW INVOICE DETAILS DIALOG */}
+      <Dialog open={viewInvoiceDialogOpen} onOpenChange={setViewInvoiceDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Invoice Details - {selectedInvoice?.invoiceNumber}</DialogTitle>
+            <DialogDescription>Full invoice information and payment history</DialogDescription>
+          </DialogHeader>
+          {selectedInvoice && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-muted-foreground">Client/Supplier</label>
+                  <p className="font-medium">{selectedInvoice.clientName || selectedInvoice.supplierName}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Status</label>
+                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(selectedInvoice.status)}`}>
+                    {getStatusIcon(selectedInvoice.status)}
+                    <span className="ml-1">{selectedInvoice.status}</span>
+                  </Badge>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Invoice Amount</label>
+                  <p className="font-mono font-medium">KES {selectedInvoice.amount.toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Paid Amount</label>
+                  <p className="font-mono font-medium text-emerald-600">KES {selectedInvoice.paidAmount.toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Balance Due</label>
+                  <p className="font-mono font-medium text-orange-600">KES {(selectedInvoice.amount - selectedInvoice.paidAmount).toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Due Date</label>
+                  <p className="font-medium">{new Date(selectedInvoice.dueDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Tax Rate</label>
+                  <p className="font-medium">{selectedInvoice.taxRate}%</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Tax Amount</label>
+                  <p className="font-medium">KES {selectedInvoice.taxAmount.toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Total Amount</label>
+                  <p className="font-mono font-medium">KES {selectedInvoice.totalAmount.toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Created Date</label>
+                  <p className="font-medium">{new Date(selectedInvoice.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+              {selectedInvoice.description && (
+                <div>
+                  <label className="text-xs text-muted-foreground">Description</label>
+                  <p className="text-sm">{selectedInvoice.description}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="flex justify-end pt-4">
+            <Button variant="outline" onClick={() => setViewInvoiceDialogOpen(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+ 
+      {/* UPLOAD INVOICE PDF DIALOG */}
       {/* ═══════════════════════════════════════════════════════════════════
     UPLOAD INVOICE PDF DIALOG
     ═══════════════════════════════════════════════════════════════════ */}
@@ -3737,3 +3859,4 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
     </div>
   );
 }
+

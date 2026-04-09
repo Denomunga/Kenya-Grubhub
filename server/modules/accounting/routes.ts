@@ -492,6 +492,8 @@ router.delete('/invoices/:id', authLimiter, requireAuth, requireRole(['admin']),
   [param('id').isMongoId()], handleValidationErrors, InvoiceEnhancedController.deleteInvoice);
 router.post('/invoices/bulk-status', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']),
   [body('ids').isArray({ min: 1 }), body('status').isIn(['unpaid', 'paid', 'overdue', 'partial'])], handleValidationErrors, InvoiceEnhancedController.bulkUpdateStatus);
+router.post('/invoices/:id/reminder', authLimiter, requireAuth, requireRole(['admin', 'accounting_manager']),
+  [param('id').isMongoId()], handleValidationErrors, InvoiceEnhancedController.sendReminder);
 
 // ============================================================
 // ENHANCED EXPENSE ENDPOINTS (missing GET routes)

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Invoice } from './models';
 import {
   AccountService,
   EnhancedReportingService,
@@ -286,8 +287,13 @@ export class InvoiceEnhancedController {
 
   static async deleteInvoice(req: AuthRequest, res: Response) {
     try {
-      const invoice = await InvoiceService.deleteInvoice(req.params.id);
-      await AuditService.log({ action: 'delete', entityType: 'Invoice', entityId: req.params.id, entityRef: invoice.invoiceNumber, userId: req.user!.id });
+      const invoice = await Invoice.findOne({ _id: req.params.id });
+      if (!invoice) {
+        return res.status(404).json({ success: false, error: 'Invoice not found' });
+      }
+      const invoiceNumber = invoice.invoiceNumber;
+      await InvoiceService.deleteInvoice(req.params.id);
+      await AuditService.log({ action: 'delete', entityType: 'Invoice', entityId: req.params.id, entityRef: invoiceNumber, userId: req.user!.id });
       res.status(200).json({ success: true, message: 'Invoice deleted' });
     } catch (error: any) {
       res.status(400).json({ success: false, error: error?.message || 'Failed to delete invoice' });
@@ -302,6 +308,15 @@ export class InvoiceEnhancedController {
       res.status(200).json({ success: true, data: result });
     } catch (error: any) {
       res.status(400).json({ success: false, error: error?.message || 'Failed to bulk update' });
+    }
+  }
+
+  static async sendReminder(req: AuthRequest, res: Response) {
+    try {
+      const result = await InvoiceService.sendReminder(req.params.id, req.user!.id);
+      res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      res.status(404).json({ success: false, error: error?.message || 'Failed to send reminder' });
     }
   }
 }
