@@ -278,8 +278,7 @@ export default function Home() {
       </div>
       
       <main className="relative z-10">
-        <div className="container mx-auto px-6 py-12 sm:py-16 lg:py-20 relative">
-          <div className="absolute inset-0 bg-linear-to-b from-background via-background to-muted/20 -z-10"></div>
+        <div className="container mx-auto px-6 py-12 sm:py-16 lg:py-20">
           <div className="relative z-32">
             {/* Search Component */}
             <ProductSearch
