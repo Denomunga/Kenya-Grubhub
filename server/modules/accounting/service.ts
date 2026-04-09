@@ -1741,6 +1741,11 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
 static extractInvoiceData(compactText: string): any {
   const extracted: any = {};
 
+
+  // Extract email address
+  const emailMatch = compactText.match(/Email:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+  extracted.clientEmail = emailMatch ? emailMatch[1] : null;
+
   // Extract invoice number – stop before next label
   const invNumMatch = compactText.match(/InvoiceNumber:(.*?)(?:InvoiceDate|DueDate|BillTo|Item|Total|$)/);
   extracted.invoiceNumber = invNumMatch ? invNumMatch[1] : null;
@@ -1760,7 +1765,12 @@ static extractInvoiceData(compactText: string): any {
   // Extract total amount – stop before next label
   const totalMatch = compactText.match(/Total:(.*?)(?:PaymentTerms|Bank|KES|$)/);
   extracted.totalAmount = totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : null;
-
+  
+  if (!extracted.clientEmail) {
+    const anyEmailMatch = compactText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    extracted.clientEmail = anyEmailMatch ? anyEmailMatch[0] : null;
+  }
+  
   return extracted;
 }
 }

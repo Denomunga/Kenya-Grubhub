@@ -696,7 +696,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 type="email"
                 value={newsletterEmail}
                 onChange={(e) => setNewsletterEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="Enter your email address"
                 aria-label="Email address"
                 className="w-full h-11 px-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/40"
               />

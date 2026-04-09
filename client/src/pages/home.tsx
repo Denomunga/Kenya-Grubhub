@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, Link } from "wouter";
 import { useData } from "@/lib/data";
 import { apiFetch } from "@/lib/api";
@@ -8,7 +8,7 @@ import FeaturedProducts from "@/components/home/FeaturedProducts";
 import ProductSearch from "@/components/search/ProductSearch";
 import JobAdvertBanner from "@/components/home/JobAdvertBanner";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, MapPin, CheckCircle, AlertCircle, Eye } from "lucide-react";
+import { ArrowRight, Clock, MapPin, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { SEOMetaTags } from "@/components/seo/SEOMetaTags";
@@ -40,13 +40,7 @@ export default function Home() {
   // const [news, setNews] = useState<NewsItem[]>([]); // ❌ Remove local news state
   const [businessLocation, setBusinessLocation] = useState<any>(null);
   const [locationLoading, setLocationLoading] = useState(true);
-  
-  // Newsletter state
-  const [email, setEmail] = useState('');
-  const [isSubscribing, setIsSubscribing] = useState(false);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [subscriptionMessage, setSubscriptionMessage] = useState('');
-  
+
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   
@@ -154,54 +148,6 @@ export default function Home() {
     const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
-
-  // Newsletter subscription handler - optimized
-  const handleNewsletterSubscribe = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setSubscriptionStatus('error');
-      setSubscriptionMessage('Please enter a valid email address');
-      return;
-    }
-
-    setIsSubscribing(true);
-    setSubscriptionStatus('idle');
-
-    try {
-      const response = await apiFetch('/api/newsletter/subscribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          email,
-          preferences: {
-            specialOffers: true,
-            newProducts: true,
-            events: true,
-            news: true
-          }
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setSubscriptionStatus('success');
-        setSubscriptionMessage(data.message);
-        setEmail('');
-      } else {
-        setSubscriptionStatus('error');
-        setSubscriptionMessage(data.message || 'Subscription failed');
-      }
-    } catch (error) {
-      setSubscriptionStatus('error');
-      setSubscriptionMessage('An error occurred. Please try again.');
-    } finally {
-      setIsSubscribing(false);
-    }
-  }, [email]);
 
 
   const closeNewsModal = () => {
@@ -450,102 +396,6 @@ export default function Home() {
                   </Card>
                 </motion.div>
               ))}
-            </div>
-          </div>
-        </motion.section>
-        
-        {/* Newsletter Section */}
-        <motion.section 
-          className="py-20 relative overflow-hidden"
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-secondary/3 to-primary/5"></div>
-          <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-4xl mx-auto">
-              <motion.div 
-                className="text-center mb-12"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-              >
-                <motion.h2 
-                  className="text-4xl md:text-5xl font-bold font-serif mb-6 bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                >
-                  Stay Connected
-                </motion.h2>
-                <motion.div 
-                  className="w-24 h-1 bg-linear-to-r from-primary to-secondary mx-auto mb-8 rounded-full shadow-lg"
-                  initial={{ width: 0 }}
-                  whileInView={{ width: 96 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                ></motion.div>
-                <motion.p 
-                  className="text-muted-foreground text-lg leading-relaxed max-w-2xl mx-auto"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                >
-                  Get exclusive offers, new menu updates, and special events delivered directly to your inbox.
-                </motion.p>
-              </motion.div>
-              
-              <motion.div 
-                className="bg-background/60 backdrop-blur-md rounded-2xl p-8 shadow-xl border border-border max-w-2xl mx-auto"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-              >
-                <form onSubmit={handleNewsletterSubscribe} className="flex flex-col sm:flex-row gap-4 w-full">
-                  <input
-                    type="email"
-                    placeholder="Enter your email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="flex-1 px-6 py-4 rounded-xl border border-border/50 bg-background/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all duration-300 text-foreground placeholder:text-muted-foreground"
-                    disabled={isSubscribing}
-                  />
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Button 
-                      type="submit"
-                      disabled={isSubscribing}
-                      className="bg-linear-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white px-8 py-4 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl min-w-[140px]"
-                    >
-                      {isSubscribing ? 'Subscribing...' : 'Subscribe'}
-                    </Button>
-                  </motion.div>
-                </form>
-                
-                {/* Subscription Status Messages */}
-                <AnimatePresence>
-                  {subscriptionStatus !== 'idle' && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className={`flex items-center gap-2 p-4 rounded-xl text-sm mt-4 ${
-                        subscriptionStatus === 'success' 
-                          ? 'bg-green-50 text-green-700 border border-green-200' 
-                          : 'bg-red-50 text-red-700 border border-red-200'
-                      }`}
-                    >
-                      {subscriptionStatus === 'success' ? (
-                        <CheckCircle className="h-5 w-5" />
-                      ) : (
-                        <AlertCircle className="h-5 w-5" />
-                      )}
-                      {subscriptionMessage}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
             </div>
           </div>
         </motion.section>
