@@ -19,9 +19,6 @@ import { Order } from '../../models/Order';
 import { Sale } from '../../models/Sale';
 import fs from 'fs';
 import path from 'path';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pdf = require('pdf-parse');
 
 
 /**
@@ -1654,9 +1651,8 @@ static async processInvoiceFromPdf(fileBuffer: Buffer, originalName: string, use
 
     // 2. Extract text from PDF using pdf-parse
     const dataBuffer = fs.readFileSync(tempFilePath);
-
-// Then in the method:
-const pdfData = await pdf(dataBuffer);
+    const pdf = await import('pdf-parse');
+    const pdfData = await (pdf as any)(dataBuffer);
     const extractedText = pdfData.text;
 
     // 3. Use regex to extract invoice fields (customize patterns for your invoice format)
