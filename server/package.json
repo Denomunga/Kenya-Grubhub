@@ -37,6 +37,7 @@
     "express-session": "^1.18.2",
     "express-validator": "^7.3.1",
     "fuzzball": "^2.2.3",
+    "groq-sdk": "^1.1.2",
     "isomorphic-dompurify": "^2.34.0",
     "jwks-rsa": "^3.2.0",
     "memorystore": "^1.6.7",
