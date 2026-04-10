@@ -30,7 +30,7 @@ const handleValidationErrors = (req: Request, res: Response, next: Function) => 
   }
   next();
 };
-
+//
 
 // Add to your accounting routes
 router.get('/search/entities', requireAuth, SearchController.searchEntities);
