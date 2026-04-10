@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const MODEL_NAME = "gemini-1.5-flash-latest"; // ✅ Use this
+const MODEL_NAME = "gemini-1.5-flash-001"; // ✅ Use this
 // Alternative: "gemini-1.5-flash-001"
 const MAX_OUTPUT_TOKENS = 1000;
 
