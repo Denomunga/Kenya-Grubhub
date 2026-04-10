@@ -8,10 +8,11 @@ import FeaturedProducts from "@/components/home/FeaturedProducts";
 import ProductSearch from "@/components/search/ProductSearch";
 import JobAdvertBanner from "@/components/home/JobAdvertBanner";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, MapPin, Eye } from "lucide-react";
+import { ArrowRight, Clock, MapPin, Eye, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { SEOMetaTags } from "@/components/seo/SEOMetaTags";
+import ChatWidget from '@/components/ChatWidget';
 import { useWebsiteStructuredData } from "@/components/seo/StructuredData";
 import { useIntersectionObserver } from "@/hooks/usePerformanceOptimizations";
 
@@ -38,6 +39,7 @@ export default function Home() {
   const [, setSelectedNews] = useState<NewsItem | null>(null);
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
   // const [news, setNews] = useState<NewsItem[]>([]); // ❌ Remove local news state
+  const [chatOpen, setChatOpen] = useState(false);
   const [businessLocation, setBusinessLocation] = useState<any>(null);
   const [locationLoading, setLocationLoading] = useState(true);
 
@@ -656,6 +658,20 @@ export default function Home() {
         </motion.div>
       </motion.section>
     </div>
+
+      {/* Floating AI Chat */}
+      {chatOpen && (
+        <div className="fixed bottom-20 right-6 z-50">
+          <ChatWidget />
+        </div>
+      )}
+      <Button
+        className="fixed bottom-6 right-6 z-50 rounded-full h-12 w-12 shadow-lg"
+        size="icon"
+        onClick={() => setChatOpen(!chatOpen)}
+      >
+        <MessageCircle className="h-5 w-5" />
+      </Button>
     </>
   );
 }
