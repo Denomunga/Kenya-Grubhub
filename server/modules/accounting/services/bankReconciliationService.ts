@@ -5,6 +5,8 @@ import { IBankTransaction } from '../models/bankReconciliation';
 import { Invoice } from '../models';
 import { Expense } from '../models';
 import { Account } from '../models';
+import { JournalEntry } from '../models';
+import { Sale } from '../../../models/Sale';
 import { JournalEntryService } from '../service';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as fuzzball from 'fuzzball';
@@ -185,8 +187,8 @@ const findColumn = (possibleNames: string[]): string | undefined => {
     );
     score += Math.floor(descSimilarity * 0.3); // max 30 points
 
-    // 4. Entity type bias (invoices are more likely for credits, expenses for debits)
-    if (bankTxn.type === 'credit' && candidate.entityType === 'Invoice') {
+    // 4. Entity type bias (credits = incoming money, debits = outgoing money)
+    if (bankTxn.type === 'credit' && (candidate.entityType === 'Invoice' || candidate.entityType === 'Payment' || candidate.entityType === 'JournalEntry')) {
       score += 10;
     } else if (bankTxn.type === 'debit' && candidate.entityType === 'Expense') {
       score += 10;
@@ -305,6 +307,50 @@ Return a JSON object with:
       });
     });
 
+    // Journal Entries (payments received - credits to cash/bank accounts)
+    const journalEntries = await JournalEntry.find({
+      transactionDate: { $gte: startDate, $lte: endDate },
+      status: 'posted',
+      referenceType: { $in: ['Payment', 'Receipt', 'Invoice', 'Order', 'POSSale'] },
+    }).lean();
+
+    journalEntries.forEach(je => {
+      // Find the line that matches the bank transaction amount
+      const matchingLine = je.lines?.find((line: any) => {
+        const lineAmount = bankTxn.type === 'credit' ? line.debit : line.credit;
+        return lineAmount > 0 &&
+          Math.abs(lineAmount - bankTxn.amount) <= bankTxn.amount * 0.05;
+      });
+      if (matchingLine) {
+        candidates.push({
+          entityType: 'JournalEntry',
+          entityId: je._id.toString(),
+          entityRef: je.entryNumber || je._id.toString(),
+          amount: bankTxn.type === 'credit' ? matchingLine.debit : matchingLine.credit,
+          description: je.description || '',
+          date: je.transactionDate,
+        });
+      }
+    });
+
+    // POS Sales (completed sales - credits/deposits)
+    const sales = await Sale.find({
+      createdAt: { $gte: startDate, $lte: endDate },
+      status: 'Completed',
+      total: { $gte: bankTxn.amount * 0.95, $lte: bankTxn.amount * 1.05 },
+    }).lean();
+
+    sales.forEach(sale => {
+      candidates.push({
+        entityType: 'Payment',
+        entityId: sale._id.toString(),
+        entityRef: sale.receiptNumber || sale._id.toString(),
+        amount: sale.total,
+        description: `POS Sale - ${sale.paymentMethod || 'Cash'}`,
+        date: sale.createdAt,
+      });
+    });
+
     if (candidates.length === 0) return null;
 
     // 2. Heuristic scoring
@@ -394,7 +440,7 @@ Return a JSON object with:
     await statement.save();
 
     // Trigger background matching (fire-and-forget)
-    this.autoMatchStatement(statement._id.toString()).catch(err =>
+    this.autoMatchStatement(statementId).catch(err =>
       console.error('Background auto-match error:', err)
     );
 
@@ -405,7 +451,7 @@ Return a JSON object with:
    * Auto-match all unmatched transactions in a statement
    */
   static async autoMatchStatement(statementId: string) {
-    const statement = await BankStatement.findById(statementId);
+    const statement = await BankStatement.findOne({ statementId });
     if (!statement) throw new Error('Statement not found');
 
     let updated = false;

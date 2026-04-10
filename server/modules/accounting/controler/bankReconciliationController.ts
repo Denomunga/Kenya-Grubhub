@@ -41,12 +41,9 @@ export class BankReconciliationController {
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
-  }
+  } 
 }
-
-// Inside BankReconciliationController class, add:
-
-/**
+  /**
  * GET /api/v1/accounting/reconciliation/statement/:statementId
  */
 static async getStatementDetails(req: Request, res: Response) {

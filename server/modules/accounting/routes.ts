@@ -8,6 +8,7 @@ import { requireRole } from '@shared/middleware/roles';
 import { generalLimiter, authLimiter } from '@shared/middleware/rateLimiter';
 import multer from 'multer'; // ✅ ADD THIS IMPORT
 import { BankReconciliationController } from './controler/bankReconciliationController';
+import { SearchController } from './controler/searchController';
 
 
 
@@ -31,7 +32,8 @@ const handleValidationErrors = (req: Request, res: Response, next: Function) => 
 };
 
 
-
+// Add to your accounting routes
+router.get('/search/entities', requireAuth, SearchController.searchEntities);
 
 
 

@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { apiFetch } from '@/lib/api';
-import { Upload, RefreshCw, CheckCircle, AlertCircle, History, Eye } from 'lucide-react';
+import { Upload, RefreshCw, CheckCircle, AlertCircle, History, Eye, Search, Loader2 } from 'lucide-react';
 
+// ============ TYPES ============
 interface UnmatchedTransaction {
   transactionId: string;
   date: string;
@@ -58,6 +59,15 @@ interface BankStatement {
   }>;
 }
 
+interface SearchResult {
+  id: string;
+  ref: string;
+  description: string;
+  amount: number;
+  date: string;
+}
+
+// ============ COMPONENT ============
 export default function BankReconciliationTab() {
   const { toast } = useToast();
   const [bankAccountCode, setBankAccountCode] = useState('1000');
@@ -67,12 +77,16 @@ export default function BankReconciliationTab() {
   const [selectedTxn, setSelectedTxn] = useState<UnmatchedTransaction | null>(null);
   const [matchDialogOpen, setMatchDialogOpen] = useState(false);
   const [matchEntity, setMatchEntity] = useState({ entityType: 'Invoice', entityId: '', entityRef: '' });
+  const [matchSearchLoading, setMatchSearchLoading] = useState(false);
+  const [matchSearchResults, setMatchSearchResults] = useState<SearchResult[]>([]);
+  const [matchSearchQuery, setMatchSearchQuery] = useState('');
   const [statementId, setStatementId] = useState<string | null>(null);
   const [allStatements, setAllStatements] = useState<BankStatement[]>([]);
   const [statementDetails, setStatementDetails] = useState<BankStatement | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
+  // ============ FETCH FUNCTIONS ============
   const fetchStatus = async () => {
     setLoading(true);
     try {
@@ -118,6 +132,53 @@ export default function BankReconciliationTab() {
     }
   };
 
+  // ============ SEARCH FOR MATCHING ENTITIES ============
+  const handleSearchEntities = async () => {
+    if (!selectedTxn) return;
+    setMatchSearchLoading(true);
+    try {
+      const params = new URLSearchParams({
+        type: matchEntity.entityType,
+        amountMin: (selectedTxn.amount * 0.95).toFixed(2),
+        amountMax: (selectedTxn.amount * 1.05).toFixed(2),
+        dateFrom: new Date(new Date(selectedTxn.date).setDate(new Date(selectedTxn.date).getDate() - 3)).toISOString(),
+        dateTo: new Date(new Date(selectedTxn.date).setDate(new Date(selectedTxn.date).getDate() + 3)).toISOString(),
+        limit: '20'
+      });
+      if (matchSearchQuery) params.append('q', matchSearchQuery);
+
+      const res = await apiFetch(`/api/v1/accounting/search/entities?${params}`);
+      const data = await res.json();
+      setMatchSearchResults(data.data || []);
+    } catch (error) {
+      toast({ title: 'Search failed', description: 'Could not fetch entities', variant: 'destructive' });
+      setMatchSearchResults([]);
+    } finally {
+      setMatchSearchLoading(false);
+    }
+  };
+
+  // Auto-search when dialog opens or entity type changes
+  useEffect(() => {
+    if (matchDialogOpen && selectedTxn) {
+      handleSearchEntities();
+    } else {
+      setMatchSearchResults([]);
+      setMatchSearchQuery('');
+    }
+  }, [matchDialogOpen, matchEntity.entityType, selectedTxn]);
+
+  const selectMatchEntity = (entity: SearchResult) => {
+    setMatchEntity({
+      ...matchEntity,
+      entityId: entity.id,
+      entityRef: entity.ref
+    });
+    setMatchSearchResults([]);
+    setMatchSearchQuery('');
+  };
+
+  // ============ FILE UPLOAD ============
   const onDrop = async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
@@ -150,6 +211,7 @@ export default function BankReconciliationTab() {
     maxFiles: 1
   });
 
+  // ============ ACTIONS ============
   const handleAutoMatch = async () => {
     if (!statementId) return;
     setLoading(true);
@@ -183,6 +245,7 @@ export default function BankReconciliationTab() {
         toast({ title: 'Matched successfully' });
         setMatchDialogOpen(false);
         setSelectedTxn(null);
+        setMatchEntity({ entityType: 'Invoice', entityId: '', entityRef: '' });
         fetchStatus();
       } else {
         throw new Error('Match failed');
@@ -242,8 +305,10 @@ export default function BankReconciliationTab() {
     }
   };
 
+  // ============ RENDER ============
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Bank Reconciliation</h3>
         <div className="flex gap-2">
@@ -256,7 +321,7 @@ export default function BankReconciliationTab() {
         </div>
       </div>
 
-      {/* Bank Account Selector & Upload */}
+      {/* Bank Account & Upload */}
       <div className="flex flex-wrap gap-4 items-end">
         <div>
           <label className="text-sm font-medium">Bank Account</label>
@@ -301,7 +366,7 @@ export default function BankReconciliationTab() {
         )}
       </div>
 
-      {/* Reconciliation Summary Cards */}
+      {/* Summary Cards */}
       {status && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
@@ -333,7 +398,7 @@ export default function BankReconciliationTab() {
         </div>
       )}
 
-      {/* Pending Statement Details */}
+      {/* Pending Statement */}
       {status?.pendingStatement && (
         <Card>
           <CardHeader>
@@ -356,7 +421,7 @@ export default function BankReconciliationTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {status.unmatchedTransactions?.map((txn: UnmatchedTransaction) => (
+                {status.unmatchedTransactions?.map((txn) => (
                   <TableRow key={txn.transactionId}>
                     <TableCell>{new Date(txn.date).toLocaleDateString()}</TableCell>
                     <TableCell>{txn.description}</TableCell>
@@ -367,9 +432,7 @@ export default function BankReconciliationTab() {
                     </TableCell>
                     <TableCell className="capitalize">{txn.type}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-yellow-100">
-                        Unmatched
-                      </Badge>
+                      <Badge variant="outline" className="bg-yellow-100">Unmatched</Badge>
                     </TableCell>
                     <TableCell>
                       <Button
@@ -377,6 +440,7 @@ export default function BankReconciliationTab() {
                         variant="ghost"
                         onClick={() => {
                           setSelectedTxn(txn);
+                          setMatchEntity({ entityType: 'Invoice', entityId: '', entityRef: '' });
                           setMatchDialogOpen(true);
                         }}
                       >
@@ -417,7 +481,7 @@ export default function BankReconciliationTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allStatements.map((stmt: BankStatement) => (
+                {allStatements.map((stmt) => (
                   <TableRow key={stmt.statementId}>
                     <TableCell>{stmt.statementId}</TableCell>
                     <TableCell>{new Date(stmt.statementDate).toLocaleDateString()}</TableCell>
@@ -448,20 +512,24 @@ export default function BankReconciliationTab() {
 
       {/* Manual Match Dialog */}
       <Dialog open={matchDialogOpen} onOpenChange={setMatchDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Match Bank Transaction</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm">
-              Transaction: <strong>{selectedTxn?.description}</strong> – KES {selectedTxn?.amount}
-            </p>
+            <div className="bg-muted p-3 rounded-md">
+              <p className="text-sm font-medium">Transaction Details</p>
+              <p className="text-sm">Description: <strong>{selectedTxn?.description}</strong></p>
+              <p className="text-sm">Amount: <strong>KES {selectedTxn?.amount?.toLocaleString()}</strong> ({selectedTxn?.type})</p>
+              <p className="text-sm">Date: <strong>{selectedTxn?.date ? new Date(selectedTxn.date).toLocaleDateString() : ''}</strong></p>
+            </div>
+
             <div>
               <label className="text-sm font-medium">Entity Type</label>
               <select
                 className="w-full border rounded-md p-2 text-sm mt-1"
                 value={matchEntity.entityType}
-                onChange={(e) => setMatchEntity({ ...matchEntity, entityType: e.target.value })}
+                onChange={(e) => setMatchEntity({ ...matchEntity, entityType: e.target.value, entityId: '', entityRef: '' })}
               >
                 <option value="Invoice">Invoice</option>
                 <option value="Expense">Expense</option>
@@ -469,19 +537,68 @@ export default function BankReconciliationTab() {
                 <option value="JournalEntry">Journal Entry</option>
               </select>
             </div>
+
             <div>
-              <label className="text-sm font-medium">Entity Reference (ID or Number)</label>
+              <label className="text-sm font-medium">Search {matchEntity.entityType}s</label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  placeholder={`Search by reference or description...`}
+                  value={matchSearchQuery}
+                  onChange={(e) => setMatchSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearchEntities()}
+                />
+                <Button variant="outline" onClick={handleSearchEntities} disabled={matchSearchLoading}>
+                  {matchSearchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            {matchSearchResults.length > 0 && (
+              <div className="border rounded-md max-h-60 overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Reference</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {matchSearchResults.map((entity) => (
+                      <TableRow
+                        key={entity.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => selectMatchEntity(entity)}
+                      >
+                        <TableCell className="font-medium">{entity.ref}</TableCell>
+                        <TableCell>{entity.description}</TableCell>
+                        <TableCell>KES {entity.amount.toLocaleString()}</TableCell>
+                        <TableCell>{new Date(entity.date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Button size="sm" variant="ghost">Select</Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            <div>
+              <label className="text-sm font-medium">Selected Entity Reference</label>
               <Input
-                placeholder="e.g. INV-001 or expense ID"
+                placeholder="Selected entity reference will appear here"
                 value={matchEntity.entityRef}
-                onChange={(e) => setMatchEntity({ ...matchEntity, entityRef: e.target.value })}
+                readOnly
+                className="bg-muted"
               />
             </div>
+
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setMatchDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleManualMatch}>Match</Button>
+              <Button variant="outline" onClick={() => setMatchDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleManualMatch} disabled={!matchEntity.entityRef}>Match</Button>
             </div>
           </div>
         </DialogContent>
@@ -494,15 +611,9 @@ export default function BankReconciliationTab() {
             <DialogTitle>Statement Details: {statementDetails?.statementId}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
-            <p>
-              <strong>File:</strong> {statementDetails?.fileName}
-            </p>
-            <p>
-              <strong>Starting Balance:</strong> KES {statementDetails?.startingBalance?.toLocaleString()}
-            </p>
-            <p>
-              <strong>Ending Balance:</strong> KES {statementDetails?.endingBalance?.toLocaleString()}
-            </p>
+            <p><strong>File:</strong> {statementDetails?.fileName}</p>
+            <p><strong>Starting Balance:</strong> KES {statementDetails?.startingBalance?.toLocaleString()}</p>
+            <p><strong>Ending Balance:</strong> KES {statementDetails?.endingBalance?.toLocaleString()}</p>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -513,7 +624,7 @@ export default function BankReconciliationTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {statementDetails?.transactions?.map((tx: any) => (
+                {statementDetails?.transactions?.map((tx) => (
                   <TableRow key={tx.transactionId}>
                     <TableCell>{new Date(tx.date).toLocaleDateString()}</TableCell>
                     <TableCell>{tx.description}</TableCell>
