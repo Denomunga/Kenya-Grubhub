@@ -12,6 +12,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@neondatabase/serverless": "^0.10.4",
     "@types/crypto-js": "^4.2.2",
@@ -35,6 +36,7 @@
     "express-rate-limit": "^8.2.1",
     "express-session": "^1.18.2",
     "express-validator": "^7.3.1",
+    "fuzzball": "^2.2.3",
     "isomorphic-dompurify": "^2.34.0",
     "jwks-rsa": "^3.2.0",
     "memorystore": "^1.6.7",
