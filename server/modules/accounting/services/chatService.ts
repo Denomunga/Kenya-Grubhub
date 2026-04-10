@@ -1,11 +1,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Groq from 'groq-sdk';
 
-// --- Configuration ---
-const PRIMARY_MODEL = "gemini-2.0-flash";
-// Free Groq models include "llama3-8b-8192", "mixtral-8x7b-32768", "llama-3.3-70b-versatile"
-const FALLBACK_MODEL = "llama3-8b-8192"; 
+// chatService.ts
+const PRIMARY_MODEL = "gemini-2.5-flash-lite"; // Best free daily limit
+const FALLBACK_MODEL = "llama-3.3-70b-versatile"; // Actively supported on Groq
 const MAX_OUTPUT_TOKENS = 1000;
+
+// ... (the rest of your ChatService class remains the same)
 
 const SYSTEM_INSTRUCTIONS = `You are "KenyaGrubHub Assistant," a helpful support agent...`;
 
