@@ -27,8 +27,12 @@ export class ChatService {
     history: { role: "user" | "model"; parts: { text: string }[] }[] = []
   ): Promise<string> {
     try {
+      // 🔧 FIX: Ensure history starts with a user message (Gemini requirement)
+      const firstUserIndex = history.findIndex((entry) => entry.role === 'user');
+      const validHistory = firstUserIndex === -1 ? [] : history.slice(firstUserIndex);
+
       const chat = this.model.startChat({
-        history,
+        history: validHistory,
         generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS }
       });
       const result = await chat.sendMessage(message);
