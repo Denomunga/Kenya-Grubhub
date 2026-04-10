@@ -3,16 +3,43 @@ import { BankReconciliationService } from '../services/bankReconciliationService
 
 export class BankReconciliationController {
   static async uploadStatement(req: Request, res: Response) {
-    try {
-      const file = (req as any).file;
-      if (!file) return res.status(400).json({ success: false, error: 'No file uploaded' });
-      const { bankAccountCode } = req.body;
-      const statement = await BankReconciliationService.uploadStatement(file.buffer, file.originalname, bankAccountCode);
-      res.status(201).json({ success: true, data: statement });
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+  try {
+    const file = (req as any).file;
+    if (!file) {
+      console.warn('⚠️ No file uploaded');
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
     }
+
+    const { bankAccountCode } = req.body;
+    if (!bankAccountCode) {
+      console.warn('⚠️ Missing bankAccountCode');
+      return res.status(400).json({ success: false, error: 'bankAccountCode is required' });
+    }
+
+    console.log(`📄 Processing file: ${file.originalname}, size: ${file.size} bytes, bank account: ${bankAccountCode}`);
+
+    const statement = await BankReconciliationService.uploadStatement(
+      file.buffer,
+      file.originalname,
+      bankAccountCode
+    );
+
+    res.status(201).json({ success: true, data: statement });
+  } catch (error: any) {
+    // 🔴 CRITICAL: Log full error details
+    console.error('❌ BANK RECONCILIATION UPLOAD FAILED:');
+    console.error('Message:', error.message);
+    console.error('Stack:', error.stack);
+    console.error('Request file:', (req as any).file?.originalname);
+    console.error('Request body:', req.body);
+
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
+}
 
   static async autoMatch(req: Request, res: Response) {
     try {
