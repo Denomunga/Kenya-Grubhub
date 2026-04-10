@@ -53,15 +53,24 @@ export class BankReconciliationService {
           }
 
           // Log headers for debugging (first row keys)
-          const headers = Object.keys(results[0]);
-          console.log('📋 CSV Headers detected:', headers);
+const rawHeaders = Object.keys(results[0]);
+console.log('📋 CSV Headers detected:', rawHeaders);
 
-          // Flexible header mapping (case-insensitive)
-          const findColumn = (possibleNames: string[]): string | undefined => {
-            return headers.find(h =>
-              possibleNames.some(name => h.toLowerCase() === name.toLowerCase())
-            );
-          };
+// Clean headers: remove BOM and trim
+const headers = rawHeaders.map(h => h.replace(/^\uFEFF/, '').trim());
+
+// Flexible header mapping (case-insensitive)
+const findColumn = (possibleNames: string[]): string | undefined => {
+  const cleaned = possibleNames.map(n => n.toLowerCase());
+  for (const h of headers) {
+    if (cleaned.includes(h.toLowerCase())) {
+      // Return the original header key from rawHeaders
+      const idx = headers.indexOf(h);
+      return rawHeaders[idx];
+    }
+  }
+  return undefined;
+};
 
           const dateCol = findColumn(['Date', 'date', 'Transaction Date', 'Posted Date']);
           const descCol = findColumn(['Description', 'description', 'Memo', 'Narration']);
