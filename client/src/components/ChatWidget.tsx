@@ -36,12 +36,15 @@ export default function ChatWidget() {
     // Optimistically add user message
     setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
 
-    // Format history for the Gemini API
-    const history = messages.map(msg => ({
-      role: msg.role,
-      parts: [{ text: msg.text }]
-    }));
+    const firstUserIndex = messages.findIndex(msg => msg.role === 'user');
+  // Slice from that index (if found) to exclude any leading model messages
+  const validHistory = firstUserIndex === -1 ? [] : messages.slice(firstUserIndex);
 
+    // Format history for the Gemini API
+    const history = validHistory.map(msg => ({
+    role: msg.role,
+    parts: [{ text: msg.text }]
+  }));
     try {
       const res = await apiFetch('/api/v1/accounting/chat', {
         method: 'POST',
