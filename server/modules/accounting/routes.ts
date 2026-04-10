@@ -9,6 +9,7 @@ import { generalLimiter, authLimiter } from '@shared/middleware/rateLimiter';
 import multer from 'multer'; // ✅ ADD THIS IMPORT
 import { BankReconciliationController } from './controler/bankReconciliationController';
 import { SearchController } from './controler/searchController';
+import { ChatController } from './controler/chatController';
 
 
 
@@ -38,7 +39,12 @@ router.get('/search/entities', requireAuth, SearchController.searchEntities);
 
 
 
-
+// AI Chatbot endpoint
+router.post(
+  '/chat',
+  requireAuth,
+  ChatController.handleChat
+);
 
 
 

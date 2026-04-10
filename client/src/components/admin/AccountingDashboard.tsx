@@ -88,6 +88,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import BankReconciliationTab from '@/components/admin/component/BankReconciliationTab';
+// Example import in your layout
+import ChatWidget from '@/components/ChatWidget';
+
+
+
+
 
 interface AccountingStats {
   totalExpenses: number;
@@ -267,6 +273,7 @@ const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
   const [viewInvoiceDialogOpen, setViewInvoiceDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [submittingInvoice, setSubmittingInvoice] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const { user, isAdmin, isAccountant, isStaff } = useHybridAuth();
 
   useEffect(() => {
@@ -3877,6 +3884,19 @@ const handleSubmitInvoice = async (e: React.FormEvent) => {
     </form>
   </DialogContent>
 </Dialog>
+      {/* Floating AI Chat */}
+      {chatOpen && (
+        <div className="fixed bottom-20 right-6 z-50">
+          <ChatWidget />
+        </div>
+      )}
+      <Button
+        className="fixed bottom-6 right-6 z-50 rounded-full h-12 w-12 shadow-lg"
+        size="icon"
+        onClick={() => setChatOpen(!chatOpen)}
+      >
+        <Send className="h-5 w-5" />
+      </Button>
     </div>
   );
 }
