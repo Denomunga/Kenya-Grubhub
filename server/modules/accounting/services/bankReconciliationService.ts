@@ -15,13 +15,7 @@ const genAI = process.env.GEMINI_API_KEY
   : null;
 const geminiModel = genAI?.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-interface CsvRow {
-  Date: string;
-  Description: string;
-  Debit?: string;
-  Credit?: string;
-  Balance?: string;
-}
+
 
 interface CandidateMatch {
   entityType: 'Invoice' | 'Expense' | 'JournalEntry' | 'Payment';
@@ -37,67 +31,116 @@ export class BankReconciliationService {
    * Parse uploaded CSV file into bank transactions
    */
   static async parseStatementFile(
-    fileBuffer: Buffer,
-    fileType: string
-  ): Promise<{ transactions: any[]; startBalance: number; endBalance: number }> {
-    if (fileType === 'text/csv') {
-      return new Promise((resolve, reject) => {
-        const results: any[] = [];
-        const bufferStream = new PassThrough();
-        bufferStream.end(fileBuffer);
-
-        bufferStream
-          .pipe(csv())
-          .on('data', (row: CsvRow) => results.push(row))
-          .on('end', () => {
-            try {
-              // Normalize header casing
-              const getValue = (row: any, possibleKeys: string[]) => {
-                for (const key of possibleKeys) {
-                  if (row[key] !== undefined) return row[key];
-                }
-                return undefined;
-              };
-
-              const transactions = results.map(row => {
-                const dateStr = getValue(row, ['Date', 'date']);
-                const description = getValue(row, ['Description', 'description']) || '';
-                const debitStr = getValue(row, ['Debit', 'debit']);
-                const creditStr = getValue(row, ['Credit', 'credit']);
-
-                const debit = debitStr ? parseFloat(debitStr) : 0;
-                const credit = creditStr ? parseFloat(creditStr) : 0;
-                const amount = debit || credit || 0;
-                const type = debit ? 'debit' : 'credit';
-
-                return {
-                  date: new Date(dateStr),
-                  description,
-                  amount,
-                  type,
-                };
-              });
-
-              const firstBalance = getValue(results[0] || {}, ['Balance', 'balance']);
-              const lastBalance = getValue(results[results.length - 1] || {}, ['Balance', 'balance']);
-              const startBalance = firstBalance ? parseFloat(firstBalance) : 0;
-              const endBalance = lastBalance ? parseFloat(lastBalance) : 0;
-
-              if (isNaN(startBalance) || isNaN(endBalance)) {
-                throw new Error('Invalid balance values. Ensure CSV contains a "Balance" column.');
-              }
-
-              resolve({ transactions, startBalance, endBalance });
-            } catch (err) {
-              reject(err);
-            }
-          })
-          .on('error', reject);
-      });
-    }
-    throw new Error('Unsupported file type. Please upload CSV.');
+  fileBuffer: Buffer,
+  fileType: string
+): Promise<{ transactions: any[]; startBalance: number; endBalance: number }> {
+  if (fileType !== 'text/csv') {
+    throw new Error('Unsupported file type. Please upload a CSV file.');
   }
 
+  return new Promise((resolve, reject) => {
+    const results: any[] = [];
+    const bufferStream = new PassThrough();
+    bufferStream.end(fileBuffer);
+
+    bufferStream
+      .pipe(csv())
+      .on('data', (row: any) => results.push(row))
+      .on('end', () => {
+        try {
+          if (results.length === 0) {
+            throw new Error('CSV file is empty');
+          }
+
+          // Log headers for debugging (first row keys)
+          const headers = Object.keys(results[0]);
+          console.log('📋 CSV Headers detected:', headers);
+
+          // Flexible header mapping (case-insensitive)
+          const findColumn = (possibleNames: string[]): string | undefined => {
+            return headers.find(h =>
+              possibleNames.some(name => h.toLowerCase() === name.toLowerCase())
+            );
+          };
+
+          const dateCol = findColumn(['Date', 'date', 'Transaction Date', 'Posted Date']);
+          const descCol = findColumn(['Description', 'description', 'Memo', 'Narration']);
+          const debitCol = findColumn(['Debit', 'debit', 'Withdrawal', 'Debit Amount']);
+          const creditCol = findColumn(['Credit', 'credit', 'Deposit', 'Credit Amount']);
+          const balanceCol = findColumn(['Balance', 'balance', 'Running Balance']);
+
+          // Validate required columns
+          if (!dateCol) {
+            throw new Error(`Missing date column. Headers found: ${headers.join(', ')}`);
+          }
+          if (!descCol) {
+            throw new Error(`Missing description column. Headers found: ${headers.join(', ')}`);
+          }
+          if (!debitCol && !creditCol) {
+            throw new Error(`Missing debit/credit column. Headers found: ${headers.join(', ')}`);
+          }
+
+          // Helper to parse date flexibly
+          const parseDate = (dateStr: string): Date => {
+            if (!dateStr) return new Date(NaN); // Invalid Date
+
+            // Try YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+              return new Date(dateStr);
+            }
+            // Try DD/MM/YYYY or MM/DD/YYYY
+            if (dateStr.includes('/')) {
+              const parts = dateStr.split('/');
+              if (parts.length === 3) {
+                // Assume DD/MM/YYYY if first part > 12
+                if (parseInt(parts[0]) > 12) {
+                  return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                }
+                // Assume MM/DD/YYYY
+                return new Date(`${parts[2]}-${parts[0]}-${parts[1]}`);
+              }
+            }
+            // Fallback to native parsing
+            return new Date(dateStr);
+          };
+
+          const transactions = results.map(row => {
+            const dateStr = row[dateCol];
+            const parsedDate = parseDate(dateStr);
+            if (isNaN(parsedDate.getTime())) {
+              throw new Error(`Invalid date format: "${dateStr}". Please use YYYY-MM-DD or DD/MM/YYYY.`);
+            }
+
+            const description = row[descCol] || '';
+            const debit = debitCol ? parseFloat(row[debitCol] || '0') : 0;
+            const credit = creditCol ? parseFloat(row[creditCol] || '0') : 0;
+            const amount = debit || credit || 0;
+            const type = debit ? 'debit' : 'credit';
+
+            return {
+              date: parsedDate,
+              description,
+              amount,
+              type,
+            };
+          });
+
+          // Balance column is optional but useful
+          let startBalance = 0;
+          let endBalance = 0;
+          if (balanceCol) {
+            startBalance = parseFloat(results[0][balanceCol]) || 0;
+            endBalance = parseFloat(results[results.length - 1][balanceCol]) || 0;
+          }
+
+          resolve({ transactions, startBalance, endBalance });
+        } catch (err) {
+          reject(err);
+        }
+      })
+      .on('error', reject);
+  });
+}
   /**
    * Calculate confidence score using heuristics (0-100)
    */
