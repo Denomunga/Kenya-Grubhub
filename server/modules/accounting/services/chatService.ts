@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+
 const MODEL_NAME = "gemini-1.5-flash-001"; // ✅ Use this
 // Alternative: "gemini-1.5-flash-001"
 const MAX_OUTPUT_TOKENS = 1000;
@@ -17,6 +18,12 @@ export class ChatService {
       throw new Error('GEMINI_API_KEY is not configured.');
     }
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+    // Debug: list available models
+    (this.genAI as any).listModels().then((models: any) => {
+      console.log('Available Gemini models:');
+      models.forEach((m: any) => console.log(` - ${m.name} (supported: ${m.supportedGenerationMethods})`));
+    }).catch((err: any) => console.error('Failed to list models:', err));
     this.model = this.genAI.getGenerativeModel({
       model: MODEL_NAME,
       systemInstruction: SYSTEM_INSTRUCTIONS
