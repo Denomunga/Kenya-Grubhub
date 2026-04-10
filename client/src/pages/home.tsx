@@ -8,7 +8,7 @@ import FeaturedProducts from "@/components/home/FeaturedProducts";
 import ProductSearch from "@/components/search/ProductSearch";
 import JobAdvertBanner from "@/components/home/JobAdvertBanner";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, MapPin, Eye, MessageCircle } from "lucide-react";
+import { ArrowRight, Clock, MapPin, Eye, MessageCircle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { SEOMetaTags } from "@/components/seo/SEOMetaTags";
@@ -659,22 +659,46 @@ export default function Home() {
       </motion.section>
     </div>
 
-      {/* Floating AI Chat */}
-      {chatOpen && (
-        <div className="fixed bottom-20 right-6 z-50">
-          <ChatWidget />
-        </div>
-      )}
-      <Button
-        className="fixed bottom-6 right-6 z-50 rounded-full h-12 w-12 shadow-lg"
-        size="icon"
+       {/* AI Chat Widget and Professional Toggle Button */}
+      <AnimatePresence>
+        {chatOpen && (
+          <motion.div
+            className="fixed bottom-24 right-6 z-50"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChatWidget />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Professional AI Assistant Toggle Button */}
+      <motion.button
+        className="fixed bottom-6 right-6 z-50 group flex items-center gap-3 px-5 py-3 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 border border-white/20 backdrop-blur-sm"
         onClick={() => setChatOpen(!chatOpen)}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
       >
-        <MessageCircle className="h-5 w-5" />
-      </Button>
+        {chatOpen ? (
+          <>
+            <X className="h-5 w-5" />
+            <span className="font-medium text-sm hidden sm:inline">Close Assistant</span>
+          </>
+        ) : (
+          <>
+            <MessageCircle className="h-5 w-5" />
+            <span className="font-medium text-sm hidden sm:inline">AI Assistant</span>
+            <span className="absolute -top-1 -right-1 h-3 w-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
+          </>
+        )}
+      </motion.button>
     </>
   );
 }
-
 // Function to fetch news by ID
 
