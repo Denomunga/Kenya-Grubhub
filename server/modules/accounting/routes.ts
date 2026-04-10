@@ -78,6 +78,27 @@ router.get(
   BankReconciliationController.getReconciliationStatus
 );
 
+router.get(
+  '/reconciliation/statement/:statementId',
+  requireAuth,
+  requireRole(['admin', 'accounting_manager', 'accounting_person']),
+  BankReconciliationController.getStatementDetails
+);
+
+router.get(
+  '/reconciliation/statements',
+  requireAuth,
+  requireRole(['admin', 'accounting_manager', 'accounting_person']),
+  BankReconciliationController.getAllStatements
+);
+
+router.post(
+  '/reconciliation/:statementId/finalize',
+  requireAuth,
+  requireRole(['admin', 'accounting_manager']),
+  BankReconciliationController.finalizeReconciliation
+);
+
 
 
 
