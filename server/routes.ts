@@ -45,6 +45,7 @@ import receiptRouter from "./routes/receipt";
 import mpesaRouter from "./routes/mpesa";
 import hrRouter from "./modules/hr";
 import accountingRouter from "./modules/accounting";
+import procurementRouter from "./modules/procurement";
 import { 
   validateThreadAccess, 
   validateThreadParticipation, 
@@ -3345,6 +3346,7 @@ app.delete('/api/menu/:id', requireAuth, async (req: Request, res: Response) => 
 
   app.use("/api/v1/hr", hrRouter.routes);
   app.use("/api/v1/accounting", accountingRouter.routes);
+  app.use("/api/procurement", procurementRouter.routes);
   // POS and Receipt routes are already mounted above with proper middleware
 
   // Test endpoint to verify routes are registering

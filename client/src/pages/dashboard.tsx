@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Bell, Check, CreditCard, DollarSign, LayoutGrid, Mail, MapPin, MapPinned, MoreHorizontal, Newspaper, Phone, Pin, PinOff, Plus, Search, Settings, ShoppingBag, Users, TrendingUp } from "lucide-react";
+import { BarChart3, Bell, Check, CreditCard, DollarSign, LayoutGrid, Mail, MapPin, MapPinned, MoreHorizontal, Newspaper, Package, Phone, Pin, PinOff, Plus, Search, Settings, ShoppingBag, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import NewsletterManager from "@/components/admin/NewsletterManager";
 import NewsManager from "@/components/admin/NewsManager";
@@ -41,6 +41,7 @@ import SocialLinksManager from "@/components/admin/SocialLinksManager";
 import OverviewDashboard from "@/components/admin/OverviewDashboard";
 import HRDashboard from "@/components/admin/HRDashboard";
 import AccountingDashboard from "@/components/admin/AccountingDashboard";
+import { ProcurementDashboard } from "@/features/procurement/pages/ProcurementDashboard";
 
 function playBeep() {
   try {
@@ -1445,6 +1446,14 @@ export default function Dashboard() {
                     {(isAdmin || isAccountant) && <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">PRO</span>}
                   </DropdownMenuItem>
                 )}
+                {(isAdmin || isStaff) && (
+                  <DropdownMenuItem onSelect={() => setActiveTab("procurement")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors">
+                    <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-600">
+                      <Package className="h-4 w-4" />
+                    </div>
+                    <span className="font-medium">Procurement</span>
+                  </DropdownMenuItem>
+                )}
                 {isAdmin && (
                   <>
                     <div className="h-px bg-border my-1.5" />
@@ -1837,6 +1846,11 @@ export default function Dashboard() {
         {(isAdmin || isAccountant) && (
           <TabsContent value="accounting">
             <AccountingDashboard />
+          </TabsContent>
+        )}
+        {(isAdmin || isStaff) && (
+          <TabsContent value="procurement">
+            <ProcurementDashboard />
           </TabsContent>
         )}
       </Tabs>
