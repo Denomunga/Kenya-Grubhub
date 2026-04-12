@@ -56,8 +56,8 @@ export const ProcurementDashboard: React.FC = () => {
   const [inventoryItems, setInventoryItems] = React.useState<any[]>([]);
 
   React.useEffect(() => {
-    apiFetch('/api/inventory?page=1&limit=200').then(res => res.json()).then((r: any) => {
-      const items = Array.isArray(r) ? r : (r.data ?? []);
+    apiFetch('/api/products?limit=200').then(res => res.json()).then((r: any) => {
+      const items = Array.isArray(r) ? r : (r.products ?? r.data ?? []);
       setInventoryItems(items);
     }).catch(() => {});
   }, []);
