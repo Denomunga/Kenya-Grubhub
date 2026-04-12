@@ -4,14 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { apiFetch } from '@/lib/api';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, X } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'model';
   text: string;
 }
 
-export default function ChatWidget() {
+interface ChatWidgetProps {
+  onClose?: () => void;
+}
+
+export default function ChatWidget({ onClose }: ChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([
     { role: 'model', text: "Hello! I'm Boom Assistant. How can I help you today?" }
   ]);
@@ -80,9 +84,14 @@ export default function ChatWidget() {
   };
 
   return (
-    <Card className="w-full max-w-md h-[600px] flex flex-col">
-      <CardHeader>
+    <Card className="w-full max-w-md h-[600px] flex flex-col shadow-2xl border-cyan-200">
+      <CardHeader className="bg-linear-to-r from-cyan-600 to-cyan-700 text-white rounded-t-lg flex flex-row items-center justify-between">
         <CardTitle>Assistant</CardTitle>
+        {onClose && (
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20">
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="flex-1 flex flex-col overflow-hidden p-4">
         <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>

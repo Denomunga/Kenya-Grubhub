@@ -100,7 +100,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
       <div className="fixed bottom-24 right-6 z-50">
         {chatMode === 'user' ? (
           <div className="relative">
-            <ChatWidget />
+            <ChatWidget onClose={closeChat} />
             {canAccessAdmin && (
               <button
                 onClick={() => setChatMode('admin')}
