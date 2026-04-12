@@ -44,6 +44,7 @@ export const ProcurementCard: React.FC<ProcurementCardProps> = ({
   };
 
   const isRequest = item.type === 'request';
+  const isAlert = item.type === 'alert';
   const data = item.data as any;
 
   return (
@@ -74,11 +75,13 @@ export const ProcurementCard: React.FC<ProcurementCardProps> = ({
         </div>
 
         <div className="text-xs text-muted-foreground space-y-0.5">
-          {isRequest ? (
-            <p>Requested: {format(new Date(data.requestDate), 'MMM d, yyyy')}</p>
+          {isAlert ? (
+            <p>Stock: {data.currentStock || data.stock || 0} units</p>
+          ) : isRequest ? (
+            <p>Requested: {data.requestDate ? format(new Date(data.requestDate), 'MMM d, yyyy') : '-'}</p>
           ) : (
             <>
-              <p>Expected: {format(new Date(data.expectedDeliveryDate), 'MMM d, yyyy')}</p>
+              <p>Expected: {data.expectedDeliveryDate ? format(new Date(data.expectedDeliveryDate), 'MMM d, yyyy') : '-'}</p>
               <p>Total: {formatPriceKSHS(data.totalAmount)}</p>
             </>
           )}
