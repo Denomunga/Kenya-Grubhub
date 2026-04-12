@@ -2741,14 +2741,9 @@ export default function HRDashboard() {
           {/* Job Postings */}
           <Card className="border shadow-sm">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Job Postings</CardTitle>
-                  <CardDescription>Manage open positions</CardDescription>
-                </div>
-                <Button size="sm" className="gap-1" onClick={handleCreateJob}>
-                  <Plus className="h-3.5 w-3.5" /> New Position
-                </Button>
+              <div>
+                <CardTitle className="text-base">Job Postings</CardTitle>
+                <CardDescription>Manage open positions</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
