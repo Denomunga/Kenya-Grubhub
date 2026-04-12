@@ -16,9 +16,16 @@ interface AdminChatWidgetProps {
 }
 
 export default function AdminChatWidget({ onClose }: AdminChatWidgetProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', text: "Hello! I'm your admin assistant. I can help you find invoices, bank statements, check inventory, and get sales summaries. What would you like to know?" }
-  ]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem('adminChatHistory');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [{ role: 'model', text: "Hello! I'm your admin assistant. I can help you find invoices, bank statements, check inventory, and get sales summaries. What would you like to know?" }];
+  });
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -27,6 +34,13 @@ export default function AdminChatWidget({ onClose }: AdminChatWidgetProps) {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
+  }, [messages]);
+
+  // Persist chat history to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('adminChatHistory', JSON.stringify(messages));
+    } catch {}
   }, [messages]);
 
   const handleSend = async () => {

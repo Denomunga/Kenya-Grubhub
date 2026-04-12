@@ -13,7 +13,7 @@ interface Message {
 
 export default function ChatWidget() {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', text: "Hello! I'm the KenyaGrubHub Assistant. How can I help you today?" }
+    { role: 'model', text: "Hello! I'm Boom Assistant. How can I help you today?" }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -24,6 +24,13 @@ export default function ChatWidget() {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
+  }, [messages]);
+
+  // Persist chat history to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('userChatHistory', JSON.stringify(messages));
+    } catch {}
   }, [messages]);
 
   const handleSend = async () => {
