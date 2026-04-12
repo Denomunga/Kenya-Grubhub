@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
-import { ShoppingBag, MessageCircle, User, Plus, X } from 'lucide-react';
+import { ShoppingBag, MessageCircle, User, Plus, X, Bot, Shield } from 'lucide-react';
 import { useHybridAuth } from '@/lib/hybrid-auth';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
+import ChatWidget from '@/components/ChatWidget';
+import AdminChatWidget from '@/components/admin/component/AdminChatWidget';
 
 interface FABProps {
   actions?: Array<{
@@ -14,12 +16,38 @@ interface FABProps {
 }
 
 const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
-  const { isAuthenticated } = useHybridAuth();
+  const { isAuthenticated, isAdmin, isStaff, isAccountant } = useHybridAuth();
   const { hasUnread, unreadCount, markAsRead } = useUnreadMessages();
   const [, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [chatMode, setChatMode] = useState<'user' | 'admin' | null>(null);
+
+  const canAccessAdmin = isAdmin || isStaff || isAccountant;
+
+  const openChat = (mode: 'user' | 'admin') => {
+    setChatMode(mode);
+    setIsOpen(false);
+  };
+
+  const closeChat = () => setChatMode(null);
 
   const defaultActions = [
+    ...(isAuthenticated ? [{
+      icon: <Bot className="h-5 w-5" />,
+      label: 'AI Assistant',
+      onClick: () => {
+        openChat('user');
+      },
+      color: 'from-cyan-500 to-cyan-600'
+    }] : []),
+    ...(isAuthenticated && canAccessAdmin ? [{
+      icon: <Shield className="h-5 w-5" />,
+      label: 'Admin AI',
+      onClick: () => {
+        openChat('admin');
+      },
+      color: 'from-emerald-500 to-emerald-600'
+    }] : []),
     {
       icon: <ShoppingBag className="h-5 w-5" />,
       label: 'Browse Menu',
@@ -66,6 +94,40 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
   const displayActions = actions.length > 0 ? actions : defaultActions;
 
   return (
+    <>
+    {/* Chat Widget Overlay */}
+    {chatMode && (
+      <div className="fixed bottom-24 right-6 z-50">
+        {chatMode === 'user' ? (
+          <div className="relative">
+            <ChatWidget />
+            {canAccessAdmin && (
+              <button
+                onClick={() => setChatMode('admin')}
+                className="absolute top-3 right-14 flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-full shadow-md transition-colors"
+                title="Switch to Admin AI"
+              >
+                <Shield className="h-3 w-3" />
+                <span>Admin</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="relative">
+            <AdminChatWidget onClose={closeChat} />
+            <button
+              onClick={() => setChatMode('user')}
+              className="absolute top-3 right-14 flex items-center gap-1.5 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-xs rounded-full shadow-md transition-colors"
+              title="Switch to Customer AI"
+            >
+              <Bot className="h-3 w-3" />
+              <span>User</span>
+            </button>
+          </div>
+        )}
+      </div>
+    )}
+
     <div className="fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-4">
       {/* Action Items */}
       {isOpen && displayActions.map((action, index) => {
@@ -131,6 +193,7 @@ const FloatingActionButton: React.FC<FABProps> = ({ actions = [] }) => {
         <div className="absolute -inset-2 rounded-2xl bg-linear-to-r from-blue-500 to-blue-700 opacity-30 blur-2xl animate-pulse pointer-events-none" />
       </div>
     </div>
+    </>
   );
 };
 
