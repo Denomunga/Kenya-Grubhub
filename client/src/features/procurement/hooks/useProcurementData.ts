@@ -41,7 +41,38 @@ export const useGoodsReceived = () => {
   });
 };
 
-// Mutations
+// Create Mutations
+export const useCreateSupplier = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: (data: any) => procurementApi.createSupplier(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['procurement', 'suppliers'] });
+      toast({ title: 'Supplier created', description: 'New supplier has been added.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Creation failed', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useCreatePurchaseRequest = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: (data: any) => procurementApi.createLowStockRequest(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['procurement', 'requests'] });
+      toast({ title: 'Request created', description: 'Purchase request has been submitted.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Creation failed', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+// Action Mutations
 export const useApproveRequest = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
