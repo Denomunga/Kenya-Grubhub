@@ -227,7 +227,7 @@ export const ProcurementDashboard: React.FC = () => {
                     <SelectTrigger id="r-item"><SelectValue placeholder="Select a product..." /></SelectTrigger>
                     <SelectContent>
                       {inventoryItems.map((item: any) => (
-                        <SelectItem key={item.id} value={item.id}>{item.name} ({item.category || item.id.slice(-6)}) - Stock: {item.stock}</SelectItem>
+                        <SelectItem key={item.id} value={item.id}>{item.name} ({item.category || (item.id || '').slice(-6)}) - Stock: {item.stock}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -336,7 +336,7 @@ export const ProcurementDashboard: React.FC = () => {
                     <TableBody>
                       {requests.map((req) => (
                         <TableRow key={req._id || req.id}>
-                          <TableCell className="font-medium">{req.requestNumber || (req._id || '').slice(-8)}</TableCell>
+                          <TableCell className="font-medium">{req.requestNumber || (req._id || req.id || '').slice(-8)}</TableCell>
                           <TableCell>{req.productName || req.itemName}</TableCell>
                           <TableCell>{req.sku}</TableCell>
                           <TableCell>{req.requestedQuantity || req.quantity}</TableCell>
@@ -401,7 +401,7 @@ export const ProcurementDashboard: React.FC = () => {
                     <TableBody>
                       {orders.map((order) => (
                         <TableRow key={order._id || order.id}>
-                          <TableCell className="font-medium">{order.poNumber || (order._id || '').slice(-8)}</TableCell>
+                          <TableCell className="font-medium">{order.poNumber || (order._id || order.id || '').slice(-8)}</TableCell>
                           <TableCell>{order.supplierId?.name || order.supplierId || '-'}</TableCell>
                           <TableCell>{order.items?.length || 0} item(s)</TableCell>
                           <TableCell>{formatPriceKSHS(order.grandTotal || order.totalAmount || 0)}</TableCell>
