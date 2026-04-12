@@ -23,21 +23,21 @@ import { apiFetch } from '@/lib/api';
 // Helper to map API statuses to Kanban statuses
 const mapRequestToKanban = (req: any): ProcurementStatus => {
   switch (req.status) {
-    case 'PENDING': return 'PENDING_APPROVAL';
-    case 'APPROVED': return 'APPROVED';
-    case 'REJECTED': return 'REJECTED';
+    case 'PENDING': case 'pending_approval': return 'PENDING_APPROVAL';
+    case 'APPROVED': case 'approved': return 'APPROVED';
+    case 'REJECTED': case 'rejected': return 'REJECTED';
     default: return 'PENDING_APPROVAL';
   }
 };
 
 const mapOrderToKanban = (order: any): ProcurementStatus => {
   switch (order.status) {
-    case 'DRAFT': return 'PO_CREATED';
-    case 'SENT': return 'PO_CREATED';
-    case 'CONFIRMED': return 'AWAITING_DELIVERY';
-    case 'SHIPPED': return 'AWAITING_DELIVERY';
-    case 'DELIVERED': return 'INSPECTION';
-    case 'CANCELLED': return 'CANCELLED';
+    case 'DRAFT': case 'draft': return 'PO_CREATED';
+    case 'SENT': case 'sent': return 'PO_CREATED';
+    case 'CONFIRMED': case 'confirmed': return 'AWAITING_DELIVERY';
+    case 'SHIPPED': case 'shipped': return 'AWAITING_DELIVERY';
+    case 'DELIVERED': case 'delivered': return 'INSPECTION';
+    case 'CANCELLED': case 'cancelled': return 'CANCELLED';
     default: return 'PO_CREATED';
   }
 };
@@ -77,9 +77,9 @@ export const ProcurementDashboard: React.FC = () => {
     if (Array.isArray(requests)) {
       requests.forEach((req: any) => {
         // Only show pending/approved requests that aren't converted yet
-        if (req.status !== 'CONVERTED') {
+        if (req.status !== 'CONVERTED' && req.status !== 'converted_to_po') {
           items.push({
-            id: req.id,
+            id: req._id || req.id,
             type: 'request',
             status: mapRequestToKanban(req),
             data: req,
@@ -91,7 +91,7 @@ export const ProcurementDashboard: React.FC = () => {
     if (Array.isArray(orders)) {
       orders.forEach((order: any) => {
         items.push({
-          id: order.id,
+          id: order._id || order.id,
           type: 'order',
           status: mapOrderToKanban(order),
           data: order,
@@ -354,10 +354,10 @@ export const ProcurementDashboard: React.FC = () => {
                           <TableCell className="text-right">
                             {permissions.canApproveRequest && req.status === 'pending_approval' && (
                               <div className="flex gap-1 justify-end">
-                                <Button size="sm" variant="ghost" onClick={() => approveRequestMutation.mutate({ id: req._id || req.id })}>
+                                <Button size="sm" variant="ghost" onClick={() => approveRequestMutation.mutate({ id: String(req._id || req.id || '') })}>
                                   <CheckCircle className="h-4 w-4 text-green-600" />
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => rejectRequestMutation.mutate({ id: req._id || req.id, reason: 'Rejected by manager' })}>
+                                <Button size="sm" variant="ghost" onClick={() => rejectRequestMutation.mutate({ id: String(req._id || req.id || ''), reason: 'Rejected by manager' })}>
                                   <XCircle className="h-4 w-4 text-red-600" />
                                 </Button>
                               </div>
@@ -413,12 +413,12 @@ export const ProcurementDashboard: React.FC = () => {
                           <TableCell>{order.expectedDeliveryDate ? new Date(order.expectedDeliveryDate).toLocaleDateString() : '-'}</TableCell>
                           <TableCell className="text-right">
                             {permissions.canConfirmPO && order.status === 'draft' && (
-                              <Button size="sm" variant="ghost" onClick={() => confirmPOMutation.mutate(order._id || order.id)}>
+                              <Button size="sm" variant="ghost" onClick={() => confirmPOMutation.mutate(String(order._id || order.id || ''))}>
                                 <CheckCircle className="h-4 w-4 text-green-600" />
                               </Button>
                             )}
                             {permissions.canConfirmPO && !['received', 'cancelled'].includes(order.status) && order.status !== 'draft' && (
-                              <Button size="sm" variant="ghost" onClick={() => cancelPOMutation.mutate({ id: order._id || order.id, reason: 'Cancelled by manager' })}>
+                              <Button size="sm" variant="ghost" onClick={() => cancelPOMutation.mutate({ id: String(order._id || order.id || ''), reason: 'Cancelled by manager' })}>
                                 <XCircle className="h-4 w-4 text-red-600" />
                               </Button>
                             )}
