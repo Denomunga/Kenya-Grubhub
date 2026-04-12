@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Truck, Eye, Ban, FileText } from 'lucide-react';
+import { CheckCircle, XCircle, Truck, Eye, Ban, FileText, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { KanbanItem } from '../../types';
 import { formatPriceKSHS } from '@/lib/format';
@@ -18,6 +18,7 @@ interface ProcurementCardProps {
   onConfirm?: () => void;
   onCancel?: () => void;
   onCreatePO?: () => void;
+  onCreateRequest?: () => void;
   onClick?: () => void;
 }
 
@@ -29,6 +30,7 @@ export const ProcurementCard: React.FC<ProcurementCardProps> = ({
   onConfirm,
   onCancel,
   onCreatePO,
+  onCreateRequest,
   onClick,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -61,13 +63,13 @@ export const ProcurementCard: React.FC<ProcurementCardProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs font-mono">
-                {isRequest ? `PR #${(item.id || '').slice(-6)}` : `PO #${data.poNumber}`}
+                {item.status === 'LOW_STOCK_ALERT' ? 'LOW STOCK' : isRequest ? `PR #${(item.id || '').slice(-6)}` : `PO #${data.poNumber}`}
               </Badge>
               <Badge variant="secondary" className="text-xs">
                 {data.quantity} {data.unit}
               </Badge>
             </div>
-            <p className="text-sm font-medium">{data.itemName}</p>
+            <p className="text-sm font-medium">{data.itemName || data.productName || data.name}</p>
           </div>
         </div>
 
@@ -151,6 +153,17 @@ export const ProcurementCard: React.FC<ProcurementCardProps> = ({
             >
               <FileText className="h-3 w-3 mr-1" />
               Create PO
+            </Button>
+          )}
+          {onCreateRequest && (
+            <Button
+              size="sm"
+              variant="default"
+              className="h-7 text-xs w-full"
+              onClick={(e) => { e.stopPropagation(); onCreateRequest(); }}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Create Request
             </Button>
           )}
         </div>

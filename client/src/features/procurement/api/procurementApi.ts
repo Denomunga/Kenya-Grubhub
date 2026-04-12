@@ -15,6 +15,7 @@ export const procurementApi = {
 
   // Purchase Requests
   getPurchaseRequests: () => apiFetch(`${BASE}/purchase-requests`).then(res => res.json()).then((r: any) => r.data ?? []),
+  getLowStockItems: (threshold?: number) => apiFetch(`${BASE}/low-stock-items?threshold=${threshold || 10}`).then(res => res.json()).then((r: any) => r.data ?? []),
   createLowStockRequest: (data: any) =>
     apiFetch(`${BASE}/purchase-requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()),
   approveRequest: (id: string, notes?: string) =>

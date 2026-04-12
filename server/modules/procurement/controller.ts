@@ -187,6 +187,22 @@ export class PurchaseRequestController {
     }
   }
 
+  
+  static async getLowStockItems(req: Request, res: Response, next: NextFunction) {
+    try {
+      const threshold = parseInt(req.query.threshold as string) || 10;
+      const items = await PurchaseRequestService.getLowStockItems(threshold);
+      
+      res.json({
+        success: true,
+        data: items,
+        count: items.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async rejectPurchaseRequest(req: Request, res: Response, next: NextFunction) {
     try {
       const errors = validationResult(req);

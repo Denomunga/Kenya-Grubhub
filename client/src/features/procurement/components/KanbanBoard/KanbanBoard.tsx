@@ -12,6 +12,7 @@ interface KanbanBoardProps {
   onSupplierClick: (supplierId: string) => void;
   onItemClick?: (item: KanbanItem) => void;
   onCreatePO?: (item: KanbanItem) => void;
+  onCreateRequest?: (item: KanbanItem) => void;
 }
 
 const COLUMNS: { id: ProcurementStatus; title: string; color: string }[] = [
@@ -24,7 +25,7 @@ const COLUMNS: { id: ProcurementStatus; title: string; color: string }[] = [
   { id: 'COMPLETED', title: 'Completed', color: 'bg-green-50 dark:bg-green-950/20' },
 ];
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ items, onSupplierClick, onItemClick }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ items, onSupplierClick, onItemClick, onCreatePO, onCreateRequest }) => {
   const permissions = useProcurementPermissions();
   const approveMutation = useApproveRequest();
   const rejectMutation = useRejectRequest();
@@ -86,6 +87,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ items, onSupplierClick
                       : undefined
                   }
                   onClick={() => onItemClick?.(item)}
+                  onCreateRequest={
+                    onCreateRequest && item.status === 'LOW_STOCK_ALERT'
+                      ? () => onCreateRequest(item)
+                      : undefined
+                  }
+                  onCreatePO={
+                    onCreatePO && item.type === 'request' && item.status === 'APPROVED'
+                      ? () => onCreatePO(item)
+                      : undefined
+                  }
                 />
               ))}
             </KanbanColumn>

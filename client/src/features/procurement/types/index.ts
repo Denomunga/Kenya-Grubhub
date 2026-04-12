@@ -65,9 +65,26 @@ export interface GoodsReceived {
   notes?: string;
 }
 
+export interface LowStockAlert {
+  id: string;
+  _id?: string;
+  productName: string;
+  name?: string;
+  currentStock: number;
+  stock?: number;
+  minimumStock: number;
+  category?: string;
+  sku?: string;
+  unit?: string;
+  type: 'low_stock_alert';
+  requestDate?: string;
+  quantity?: number;
+  itemName?: string;
+}
+
 export interface KanbanItem {
   id: string;
-  type: 'request' | 'order';
+  type: 'request' | 'order' | 'alert';
   status: ProcurementStatus;
-  data: PurchaseRequest | PurchaseOrder;
+  data: PurchaseRequest | PurchaseOrder | LowStockAlert;
 }

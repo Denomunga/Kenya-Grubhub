@@ -16,7 +16,7 @@ import { KanbanItem, ProcurementStatus } from '../types';
 import { LayoutGrid, BarChart3, Truck, ClipboardList, Plus, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useApproveRequest, useRejectRequest, useConfirmPO, useCancelPO, useCreateSupplier, useCreatePurchaseRequest, useCreatePurchaseOrder, useSuppliers } from '../hooks/useProcurementData';
+import { useApproveRequest, useRejectRequest, useConfirmPO, useCancelPO, useCreateSupplier, useCreatePurchaseRequest, useCreatePurchaseOrder, useSuppliers, useLowStockItems } from '../hooks/useProcurementData';
 import { formatPriceKSHS } from '@/lib/format';
 import { apiFetch } from '@/lib/api';
 
@@ -47,6 +47,7 @@ export const ProcurementDashboard: React.FC = () => {
   const { data: requests, isLoading: requestsLoading } = usePurchaseRequests();
   const { data: orders, isLoading: ordersLoading } = usePurchaseOrders();
   const { data: suppliers } = useSuppliers();
+  const { data: lowStockItems, isLoading: lowStockLoading } = useLowStockItems();
   
   const createSupplierMutation = useCreateSupplier();
   const createRequestMutation = useCreatePurchaseRequest();
@@ -79,6 +80,23 @@ export const ProcurementDashboard: React.FC = () => {
   const kanbanItems: KanbanItem[] = React.useMemo(() => {
     const items: KanbanItem[] = [];
     
+    // Add low stock alerts first
+    if (Array.isArray(lowStockItems)) {
+      lowStockItems.forEach((item: any) => {
+        items.push({
+          id: item._id || item.id,
+          type: 'alert',
+          status: 'LOW_STOCK_ALERT',
+          data: {
+            ...item,
+            requestDate: new Date(),
+            quantity: item.currentStock || item.stock,
+            itemName: item.productName || item.name,
+          },
+        });
+      });
+    }
+    
     if (Array.isArray(requests)) {
       requests.forEach((req: any) => {
         // Only show pending/approved requests that aren't converted yet
@@ -107,7 +125,7 @@ export const ProcurementDashboard: React.FC = () => {
     return items;
   }, [requests, orders]);
 
-  const loading = requestsLoading || ordersLoading;
+  const loading = requestsLoading || ordersLoading || lowStockLoading;
 
   if (!permissions.canViewProcurement) {
     return (
@@ -305,6 +323,15 @@ export const ProcurementDashboard: React.FC = () => {
               items={kanbanItems}
               onSupplierClick={setSelectedSupplierId}
               onCreatePO={(item) => { setSelectedRequestForPO(item.data); setCreatePODialogOpen(true); }}
+              onCreateRequest={(item: any) => {
+                setRequestForm({
+                  inventoryItemId: item.id || item._id,
+                  requestedQuantity: Math.max(10 - (item.currentStock || item.data?.currentStock || 0), 10),
+                  priority: 'high',
+                  notes: 'Auto-created from low stock alert'
+                });
+                setRequestDialogOpen(true);
+              }}
               onItemClick={(item) => {
                 if (item.type === 'request') setActiveTab('requests');
                 else setActiveTab('orders');

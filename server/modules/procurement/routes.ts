@@ -72,6 +72,12 @@ router.get('/purchase-requests',
   PurchaseRequestController.getPurchaseRequests
 );
 
+// Get low stock items
+router.get('/low-stock-items',
+  generalLimiter,
+  PurchaseRequestController.getLowStockItems
+);
+
 // Create purchase request (triggered by low stock)
 router.post('/purchase-requests',
   authLimiter,

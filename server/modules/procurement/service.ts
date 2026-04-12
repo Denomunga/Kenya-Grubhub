@@ -214,6 +214,47 @@ export class PurchaseRequestService {
       throw new Error(`Failed to reject request: ${error?.message || String(error)}`);
     }
   }
+
+  /**
+   * Get inventory items with low stock that don't have pending purchase requests
+   */
+  static async getLowStockItems(threshold: number = 10) {
+    try {
+      // Get all products with stock below threshold
+      const lowStockProducts = await Product.find({ stock: { $lt: threshold } });
+      
+      // Get IDs of products that already have pending/approved purchase requests
+      const existingRequests = await PurchaseRequest.find({
+        status: { $in: ['pending_approval', 'approved'] },
+        inventoryItemId: { $in: lowStockProducts.map(p => p._id) }
+      });
+      
+      const requestedProductIds = new Set(
+        existingRequests.map(r => r.inventoryItemId.toString())
+      );
+      
+      // Filter out products that already have requests
+      const alerts = lowStockProducts
+        .filter(p => !requestedProductIds.has(p._id.toString()))
+        .map(p => ({
+          _id: p._id,
+          id: p._id.toString(),
+          productName: p.name,
+          name: p.name,
+          currentStock: p.stock || 0,
+          stock: p.stock || 0,
+          minimumStock: threshold,
+          category: p.category,
+          sku: p._id.toString().slice(-8).toUpperCase(),
+          unit: 'pcs',
+          type: 'low_stock_alert'
+        }));
+      
+      return alerts;
+    } catch (error: any) {
+      throw new Error(`Failed to get low stock items: ${error?.message || String(error)}`);
+    }
+  }
 }
 
 // ============================================================

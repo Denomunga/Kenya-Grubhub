@@ -57,6 +57,14 @@ export const useCreateSupplier = () => {
   });
 };
 
+
+export const useLowStockItems = (threshold?: number) => {
+  return useQuery({
+    queryKey: ['procurement', 'lowStock', threshold],
+    queryFn: () => procurementApi.getLowStockItems(threshold),
+  });
+};
+
 export const useCreatePurchaseOrder = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
