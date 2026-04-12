@@ -143,7 +143,7 @@ const SearchInvoicesSchema = z.object({
   status: z.enum(['unpaid', 'paid', 'overdue', 'partial']).optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  limit: z.number().min(1).max(50).default(10),
+  limit: z.coerce.number().min(1).max(50).default(10),
 });
 
 const GetBankStatementsSchema = z.object({
@@ -156,8 +156,8 @@ const GetBankStatementsSchema = z.object({
 const SearchInventorySchema = z.object({
   query: z.string().optional(),
   category: z.string().optional(),
-  lowStock: z.boolean().optional(),
-  limit: z.number().min(1).max(100).default(20),
+  lowStock: z.coerce.boolean().optional(),
+  limit: z.coerce.number().min(1).max(100).default(20),
 });
 
 const GetSalesSummarySchema = z.object({
@@ -169,27 +169,27 @@ const GetOrdersSchema = z.object({
   status: z.enum(['Pending', 'Preparing', 'Ready', 'Delivered', 'Cancelled']).optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  limit: z.number().min(1).max(100).default(20),
+  limit: z.coerce.number().min(1).max(100).default(20),
 });
 
 const GetProductCatalogSchema = z.object({
   query: z.string().optional(),
   category: z.string().optional(),
-  available: z.boolean().optional(),
-  includeValue: z.boolean().optional(),
-  limit: z.number().min(1).max(100).default(30),
+  available: z.coerce.boolean().optional(),
+  includeValue: z.coerce.boolean().optional(),
+  limit: z.coerce.number().min(1).max(100).default(30),
 });
 
 const GetDashboardKPIsSchema = z.object({
-  includeInventoryValue: z.boolean().optional(),
-  includeTopProducts: z.boolean().optional(),
+  includeInventoryValue: z.coerce.boolean().optional(),
+  includeTopProducts: z.coerce.boolean().optional(),
 });
 
 const GetPOSSalesSchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   groupBy: z.enum(['day', 'product', 'category']).default('day'),
-  limit: z.number().min(1).max(100).default(20),
+  limit: z.coerce.number().min(1).max(100).default(20),
 });
 
 // ========== CHAT SERVICE CLASS ==========

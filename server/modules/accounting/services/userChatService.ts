@@ -74,9 +74,9 @@ const userTools = [
 const BrowseMenuSchema = z.object({
   query: z.string().optional(),
   category: z.string().optional(),
-  maxPrice: z.number().optional(),
-  available: z.boolean().optional(),
-  limit: z.number().min(1).max(50).default(15),
+  maxPrice: z.coerce.number().optional(),
+  available: z.coerce.boolean().optional(),
+  limit: z.coerce.number().min(1).max(50).default(15),
 });
 
 const GetProductDetailsSchema = z.object({
