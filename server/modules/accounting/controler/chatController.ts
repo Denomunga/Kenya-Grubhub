@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ChatService } from '../services/chatService';
+import { UserChatService } from '../services/userChatService';
 
 export class ChatController {
   static async handleChat(req: Request, res: Response) {
@@ -9,7 +9,7 @@ export class ChatController {
         return res.status(400).json({ success: false, error: 'Message is required' });
       }
       const userId = (req as any).user?.id || 'anonymous';
-      const chatService = new ChatService(userId);
+      const chatService = new UserChatService(userId);
       const response = await chatService.sendMessage(message, history || []);
       res.json({ success: true, response });
     } catch (error: any) {
