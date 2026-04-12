@@ -30,6 +30,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { formatPriceKSHS } from '@/lib/format';
+import { apiFetch } from '@/lib/api';
 
 // ─── Mini Sparkline ─────────────────────────────────────────────────────────
 function MiniSparkline({ data, color = 'currentColor', height = 32, width = 80 }: {
@@ -148,6 +149,25 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
   } = props;
 
   const [salesTrendPeriod, setSalesTrendPeriod] = React.useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [accountingStats, setAccountingStats] = React.useState<any>(null);
+
+  // Fetch accounting stats for real profit calculation
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await apiFetch('/api/v1/accounting/stats');
+        if (res.ok) {
+          const data = await res.json();
+          setAccountingStats(data.data);
+        }
+      } catch (e) {
+        // Accounting stats not available - will use estimated profit
+      }
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 60000);
+    return () => clearInterval(interval);
+  }, []);
   const [autoRefreshCountdown, setAutoRefreshCountdown] = React.useState(300);
 
   // Auto-refresh countdown
@@ -502,10 +522,10 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl font-bold text-emerald-600">
-              {formatPriceKSHS(Math.round(totalRevenue * 0.6))}
+              {formatPriceKSHS(Math.round(accountingStats?.profit ?? accountingStats?.netIncome ?? (totalRevenue - (accountingStats?.totalExpenses ?? totalRevenue * 0.4))))}
             </div>
             <div className="flex items-center gap-1 mt-1">
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">~60% margin</Badge>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{accountingStats?.profitMargin ? `${accountingStats.profitMargin.toFixed(1)}% margin` : "~60% est."}</Badge>
             </div>
           </CardContent>
         </Card>
@@ -518,10 +538,10 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl font-bold text-red-600">
-              {formatPriceKSHS(Math.round(totalRevenue * 0.4))}
+              {formatPriceKSHS(Math.round(accountingStats?.totalExpenses ?? totalRevenue * 0.4))}
             </div>
             <div className="flex items-center gap-1 mt-1">
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">~40% of revenue</Badge>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{accountingStats?.totalExpenses ? `${((accountingStats.totalExpenses / (accountingStats.totalRevenue || totalRevenue)) * 100).toFixed(0)}% of revenue` : "~40% est."}</Badge>
             </div>
           </CardContent>
         </Card>
