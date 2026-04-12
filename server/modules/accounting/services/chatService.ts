@@ -166,7 +166,7 @@ export class ChatService {
 
     const chat = this.geminiModel.startChat({
       history: validHistory,
-      tools: adminTools,
+      tools: [{ functionDeclarations: adminTools }],
       generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS },
     });
 
@@ -200,7 +200,7 @@ export class ChatService {
   // ========== GROQ FALLBACK (Prompt-based) ==========
   private async callGroqWithPrompt(message: string, history: any[]): Promise<string> {
     const groqHistory = history.map(msg => ({
-      role: msg.role,
+      role: msg.role === 'model' ? 'assistant' : msg.role,
       content: msg.parts?.[0]?.text || '',
     }));
 
