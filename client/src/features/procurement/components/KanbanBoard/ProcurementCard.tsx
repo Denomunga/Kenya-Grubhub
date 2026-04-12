@@ -59,7 +59,7 @@ export const ProcurementCard: React.FC<ProcurementCardProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs font-mono">
-                {isRequest ? `PR #${item.id.slice(-6)}` : `PO #${data.poNumber}`}
+                {isRequest ? `PR #${(item.id || '').slice(-6)}` : `PO #${data.poNumber}`}
               </Badge>
               <Badge variant="secondary" className="text-xs">
                 {data.quantity} {data.unit}
