@@ -64,7 +64,7 @@ const adminTools = [
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        query: { type: SchemaType.STRING, description: 'Product name or SKU' },
+        query: { type: SchemaType.STRING, description: 'Product name' },
         category: { type: SchemaType.STRING, description: 'Product category' },
         lowStock: { type: SchemaType.BOOLEAN, description: 'If true, only show items with stock below reorder level' },
         limit: { type: SchemaType.NUMBER, description: 'Maximum results (default 20)' },
@@ -296,13 +296,19 @@ export class ChatService {
     // Add a system prompt that instructs the model how to format responses
     const toolPrompt = `
 You have access to the following functions:
-- search_invoices(query?, status?, startDate?, endDate?, limit?)
-- get_bank_statements(bankAccountCode?, startDate, endDate, status?)
-- search_inventory(query?, category?, lowStock?, limit?)
-- get_sales_summary(period, groupBy?)
+- search_invoices(query?, status?, startDate?, endDate?, limit?): Search invoices. status can be: unpaid, paid, overdue, partial
+- get_bank_statements(bankAccountCode?, startDate, endDate, status?): Get bank statements
+- search_inventory(query?, category?, lowStock?, limit?): Search products/inventory. Set lowStock to true to find items with low stock (stock <= 10)
+- get_sales_summary(period, groupBy?): Get sales summary. period: today, yesterday, this_week, last_week, this_month, last_month
+- get_orders(status?, startDate?, endDate?, limit?): Get orders. status: Pending, Preparing, Ready, Delivered, Cancelled
+- get_product_catalog(query?, category?, available?, includeValue?, limit?): Get product catalog with prices and stock values. Set includeValue to true for stock value calculations
+- get_dashboard_kpis(includeInventoryValue?, includeTopProducts?): Get dashboard KPIs like revenue, orders, low stock items, top products
+- get_pos_sales(startDate, endDate, groupBy?, limit?): Get POS sales data. groupBy: day, product, category
+
+IMPORTANT: For boolean params (lowStock, available, includeValue, includeInventoryValue, includeTopProducts), use actual JSON booleans (true/false), NOT strings. For number params (limit), use actual numbers, NOT strings.
 
 If the user asks for information that requires one of these functions, respond with a JSON object like:
-{"function": "search_invoices", "args": {"query": "client name", "status": "unpaid"}}
+{"function": "search_inventory", "args": {"lowStock": true, "limit": 20}}
 
 Otherwise, respond normally. Today's date is ${new Date().toISOString().split('T')[0]}.
 `;
@@ -451,12 +457,12 @@ Otherwise, respond normally. Today's date is ${new Date().toISOString().split('T
     if (args.query) {
       filter.$or = [
         { name: new RegExp(args.query, 'i') },
-        { sku: new RegExp(args.query, 'i') },
+        
       ];
     }
     if (args.category) filter.category = args.category;
     if (args.lowStock) {
-      filter.$expr = { $lt: ['$stockQuantity', '$reorderLevel'] };
+      filter.stock = { $lte: 10 }; // Items with stock <= 10 are considered low stock
     }
 
     const products = await Product.find(filter).limit(args.limit).lean();
@@ -465,10 +471,9 @@ Otherwise, respond normally. Today's date is ${new Date().toISOString().split('T
       products: products.map((p: any) => ({
         id: p._id,
         name: p.name,
-        sku: p.sku,
         category: p.category,
-        stock: p.stockQuantity,
-        reorderLevel: p.reorderLevel,
+        stock: p.stock ?? 0,
+        available: p.available,
         price: p.price,
       })),
     };
