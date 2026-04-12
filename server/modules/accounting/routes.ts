@@ -10,6 +10,7 @@ import multer from 'multer'; // ✅ ADD THIS IMPORT
 import { BankReconciliationController } from './controler/bankReconciliationController';
 import { SearchController } from './controler/searchController';
 import { ChatController } from './controler/chatController';
+import { AdminChatController } from './controler/adminChatController';
 
 
 
@@ -44,6 +45,13 @@ router.post(
   '/chat',
   requireAuth,
   ChatController.handleChat
+);
+
+// Admin AI Chatbot endpoint
+router.post(
+  '/admin/chat',
+  requireAuth,
+  AdminChatController.handleChat
 );
 
 
