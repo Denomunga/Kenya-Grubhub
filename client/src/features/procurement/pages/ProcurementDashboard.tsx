@@ -56,8 +56,8 @@ export const ProcurementDashboard: React.FC = () => {
   const [inventoryItems, setInventoryItems] = React.useState<any[]>([]);
 
   React.useEffect(() => {
-    apiFetch('/api/products?limit=200').then(res => res.json()).then((r: any) => {
-      const items = Array.isArray(r) ? r : (r.products ?? r.data ?? []);
+    apiFetch('/api/menu').then(res => res.json()).then((r: any) => {
+      const items = r.menu ?? [];
       setInventoryItems(items);
     }).catch(() => {});
   }, []);
@@ -227,7 +227,7 @@ export const ProcurementDashboard: React.FC = () => {
                     <SelectTrigger id="r-item"><SelectValue placeholder="Select a product..." /></SelectTrigger>
                     <SelectContent>
                       {inventoryItems.map((item: any) => (
-                        <SelectItem key={item._id} value={item._id}>{item.productName} ({item.sku}) - Stock: {item.currentStock}</SelectItem>
+                        <SelectItem key={item.id} value={item.id}>{item.name} ({item.category || item.id.slice(-6)}) - Stock: {item.stock}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
