@@ -44,7 +44,7 @@ export const ProcurementDashboard: React.FC = () => {
   const kanbanItems: KanbanItem[] = React.useMemo(() => {
     const items: KanbanItem[] = [];
     
-    if (requests) {
+    if (Array.isArray(requests)) {
       requests.forEach((req: any) => {
         // Only show pending/approved requests that aren't converted yet
         if (req.status !== 'CONVERTED') {
@@ -58,7 +58,7 @@ export const ProcurementDashboard: React.FC = () => {
       });
     }
     
-    if (orders) {
+    if (Array.isArray(orders)) {
       orders.forEach((order: any) => {
         items.push({
           id: order.id,
