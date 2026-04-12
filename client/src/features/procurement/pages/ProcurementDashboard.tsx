@@ -304,6 +304,7 @@ export const ProcurementDashboard: React.FC = () => {
             <KanbanBoard
               items={kanbanItems}
               onSupplierClick={setSelectedSupplierId}
+              onCreatePO={(item) => { setSelectedRequestForPO(item.data); setCreatePODialogOpen(true); }}
               onItemClick={(item) => {
                 if (item.type === 'request') setActiveTab('requests');
                 else setActiveTab('orders');

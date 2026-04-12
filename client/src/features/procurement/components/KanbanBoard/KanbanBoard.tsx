@@ -11,6 +11,7 @@ interface KanbanBoardProps {
   items: KanbanItem[];
   onSupplierClick: (supplierId: string) => void;
   onItemClick?: (item: KanbanItem) => void;
+  onCreatePO?: (item: KanbanItem) => void;
 }
 
 const COLUMNS: { id: ProcurementStatus; title: string; color: string }[] = [

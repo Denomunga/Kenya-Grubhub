@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Truck, Eye, Ban } from 'lucide-react';
+import { CheckCircle, XCircle, Truck, Eye, Ban, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { KanbanItem } from '../../types';
 import { formatPriceKSHS } from '@/lib/format';
@@ -17,6 +17,7 @@ interface ProcurementCardProps {
   onReject?: () => void;
   onConfirm?: () => void;
   onCancel?: () => void;
+  onCreatePO?: () => void;
   onClick?: () => void;
 }
 
@@ -27,6 +28,7 @@ export const ProcurementCard: React.FC<ProcurementCardProps> = ({
   onReject,
   onConfirm,
   onCancel,
+  onCreatePO,
   onClick,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -138,6 +140,17 @@ export const ProcurementCard: React.FC<ProcurementCardProps> = ({
             >
               <Ban className="h-3 w-3 mr-1" />
               Cancel
+            </Button>
+          )}
+          {onCreatePO && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs w-full"
+              onClick={(e) => { e.stopPropagation(); onCreatePO(); }}
+            >
+              <FileText className="h-3 w-3 mr-1" />
+              Create PO
             </Button>
           )}
         </div>
