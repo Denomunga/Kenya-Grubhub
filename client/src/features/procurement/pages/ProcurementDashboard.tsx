@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useApproveRequest, useRejectRequest, useConfirmPO, useCancelPO, useCreateSupplier, useCreatePurchaseRequest } from '../hooks/useProcurementData';
 import { formatPriceKSHS } from '@/lib/format';
+import { apiFetch } from '@/lib/api';
 
 // Helper to map API statuses to Kanban statuses
 const mapRequestToKanban = (req: any): ProcurementStatus => {
@@ -52,6 +53,14 @@ export const ProcurementDashboard: React.FC = () => {
   const [requestDialogOpen, setRequestDialogOpen] = React.useState(false);
   const [supplierForm, setSupplierForm] = React.useState({ name: '', email: '', phone: '', address: '', city: '', state: '', zipCode: '', country: 'Kenya', contactPerson: '', contactEmail: '', contactPhone: '', paymentTerms: 'net30' });
   const [requestForm, setRequestForm] = React.useState({ inventoryItemId: '', requestedQuantity: 1, priority: 'medium', notes: '' });
+  const [inventoryItems, setInventoryItems] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    apiFetch('/api/inventory?page=1&limit=200').then(res => res.json()).then((r: any) => {
+      const items = Array.isArray(r) ? r : (r.data ?? []);
+      setInventoryItems(items);
+    }).catch(() => {});
+  }, []);
 
   const approveRequestMutation = useApproveRequest();
   const rejectRequestMutation = useRejectRequest();
@@ -213,8 +222,15 @@ export const ProcurementDashboard: React.FC = () => {
               </DialogHeader>
               <div className="grid gap-3 py-4">
                 <div className="space-y-1">
-                  <Label htmlFor="r-item">Inventory Item ID *</Label>
-                  <Input id="r-item" placeholder="Enter inventory item ID" value={requestForm.inventoryItemId} onChange={e => setRequestForm(f => ({ ...f, inventoryItemId: e.target.value }))} />
+                  <Label htmlFor="r-item">Product *</Label>
+                  <Select value={requestForm.inventoryItemId} onValueChange={v => setRequestForm(f => ({ ...f, inventoryItemId: v }))}>
+                    <SelectTrigger id="r-item"><SelectValue placeholder="Select a product..." /></SelectTrigger>
+                    <SelectContent>
+                      {inventoryItems.map((item: any) => (
+                        <SelectItem key={item._id} value={item._id}>{item.productName} ({item.sku}) - Stock: {item.currentStock}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
