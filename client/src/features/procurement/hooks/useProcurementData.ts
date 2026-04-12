@@ -57,6 +57,22 @@ export const useCreateSupplier = () => {
   });
 };
 
+export const useCreatePurchaseOrder = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: (data: any) => procurementApi.createPurchaseOrder(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['procurement', 'orders'] });
+      queryClient.invalidateQueries({ queryKey: ['procurement', 'requests'] });
+      toast({ title: 'Purchase order created', description: 'PO has been created from the request.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'PO creation failed', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
 export const useCreatePurchaseRequest = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();

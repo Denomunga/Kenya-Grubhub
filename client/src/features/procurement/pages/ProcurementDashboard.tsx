@@ -13,10 +13,10 @@ import { KanbanBoard } from '../components/KanbanBoard/KanbanBoard';
 import { SupplierDrawer } from '../components/SupplierDrawer/SupplierDrawer';
 import { StatsCards } from '@/features/procurement/components/ProcurementStats/StatsCards';
 import { KanbanItem, ProcurementStatus } from '../types';
-import { LayoutGrid, BarChart3, Truck, ClipboardList, Plus, CheckCircle, XCircle } from 'lucide-react';
+import { LayoutGrid, BarChart3, Truck, ClipboardList, Plus, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useApproveRequest, useRejectRequest, useConfirmPO, useCancelPO, useCreateSupplier, useCreatePurchaseRequest } from '../hooks/useProcurementData';
+import { useApproveRequest, useRejectRequest, useConfirmPO, useCancelPO, useCreateSupplier, useCreatePurchaseRequest, useCreatePurchaseOrder, useSuppliers } from '../hooks/useProcurementData';
 import { formatPriceKSHS } from '@/lib/format';
 import { apiFetch } from '@/lib/api';
 
@@ -46,6 +46,7 @@ export const ProcurementDashboard: React.FC = () => {
   const permissions = useProcurementPermissions();
   const { data: requests, isLoading: requestsLoading } = usePurchaseRequests();
   const { data: orders, isLoading: ordersLoading } = usePurchaseOrders();
+  const { data: suppliers } = useSuppliers();
   
   const createSupplierMutation = useCreateSupplier();
   const createRequestMutation = useCreatePurchaseRequest();
@@ -66,6 +67,10 @@ export const ProcurementDashboard: React.FC = () => {
   const rejectRequestMutation = useRejectRequest();
   const confirmPOMutation = useConfirmPO();
   const cancelPOMutation = useCancelPO();
+  const createPOMutation = useCreatePurchaseOrder();
+  const [createPODialogOpen, setCreatePODialogOpen] = React.useState(false);
+  const [selectedRequestForPO, setSelectedRequestForPO] = React.useState<any>(null);
+  const [poSupplierId, setPoSupplierId] = React.useState('');
 
   const [selectedSupplierId, setSelectedSupplierId] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState('kanban');
@@ -362,6 +367,12 @@ export const ProcurementDashboard: React.FC = () => {
                                 </Button>
                               </div>
                             )}
+                            {req.status === 'approved' && (
+                              <Button size="sm" variant="outline" onClick={() => { setSelectedRequestForPO(req); setCreatePODialogOpen(true); }}>
+                                <FileText className="h-4 w-4 mr-1" />
+                                Create PO
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -562,6 +573,48 @@ export const ProcurementDashboard: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Create Purchase Order Dialog */}
+      <Dialog open={createPODialogOpen} onOpenChange={setCreatePODialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create Purchase Order</DialogTitle>
+            <DialogDescription>
+              Create a purchase order from request: {selectedRequestForPO?.requestNumber || ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-4">
+            <div className="space-y-1">
+              <Label>Product</Label>
+              <p className="text-sm font-medium">{selectedRequestForPO?.productName || '-'}</p>
+            </div>
+            <div className="space-y-1">
+              <Label>Quantity</Label>
+              <p className="text-sm font-medium">{selectedRequestForPO?.requestedQuantity || '-'}</p>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="po-supplier">Supplier *</Label>
+              <Select value={poSupplierId} onValueChange={setPoSupplierId}>
+                <SelectTrigger id="po-supplier"><SelectValue placeholder="Select a supplier..." /></SelectTrigger>
+                <SelectContent>
+                  {(suppliers || []).map((s: any) => (
+                    <SelectItem key={s._id || s.id} value={String(s._id || s.id)}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreatePODialogOpen(false)}>Cancel</Button>
+            <Button disabled={!poSupplierId || createPOMutation.isPending} onClick={() => {
+              createPOMutation.mutate(
+                { purchaseRequestId: String(selectedRequestForPO?._id || selectedRequestForPO?.id || ''), supplierId: poSupplierId },
+                { onSuccess: () => { setCreatePODialogOpen(false); setPoSupplierId(''); setSelectedRequestForPO(null); } }
+              );
+            }}>{createPOMutation.isPending ? 'Creating...' : 'Create PO'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Supplier Drawer */}
       <SupplierDrawer
