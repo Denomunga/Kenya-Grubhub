@@ -118,7 +118,7 @@ export const validatePurchaseApproval = [
     .withMessage('Status must be approved or rejected'),
 
   body('rejectionReason')
-    .if((value, { req }) => req.body.status === 'rejected')
+    .if((_value, { req }) => req.body.status === 'rejected')
     .trim()
     .isLength({ min: 1, max: 300 })
     .withMessage('Rejection reason is required and must be between 1 and 300 characters')
@@ -197,7 +197,7 @@ export const validatePOConfirmation = [
     .withMessage('Status must be confirmed or cancelled'),
 
   body('cancellationReason')
-    .if((value, { req }) => req.body.status === 'cancelled')
+    .if((_value, { req }) => req.body.status === 'cancelled')
     .trim()
     .isLength({ min: 1, max: 300 })
     .withMessage('Cancellation reason is required')
