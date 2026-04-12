@@ -6,7 +6,7 @@ import {
   GoodsReceived
 } from './models';
 import { InventoryService } from '../inventory/service';
-import { InventoryItem } from '../inventory/model';
+import { Product } from '../../models/Product';
 import { TransactionService } from '../accounting/service';
 
 /**
@@ -114,24 +114,25 @@ export class PurchaseRequestService {
     priority: string = 'medium'
   ) {
     try {
-      const inventoryItem = await InventoryItem.findById(inventoryItemId);
-      if (!inventoryItem) throw new Error('Inventory item not found');
+      const product = await Product.findById(inventoryItemId);
+      if (!product) throw new Error('Product not found');
 
       // Calculate recommended quantity to bring stock to maximum
-      const recommendedQuantity =
-        (inventoryItem.maximumStock || inventoryItem.minimumStock * 2) - inventoryItem.currentStock;
+      const currentStock = product.stock || 0;
+        const minimumStock = 10;
+        const recommendedQuantity = Math.max(minimumStock * 2 - currentStock, minimumStock);
 
       const requestNumber = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       const purchaseRequest = new PurchaseRequest({
         requestNumber,
         inventoryItemId,
-        productName: inventoryItem.productName,
-        sku: inventoryItem.sku,
-        currentStock: inventoryItem.currentStock,
-        minimumStock: inventoryItem.minimumStock,
-        recommendedQuantity: Math.max(recommendedQuantity, inventoryItem.minimumStock),
-        requestedQuantity: Math.max(recommendedQuantity, inventoryItem.minimumStock),
+        productName: product.name,
+        sku: product._id.toString().slice(-8).toUpperCase(),
+        currentStock,
+        minimumStock,
+        recommendedQuantity,
+        requestedQuantity: recommendedQuantity,
         requestedBy,
         priority,
         requestDate: new Date()
@@ -235,10 +236,10 @@ export class PurchaseOrderService {
       const supplier = await Supplier.findById(supplierId);
       if (!supplier) throw new Error('Supplier not found');
 
-      const inventoryItem = await InventoryItem.findById(purchaseRequest.inventoryItemId);
-      if (!inventoryItem) throw new Error('Inventory item not found');
+      const product = await Product.findById(purchaseRequest.inventoryItemId);
+      if (!product) throw new Error('Product not found');
 
-      const unitPrice = additionalData.unitPrice || inventoryItem.costPrice;
+      const unitPrice = additionalData.unitPrice || product.costPrice || 0;
       const quantity = purchaseRequest.requestedQuantity;
       const totalPrice = unitPrice * quantity;
 
@@ -254,7 +255,7 @@ export class PurchaseOrderService {
             productName: purchaseRequest.productName,
             sku: purchaseRequest.sku,
             quantity,
-            unit: inventoryItem.unit,
+            unit: product.unit || 'pcs',
             unitPrice,
             totalPrice
           }
@@ -390,10 +391,9 @@ export class GoodsReceivedService {
       const supplier = await Supplier.findById(purchaseOrder.supplierId);
       if (!supplier) throw new Error('Supplier not found');
 
-      let totalReceived = 0;
-      let totalRejected = 0;
-
-      // These will be calculated from items
+      // Calculate totals from items
+      const totalReceived = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+      const totalRejected = items.reduce((sum: number, item: any) => sum + (item.rejectedQuantity || 0), 0);
       const grNumber = `GR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       const goodsReceived = new GoodsReceived({
@@ -403,8 +403,8 @@ export class GoodsReceivedService {
         items,
         receivedDate: new Date(),
         receivedBy,
-        totalItemsReceived: items.reduce((sum, item) => sum + item.quantity, 0),
-        totalItemsRejected: items.reduce((sum, item) => sum + (item.rejectedQuantity || 0), 0),
+        totalItemsReceived: totalReceived,
+        totalItemsRejected: totalRejected,
         warehouseLocation,
         status: 'pending_inspection'
       });
