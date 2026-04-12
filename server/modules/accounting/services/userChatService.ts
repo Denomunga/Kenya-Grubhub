@@ -16,9 +16,11 @@ You can help with:
 - "Is [product] available?"
 - "What's the status of my order?"
 - "What categories do you have?"
-- "Show me products under 500 KES"
+- "Show me products under 500 Ksh"
 
-Be friendly, helpful, and concise. Prices are in Kenyan Shillings (KES).`;
+Be friendly, helpful, and concise.
+
+IMPORTANT: All prices are in Kenyan Shillings. Always format prices as "Ksh 500" or "500 Ksh". NEVER use $ or USD. Always use Ksh for any monetary value.`;
 
 // ========== USER-FACING TOOLS ==========
 const userTools = [
@@ -30,7 +32,7 @@ const userTools = [
       properties: {
         query: { type: SchemaType.STRING, description: 'Search term for product name' },
         category: { type: SchemaType.STRING, description: 'Category filter (e.g. Food, Drinks, Snacks)' },
-        maxPrice: { type: SchemaType.NUMBER, description: 'Maximum price filter in KES' },
+        maxPrice: { type: SchemaType.NUMBER, description: 'Maximum price filter in Ksh' },
         available: { type: SchemaType.BOOLEAN, description: 'Only show available items (default true)' },
         limit: { type: SchemaType.NUMBER, description: 'Maximum results (default 15)' },
       },
@@ -337,7 +339,7 @@ Otherwise, respond normally. Today's date is ${new Date().toISOString().split('T
       categories: categories.map((c: any) => ({
         name: c._id,
         itemCount: c.count,
-        priceRange: `${c.minPrice} - ${c.maxPrice} KES`,
+        priceRange: `${c.minPrice} - ${c.maxPrice} Ksh`,
       })),
     };
   }
@@ -372,7 +374,7 @@ Otherwise, respond normally. Today's date is ${new Date().toISOString().split('T
       orders: orders.map((o: any) => ({
         orderId: o._id.toString(),
         status: o.status,
-        items: o.items?.map((i: any) => `${i.name} x${i.quantity} @ ${i.price} KES`),
+        items: o.items?.map((i: any) => `${i.name} x${i.quantity} @ ${i.price} Ksh`),
         total: o.total,
         date: o.createdAt,
         estimatedDelivery: o.status === 'Pending' ? 'Being processed' :

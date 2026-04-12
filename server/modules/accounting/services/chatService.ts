@@ -24,7 +24,9 @@ You can answer questions like:
 - "What are the top selling products?"
 
 You have access to real-time data from orders, products, sales, invoices, bank statements, and inventory.
-Be concise, professional, and only provide information you are authorized to access.`;
+Be concise, professional, and only provide information you are authorized to access.
+
+IMPORTANT: All monetary values are in Kenyan Shillings. Always format prices as "Ksh 500" or "500 Ksh". NEVER use $ or USD. Always use Ksh for any monetary value including revenue, totals, and prices.`;
 
 // ========== FUNCTION DEFINITIONS (Tools) ==========
 const adminTools = [
