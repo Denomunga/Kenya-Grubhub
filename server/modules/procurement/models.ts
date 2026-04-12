@@ -101,7 +101,7 @@ export interface IPurchaseRequest extends Document {
 const PurchaseRequestSchema = new Schema<IPurchaseRequest>(
   {
     requestNumber: { type: String, required: true, unique: true },
-    inventoryItemId: { type: Schema.Types.ObjectId, ref: 'InventoryItem', required: true },
+    inventoryItemId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     productName: { type: String, required: true },
     sku: { type: String, required: true },
     currentStock: { type: Number, required: true },
@@ -181,7 +181,7 @@ const PurchaseOrderSchema = new Schema<IPurchaseOrder>(
     purchaseRequestId: { type: Schema.Types.ObjectId, ref: 'PurchaseRequest' },
     items: [
       {
-        inventoryItemId: { type: Schema.Types.ObjectId, ref: 'InventoryItem', required: true },
+        inventoryItemId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
         productName: { type: String, required: true },
         sku: { type: String, required: true },
         quantity: { type: Number, required: true },
@@ -262,7 +262,7 @@ const GoodsReceivedSchema = new Schema<IGoodsReceived>(
     supplierId: { type: Schema.Types.ObjectId, ref: 'Supplier', required: true },
     items: [
       {
-        inventoryItemId: { type: Schema.Types.ObjectId, ref: 'InventoryItem', required: true },
+        inventoryItemId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
         purchaseOrderItemIndex: { type: Number, required: true },
         quantity: { type: Number, required: true },
         unit: { type: String, required: true },

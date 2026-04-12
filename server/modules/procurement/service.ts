@@ -161,7 +161,7 @@ export class PurchaseRequestService {
 
       const requests = await PurchaseRequest
         .find(query)
-        .populate('inventoryItemId', 'productName sku')
+        .populate('inventoryItemId', 'name')
         .sort({ requestDate: -1 })
         .skip(skip)
         .limit(limit)
