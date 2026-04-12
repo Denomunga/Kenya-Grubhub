@@ -30,6 +30,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { formatPriceKSHS } from '@/lib/format';
+import AdminChatWidget from '@/components/admin/component/AdminChatWidget';
+import { MessageCircle } from 'lucide-react';
 
 // ─── Mini Sparkline ─────────────────────────────────────────────────────────
 function MiniSparkline({ data, color = 'currentColor', height = 32, width = 80 }: {
@@ -149,6 +151,7 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
 
   const [salesTrendPeriod, setSalesTrendPeriod] = React.useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [autoRefreshCountdown, setAutoRefreshCountdown] = React.useState(300);
+  const [chatOpen, setChatOpen] = React.useState(false);
 
   // Auto-refresh countdown
   React.useEffect(() => {
@@ -422,6 +425,7 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
   // ─── Render ───────────────────────────────────────────────────────────
 
   return (
+    <>
     <div className="space-y-6">
       {/* Range selector */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -833,5 +837,20 @@ export default function OverviewDashboard(props: OverviewDashboardProps) {
         </Card>
       </div>
     </div>
+
+      {/* Floating Admin AI Chat */}
+      {chatOpen && (
+        <div className="fixed bottom-24 right-6 z-50">
+          <AdminChatWidget onClose={() => setChatOpen(false)} />
+        </div>
+      )}
+      <button
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all"
+        onClick={() => setChatOpen(!chatOpen)}
+      >
+        <MessageCircle className="h-5 w-5" />
+        <span className="font-medium">Admin AI</span>
+      </button>
+    </>
   );
 }
