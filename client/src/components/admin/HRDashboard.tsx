@@ -25,7 +25,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -56,6 +56,7 @@ import {
   Calculator,
   Download,
   MoreHorizontal,
+  Send,
 } from 'lucide-react';
 import { InsightActionCard, InsightItem } from '@/components/ui/InsightActionCard';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +66,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface EmployeeStats {
   overview: {
@@ -266,12 +273,12 @@ export default function HRDashboard() {
     department: 'Kitchen',
     description: '',
     status: 'open',
-        postedDate: new Date().toISOString(),
-        location: 'Nairobi',                // or add a location field to your form
-        employmentType: 'full_time',
-        requirements: [],
-        salaryRange: { min: 0, max: 0 },
-        closingDate: '',
+    postedDate: new Date().toISOString(),
+    location: 'Nairobi',
+    employmentType: 'full_time',
+    requirements: [] as string[],
+    salaryRange: { min: 0, max: 0 },
+    closingDate: '',
   });
 
   useEffect(() => {
@@ -333,7 +340,6 @@ export default function HRDashboard() {
         if (user?.role === 'admin' || user?.role === 'staff') {
           setContracts(data.data?.contracts || []);
         } else {
-          // For employees, fetch their own contracts
           const employeeContractsRes = await apiFetch('/api/v1/hr/contracts/employee/my');
           if (employeeContractsRes.ok) {
             const employeeData = await employeeContractsRes.json();
@@ -347,7 +353,6 @@ export default function HRDashboard() {
         if (user?.role === 'admin' || user?.role === 'staff') {
           setPayslips(data.data?.payslips || []);
         } else {
-          // For employees, fetch their own payslips
           const employeePayslipsRes = await apiFetch('/api/v1/hr/payslips/employee/my');
           if (employeePayslipsRes.ok) {
             const employeeData = await employeePayslipsRes.json();
@@ -356,7 +361,6 @@ export default function HRDashboard() {
         }
       }
 
-      // Fetch leave requests (admin/HR only)
       if (user?.role === 'admin' || user?.role === 'staff') {
         try {
           const leavesRes = await apiFetch('/api/v1/hr/leaves');
@@ -436,7 +440,6 @@ export default function HRDashboard() {
 
   const activityLogs: ActivityLog[] = useMemo(() => {
     const logs: ActivityLog[] = [];
-    // Generate activity logs from available data
     employees.slice(0, 3).forEach(e => {
       logs.push({
         id: `hire-${e._id}`, type: 'hire',
@@ -519,7 +522,6 @@ export default function HRDashboard() {
         const data = await res.json();
         setPayrollCalcResult(data.data);
       } else {
-        // Use local calculation as fallback
         const emp = employees.find(e => e._id === employeeId);
         if (emp) {
           const basic = emp.salary;
@@ -617,12 +619,12 @@ export default function HRDashboard() {
       department: 'Kitchen',
       description: '',
       status: 'open',
-        postedDate: new Date().toISOString(),
-        location: 'Nairobi',                // or add a location field to your form
-        employmentType: 'full_time',
-        requirements: [],
-        salaryRange: { min: 0, max: 0 },
-        closingDate: '',
+      postedDate: new Date().toISOString(),
+      location: 'Nairobi',
+      employmentType: 'full_time',
+      requirements: [],
+      salaryRange: { min: 0, max: 0 },
+      closingDate: '',
     });
     setCreateJobOpen(true);
   };
@@ -648,7 +650,6 @@ export default function HRDashboard() {
         toast({ title: 'Success', description: 'Employee created successfully' });
         setCreateEmployeeOpen(false);
 
-        // Auto-create contract for the new employee
         if (newEmpId) {
           try {
             await apiFetch('/api/v1/hr/contracts', {
@@ -668,7 +669,6 @@ export default function HRDashboard() {
             console.error('Auto-create contract failed');
           }
 
-          // Auto-generate payslip for current month
           try {
             const now = new Date();
             await apiFetch(`/api/v1/hr/payslips/generate/${newEmpId}`, {
@@ -702,7 +702,7 @@ export default function HRDashboard() {
       if (res.ok) {
         toast({ title: 'Success', description: 'Job posted successfully' });
         setCreateJobOpen(false);
-        fetchHRData(); // Refresh data
+        fetchHRData();
       } else {
         toast({ title: 'Error', description: 'Failed to post job', variant: 'destructive' });
       }
@@ -725,7 +725,6 @@ export default function HRDashboard() {
       salaryRange: { min: 0, max: 0 },
       closingDate: '',
     });
-    // Fetch full job details to populate the form
     apiFetch(`/api/v1/hr/jobs/${job._id}`).then(async (res) => {
       if (res.ok) {
         const data = await res.json();
@@ -1035,7 +1034,7 @@ export default function HRDashboard() {
         toast({ title: 'Success', description: 'Contract offer sent successfully' });
         setContractOfferOpen(false);
         setSelectedContract(null);
-        fetchHRData(); // Refresh data
+        fetchHRData();
       } else {
         toast({ title: 'Error', description: 'Failed to send contract offer', variant: 'destructive' });
       }
@@ -1056,7 +1055,7 @@ export default function HRDashboard() {
         toast({ title: 'Success', description: 'Contract signed successfully' });
         setContractSignOpen(false);
         setSelectedContract(null);
-        fetchHRData(); // Refresh data
+        fetchHRData();
       } else {
         toast({ title: 'Error', description: 'Failed to sign contract', variant: 'destructive' });
       }
@@ -1220,187 +1219,272 @@ export default function HRDashboard() {
   }
 
   return (
-    <div className="w-full space-y-6">
-      {/* ═══════════════════════════════════════════════════════════════════
-          SMART CARDS (4 cards)
-          ═══════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Total Employees */}
-        <Card className="border shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => setActiveTab('employees')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Total Employees</CardTitle>
-            <Users className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-2xl font-bold">{stats?.overview.totalEmployees ?? employees.length}</div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Avg salary: KES {Math.round(stats?.overview.avgSalary ?? 0).toLocaleString()}
-            </p>
-          </CardContent>
-        </Card>
+    <TooltipProvider>
+      <div className="w-full space-y-6">
+        {/* SMART CARDS */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="border shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => setActiveTab('employees')}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Total Employees</CardTitle>
+              <Users className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className="text-2xl font-bold">{stats?.overview.totalEmployees ?? employees.length}</div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Avg salary: KES {Math.round(stats?.overview.avgSalary ?? 0).toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
 
-        {/* Active Staff */}
-        <Card className="border shadow-sm hover:shadow-md transition-all border-emerald-200 bg-emerald-50/50 cursor-pointer" onClick={() => { setActiveTab('employees'); setEmployeeFilter('active'); }}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Active Staff</CardTitle>
-            <UserCheck className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-2xl font-bold text-emerald-700">{stats?.overview.activeEmployees ?? 0}</div>
-            <p className="text-[10px] text-emerald-600 mt-0.5">Currently working</p>
-          </CardContent>
-        </Card>
+          <Card className="border shadow-sm hover:shadow-md transition-all border-emerald-200 bg-emerald-50/50 cursor-pointer" onClick={() => { setActiveTab('employees'); setEmployeeFilter('active'); }}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Active Staff</CardTitle>
+              <UserCheck className="h-4 w-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className="text-2xl font-bold text-emerald-700">{stats?.overview.activeEmployees ?? 0}</div>
+              <p className="text-[10px] text-emerald-600 mt-0.5">Currently working</p>
+            </CardContent>
+          </Card>
 
-        {/* On Leave */}
-        <Card className={`border shadow-sm hover:shadow-md transition-all cursor-pointer ${onLeaveCount > 0 ? 'border-amber-200 bg-amber-50/50' : ''}`} onClick={() => { setActiveTab('employees'); setEmployeeFilter('on_leave'); }}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground">On Leave</CardTitle>
-            <CalendarOff className={`h-4 w-4 ${onLeaveCount > 0 ? 'text-amber-500' : 'text-muted-foreground'}`} />
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className={`text-2xl font-bold ${onLeaveCount > 0 ? 'text-amber-700' : ''}`}>{onLeaveCount}</div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              {onLeaveCount > 0 ? 'Staff on leave today' : 'None on leave'}
-            </p>
-          </CardContent>
-        </Card>
+          <Card className={`border shadow-sm hover:shadow-md transition-all cursor-pointer ${onLeaveCount > 0 ? 'border-amber-200 bg-amber-50/50' : ''}`} onClick={() => { setActiveTab('employees'); setEmployeeFilter('on_leave'); }}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">On Leave</CardTitle>
+              <CalendarOff className={`h-4 w-4 ${onLeaveCount > 0 ? 'text-amber-500' : 'text-muted-foreground'}`} />
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className={`text-2xl font-bold ${onLeaveCount > 0 ? 'text-amber-700' : ''}`}>{onLeaveCount}</div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {onLeaveCount > 0 ? 'Staff on leave today' : 'None on leave'}
+              </p>
+            </CardContent>
+          </Card>
 
-        {/* Open Positions */}
-        <Card className={`border shadow-sm hover:shadow-md transition-all cursor-pointer ${openPositions > 0 ? 'border-blue-200 bg-blue-50/50' : ''}`} onClick={() => setActiveTab('recruitment')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Open Positions</CardTitle>
-            <Briefcase className={`h-4 w-4 ${openPositions > 0 ? 'text-blue-500' : 'text-muted-foreground'}`} />
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className={`text-2xl font-bold ${openPositions > 0 ? 'text-blue-700' : ''}`}>{openPositions}</div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              {recentApplications.length} total applicants
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Data -> Insight -> Action Panel */}
-      <InsightActionCard insights={hrInsights} title="HR Alerts" />
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          ACTION TOOLBAR
-          ═══════════════════════════════════════════════════════════════════ */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" onClick={() => fetchHRData()} className="gap-1.5">
-          <RefreshCw className="h-3.5 w-3.5" />
-          Refresh
-        </Button>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportEmployees}>
-          <Download className="h-3.5 w-3.5" />
-          Export Employees
-        </Button>
-        <div className="ml-auto text-xs text-muted-foreground">
-          {employees.length} employees &middot; {recentJobs.length} jobs &middot; {recentApplications.length} applicants
+          <Card className={`border shadow-sm hover:shadow-md transition-all cursor-pointer ${openPositions > 0 ? 'border-blue-200 bg-blue-50/50' : ''}`} onClick={() => setActiveTab('recruitment')}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Open Positions</CardTitle>
+              <Briefcase className={`h-4 w-4 ${openPositions > 0 ? 'text-blue-500' : 'text-muted-foreground'}`} />
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className={`text-2xl font-bold ${openPositions > 0 ? 'text-blue-700' : ''}`}>{openPositions}</div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {recentApplications.length} total applicants
+              </p>
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
-      {/* Payroll Auto-Calculation Dialog */}
-      <Dialog open={payrollCalcOpen} onOpenChange={setPayrollCalcOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Payroll Auto-Calculation</DialogTitle>
-            <DialogDescription>
-              {payrollCalcResult ? `Monthly payroll breakdown for ${payrollCalcResult.employeeName}` : 'Calculating...'}
-            </DialogDescription>
-          </DialogHeader>
-          {payrollCalcResult && (
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm border-b pb-2">
-                <span className="text-muted-foreground">Basic Salary</span>
-                <span className="font-mono font-medium">KES {payrollCalcResult.basicSalary.toLocaleString()}</span>
-              </div>
-              {payrollCalcResult.allowances.map((a, i) => (
-                <div key={i} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">+ {a.type}</span>
-                  <span className="font-mono text-emerald-600">{a.amount.toLocaleString()}</span>
-                </div>
-              ))}
-              <div className="flex justify-between text-sm border-t pt-2 font-medium">
-                <span>Gross Pay</span>
-                <span className="font-mono">KES {payrollCalcResult.grossPay.toLocaleString()}</span>
-              </div>
-              {payrollCalcResult.deductions.map((d, i) => (
-                <div key={i} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">- {d.type}</span>
-                  <span className="font-mono text-red-600">{d.amount.toLocaleString()}</span>
-                </div>
-              ))}
-              <div className="flex justify-between text-sm border-t pt-2 font-medium">
-                <span>Total Deductions</span>
-                <span className="font-mono text-red-600">KES {payrollCalcResult.totalDeductions.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-base border-t-2 pt-2 font-bold">
-                <span>Net Pay</span>
-                <span className="font-mono text-emerald-700">KES {payrollCalcResult.netPay.toLocaleString()}</span>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        <InsightActionCard insights={hrInsights} title="HR Alerts" />
 
-      {/* Create Employee Dialog */}
-      <Dialog open={createEmployeeOpen} onOpenChange={setCreateEmployeeOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Employee</DialogTitle>
-            <DialogDescription>Add a new employee to the system</DialogDescription>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={handleSubmitEmployee}>
-            <div className="grid grid-cols-2 gap-4">
+        {/* ACTION TOOLBAR */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => fetchHRData()} className="gap-1.5">
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refresh
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Refresh all data</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportEmployees}>
+                <Download className="h-3.5 w-3.5" />
+                Export Employees
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Export as CSV</TooltipContent>
+          </Tooltip>
+          <div className="ml-auto text-xs text-muted-foreground">
+            {employees.length} employees · {recentJobs.length} jobs · {recentApplications.length} applicants
+          </div>
+        </div>
+
+        {/* Payroll Auto-Calculation Dialog */}
+        <Dialog open={payrollCalcOpen} onOpenChange={setPayrollCalcOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Payroll Auto-Calculation</DialogTitle>
+              <DialogDescription>
+                {payrollCalcResult ? `Monthly payroll breakdown for ${payrollCalcResult.employeeName}` : 'Calculating...'}
+              </DialogDescription>
+            </DialogHeader>
+            {payrollCalcResult && (
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm border-b pb-2">
+                  <span className="text-muted-foreground">Basic Salary</span>
+                  <span className="font-mono font-medium">KES {payrollCalcResult.basicSalary.toLocaleString()}</span>
+                </div>
+                {payrollCalcResult.allowances.map((a, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">+ {a.type}</span>
+                    <span className="font-mono text-emerald-600">{a.amount.toLocaleString()}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-sm border-t pt-2 font-medium">
+                  <span>Gross Pay</span>
+                  <span className="font-mono">KES {payrollCalcResult.grossPay.toLocaleString()}</span>
+                </div>
+                {payrollCalcResult.deductions.map((d, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">- {d.type}</span>
+                    <span className="font-mono text-red-600">{d.amount.toLocaleString()}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-sm border-t pt-2 font-medium">
+                  <span>Total Deductions</span>
+                  <span className="font-mono text-red-600">KES {payrollCalcResult.totalDeductions.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-base border-t-2 pt-2 font-bold">
+                  <span>Net Pay</span>
+                  <span className="font-mono text-emerald-700">KES {payrollCalcResult.netPay.toLocaleString()}</span>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Employee Dialog */}
+        <Dialog open={createEmployeeOpen} onOpenChange={setCreateEmployeeOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create New Employee</DialogTitle>
+              <DialogDescription>Add a new employee to the system</DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={handleSubmitEmployee}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">First Name</label>
+                  <Input
+                    placeholder="John"
+                    value={employeeForm.firstName}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, firstName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Last Name</label>
+                  <Input
+                    placeholder="Doe"
+                    value={employeeForm.lastName}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, lastName: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
               <div>
-                <label className="text-sm font-medium">First Name</label>
+                <label className="text-sm font-medium">Email</label>
                 <Input
-                  placeholder="John"
-                  value={employeeForm.firstName}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, firstName: e.target.value })}
+                  type="email"
+                  placeholder="john@company.com"
+                  value={employeeForm.email}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
                   required
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Last Name</label>
+                <label className="text-sm font-medium">Phone</label>
                 <Input
-                  placeholder="Doe"
-                  value={employeeForm.lastName}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, lastName: e.target.value })}
+                  placeholder="+254700000000"
+                  value={employeeForm.phone}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })}
                   required
                 />
               </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Email</label>
-              <Input
-                type="email"
-                placeholder="john@company.com"
-                value={employeeForm.email}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Phone</label>
-              <Input
-                placeholder="+254700000000"
-                value={employeeForm.phone}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })}
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Department</label>
+                  <Input
+                    list="dept-suggestions"
+                    placeholder="Type or select department"
+                    value={employeeForm.department}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })}
+                  />
+                  <datalist id="dept-suggestions">
+                    <option value="Kitchen" />
+                    <option value="Service" />
+                    <option value="Delivery" />
+                    <option value="Management" />
+                    <option value="Admin" />
+                    <option value="Finance" />
+                    <option value="Marketing" />
+                    <option value="Operations" />
+                    <option value="IT" />
+                    <option value="Customer Support" />
+                  </datalist>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Position</label>
+                  <Input
+                    placeholder="Chef"
+                    value={employeeForm.position}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, position: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Employment Type</label>
+                  <select
+                    className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
+                    value={employeeForm.employmentType}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, employmentType: e.target.value })}
+                  >
+                    <option value="full_time">Full Time</option>
+                    <option value="part_time">Part Time</option>
+                    <option value="contract">Contract</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Salary (KES)</label>
+                  <Input
+                    type="number"
+                    placeholder="50000"
+                    value={employeeForm.salary}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, salary: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" type="button" onClick={() => setCreateEmployeeOpen(false)}>Cancel</Button>
+                <Button type="submit" className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  Create Employee
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Job Dialog */}
+        <Dialog open={createJobOpen} onOpenChange={setCreateJobOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Post New Job</DialogTitle>
+              <DialogDescription>Create a new job posting</DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={handleSubmitJob}>
+              <div>
+                <label className="text-sm font-medium">Job Title</label>
+                <Input
+                  placeholder="Line Cook"
+                  value={jobForm.title}
+                  onChange={(e) => setJobForm({ ...jobForm, title: e.target.value })}
+                  required
+                />
+              </div>
               <div>
                 <label className="text-sm font-medium">Department</label>
                 <Input
-                  list="dept-suggestions"
+                  list="create-job-dept-suggestions"
                   placeholder="Type or select department"
-                  value={employeeForm.department}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })}
+                  value={jobForm.department}
+                  onChange={(e) => setJobForm({ ...jobForm, department: e.target.value })}
                 />
-                <datalist id="dept-suggestions">
+                <datalist id="create-job-dept-suggestions">
                   <option value="Kitchen" />
                   <option value="Service" />
                   <option value="Delivery" />
@@ -1414,1964 +1498,1913 @@ export default function HRDashboard() {
                 </datalist>
               </div>
               <div>
-                <label className="text-sm font-medium">Position</label>
-                <Input
-                  placeholder="Chef"
-                  value={employeeForm.position}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, position: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Employment Type</label>
-                <select
-                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
-                  value={employeeForm.employmentType}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, employmentType: e.target.value })}
-                >
-                  <option value="full_time">Full Time</option>
-                  <option value="part_time">Part Time</option>
-                  <option value="contract">Contract</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Salary (KES)</label>
-                <Input
-                  type="number"
-                  placeholder="50000"
-                  value={employeeForm.salary}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, salary: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" type="button" onClick={() => setCreateEmployeeOpen(false)}>Cancel</Button>
-              <Button type="submit">Create Employee</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Job Dialog */}
-      <Dialog open={createJobOpen} onOpenChange={setCreateJobOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Post New Job</DialogTitle>
-            <DialogDescription>Create a new job posting</DialogDescription>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={handleSubmitJob}>
-            <div>
-              <label className="text-sm font-medium">Job Title</label>
-              <Input
-                placeholder="Line Cook"
-                value={jobForm.title}
-                onChange={(e) => setJobForm({ ...jobForm, title: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Department</label>
-              <Input
-                list="create-job-dept-suggestions"
-                placeholder="Type or select department"
-                value={jobForm.department}
-                onChange={(e) => setJobForm({ ...jobForm, department: e.target.value })}
-              />
-              <datalist id="create-job-dept-suggestions">
-                <option value="Kitchen" />
-                <option value="Service" />
-                <option value="Delivery" />
-                <option value="Management" />
-                <option value="Admin" />
-                <option value="Finance" />
-                <option value="Marketing" />
-                <option value="Operations" />
-                <option value="IT" />
-                <option value="Customer Support" />
-              </datalist>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Description</label>
-              <textarea
-                className="w-full h-20 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
-                placeholder="Job description..."
-                value={jobForm.description}
-                onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Closing Date</label>
-              <Input
-                type="date"
-                value={jobForm.closingDate ? new Date(jobForm.closingDate).toISOString().split('T')[0] : ''}
-                onChange={(e) => setJobForm({ ...jobForm, closingDate: e.target.value })}
-                required
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" type="button" onClick={() => setCreateJobOpen(false)}>Cancel</Button>
-              <Button type="submit">Post Job</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Job Dialog */}
-      <Dialog open={editJobOpen} onOpenChange={setEditJobOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Job Posting</DialogTitle>
-            <DialogDescription>Update job posting details</DialogDescription>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={handleSubmitEditJob}>
-            <div>
-              <label className="text-sm font-medium">Job Title</label>
-              <Input
-                placeholder="Line Cook"
-                value={jobForm.title}
-                onChange={(e) => setJobForm({ ...jobForm, title: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Department</label>
-              <Input
-                list="job-dept-suggestions"
-                placeholder="Type or select department"
-                value={jobForm.department}
-                onChange={(e) => setJobForm({ ...jobForm, department: e.target.value })}
-              />
-              <datalist id="job-dept-suggestions">
-                <option value="Kitchen" />
-                <option value="Service" />
-                <option value="Delivery" />
-                <option value="Management" />
-                <option value="Admin" />
-                <option value="Finance" />
-                <option value="Marketing" />
-                <option value="Operations" />
-                <option value="IT" />
-                <option value="Customer Support" />
-              </datalist>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Description</label>
-              <textarea
-                className="w-full h-20 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
-                placeholder="Job description..."
-                value={jobForm.description}
-                onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Status</label>
-              <select
-                className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
-                value={jobForm.status}
-                onChange={(e) => setJobForm({ ...jobForm, status: e.target.value })}
-              >
-                <option value="open">Open</option>
-                <option value="closed">Closed</option>
-                <option value="on_hold">On Hold</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Closing Date</label>
-              <Input
-                type="date"
-                value={jobForm.closingDate ? new Date(jobForm.closingDate).toISOString().split('T')[0] : ''}
-                onChange={(e) => setJobForm({ ...jobForm, closingDate: e.target.value })}
-                required
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" type="button" onClick={() => setEditJobOpen(false)}>Cancel</Button>
-              <Button type="submit">Save Changes</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Application Review Dialog */}
-      <Dialog open={reviewAppOpen} onOpenChange={setReviewAppOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Review Application</DialogTitle>
-            <DialogDescription>Update candidate pipeline status</DialogDescription>
-          </DialogHeader>
-          {selectedApp && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Application ID</span>
-                  <p className="font-mono text-xs">{selectedApp.applicationId}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Applied</span>
-                  <p>{new Date(selectedApp.appliedDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Candidate</span>
-                  <p className="font-medium">{selectedApp.applicantName}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Position</span>
-                  <p>{selectedApp.title}</p>
-                </div>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Current Status</span>
-                <div className="mt-1">
-                  <Badge variant="outline" className={`${getStatusBadge(selectedApp.status)}`}>
-                    {getStatusIcon(selectedApp.status)}
-                    <span className="ml-1 capitalize">{selectedApp.status.replace('_', ' ')}</span>
-                  </Badge>
-                </div>
-              </div>
-              <div>
-                <span className="text-sm font-medium">Move to Stage</span>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <Button
-                    size="sm"
-                    variant={selectedApp.status === 'pending' ? 'default' : 'outline'}
-                    disabled={updatingStatus || selectedApp.status === 'pending'}
-                    onClick={() => handleUpdateAppStatus('pending')}
-                  >
-                    Applied
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={selectedApp.status === 'under_review' ? 'default' : 'outline'}
-                    disabled={updatingStatus || selectedApp.status === 'under_review'}
-                    onClick={() => handleUpdateAppStatus('under_review')}
-                  >
-                    Shortlisted
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={selectedApp.status === 'interviewed' ? 'default' : 'outline'}
-                    disabled={updatingStatus || selectedApp.status === 'interviewed'}
-                    onClick={() => handleUpdateAppStatus('interviewed')}
-                  >
-                    Interview
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={selectedApp.status === 'offered' ? 'default' : 'outline'}
-                    disabled={updatingStatus || selectedApp.status === 'offered'}
-                    onClick={() => handleUpdateAppStatus('offered')}
-                  >
-                    Offered
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={selectedApp.status === 'hired' ? 'default' : 'outline'}
-                    className={selectedApp.status !== 'hired' ? 'border-green-300 text-green-700 hover:bg-green-50' : ''}
-                    disabled={updatingStatus || selectedApp.status === 'hired'}
-                    onClick={() => handleUpdateAppStatus('hired')}
-                  >
-                    Hired
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={selectedApp.status === 'rejected' ? 'default' : 'outline'}
-                    className={selectedApp.status !== 'rejected' ? 'border-red-300 text-red-700 hover:bg-red-50' : ''}
-                    disabled={updatingStatus || selectedApp.status === 'rejected'}
-                    onClick={() => handleUpdateAppStatus('rejected')}
-                  >
-                    Rejected
-                  </Button>
-                </div>
-              </div>
-              <div className="flex justify-end pt-2">
-                <Button variant="outline" onClick={() => setReviewAppOpen(false)}>Close</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Contract Dialog */}
-      <Dialog open={createContractOpen} onOpenChange={setCreateContractOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Contract</DialogTitle>
-            <DialogDescription>Create an employment contract</DialogDescription>
-          </DialogHeader>
-          <form className="space-y-3" onSubmit={handleSubmitContract}>
-            <div>
-              <label className="text-sm font-medium">Employee</label>
-              <select
-                className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
-                value={contractForm.employeeId}
-                onChange={(e) => setContractForm({ ...contractForm, employeeId: e.target.value })}
-                required
-              >
-                <option value="">Select employee...</option>
-                {employees.map(emp => (
-                  <option key={emp._id} value={emp._id}>{emp.firstName} {emp.lastName} - {emp.position}</option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium">Contract Type</label>
-                <select
-                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
-                  value={contractForm.contractType}
-                  onChange={(e) => setContractForm({ ...contractForm, contractType: e.target.value })}
-                >
-                  <option value="permanent">Permanent</option>
-                  <option value="fixed_term">Fixed Term</option>
-                  <option value="casual">Casual</option>
-                  <option value="consultancy">Consultancy</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Salary (KES)</label>
-                <Input
-                  type="number"
-                  placeholder="50000"
-                  value={contractForm.salary}
-                  onChange={(e) => setContractForm({ ...contractForm, salary: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Title</label>
-              <Input
-                placeholder="Software Engineer - Employment Contract"
-                value={contractForm.title}
-                onChange={(e) => setContractForm({ ...contractForm, title: e.target.value })}
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium">Start Date</label>
-                <Input type="date" value={contractForm.startDate} onChange={(e) => setContractForm({ ...contractForm, startDate: e.target.value })} required />
-              </div>
-              <div>
-                <label className="text-sm font-medium">End Date</label>
-                <Input type="date" value={contractForm.endDate} onChange={(e) => setContractForm({ ...contractForm, endDate: e.target.value })} />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Terms</label>
-              <textarea
-                className="w-full h-16 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
-                value={contractForm.terms}
-                onChange={(e) => setContractForm({ ...contractForm, terms: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Leave Entitlements (days/year)</label>
-              <div className="grid grid-cols-3 gap-2 mt-1">
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Annual</label>
-                  <Input type="number" value={contractForm.annualLeave} onChange={(e) => setContractForm({ ...contractForm, annualLeave: e.target.value })} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Sick</label>
-                  <Input type="number" value={contractForm.sickLeave} onChange={(e) => setContractForm({ ...contractForm, sickLeave: e.target.value })} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Maternity</label>
-                  <Input type="number" value={contractForm.maternityLeave} onChange={(e) => setContractForm({ ...contractForm, maternityLeave: e.target.value })} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Paternity</label>
-                  <Input type="number" value={contractForm.paternityLeave} onChange={(e) => setContractForm({ ...contractForm, paternityLeave: e.target.value })} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Compassionate</label>
-                  <Input type="number" value={contractForm.compassionateLeave} onChange={(e) => setContractForm({ ...contractForm, compassionateLeave: e.target.value })} />
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Notes</label>
-              <Input
-                placeholder="Additional notes..."
-                value={contractForm.notes}
-                onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" type="button" onClick={() => setCreateContractOpen(false)}>Cancel</Button>
-              <Button type="submit">Create Contract</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Contract Dialog */}
-      <Dialog open={editContractOpen} onOpenChange={setEditContractOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Contract</DialogTitle>
-            <DialogDescription>
-              {selectedEditContract?.employeeId?.firstName} {selectedEditContract?.employeeId?.lastName} — {selectedEditContract?.contractId}
-            </DialogDescription>
-          </DialogHeader>
-          <form className="space-y-3" onSubmit={handleSubmitEditContract}>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium">Contract Type</label>
-                <select
-                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
-                  value={contractForm.contractType}
-                  onChange={(e) => setContractForm({ ...contractForm, contractType: e.target.value })}
-                >
-                  <option value="permanent">Permanent</option>
-                  <option value="fixed_term">Fixed Term</option>
-                  <option value="casual">Casual</option>
-                  <option value="consultancy">Consultancy</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Salary (KES)</label>
-                <Input
-                  type="number"
-                  value={contractForm.salary}
-                  onChange={(e) => setContractForm({ ...contractForm, salary: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Title</label>
-              <Input
-                value={contractForm.title}
-                onChange={(e) => setContractForm({ ...contractForm, title: e.target.value })}
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium">Start Date</label>
-                <Input type="date" value={contractForm.startDate} onChange={(e) => setContractForm({ ...contractForm, startDate: e.target.value })} required />
-              </div>
-              <div>
-                <label className="text-sm font-medium">End Date</label>
-                <Input type="date" value={contractForm.endDate} onChange={(e) => setContractForm({ ...contractForm, endDate: e.target.value })} />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Status</label>
-              <select
-                className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
-                value={selectedEditContract?.status || 'draft'}
-                onChange={(e) => setSelectedEditContract(prev => prev ? { ...prev, status: e.target.value } : prev)}
-              >
-                <option value="draft">Draft</option>
-                <option value="offered">Offered</option>
-                <option value="active">Active</option>
-                <option value="expired">Expired</option>
-                <option value="terminated">Terminated</option>
-                <option value="renewed">Renewed</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Terms</label>
-              <textarea
-                className="w-full h-16 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
-                value={contractForm.terms}
-                onChange={(e) => setContractForm({ ...contractForm, terms: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Leave Entitlements (days/year)</label>
-              <div className="grid grid-cols-3 gap-2 mt-1">
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Annual</label>
-                  <Input type="number" value={contractForm.annualLeave} onChange={(e) => setContractForm({ ...contractForm, annualLeave: e.target.value })} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Sick</label>
-                  <Input type="number" value={contractForm.sickLeave} onChange={(e) => setContractForm({ ...contractForm, sickLeave: e.target.value })} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Maternity</label>
-                  <Input type="number" value={contractForm.maternityLeave} onChange={(e) => setContractForm({ ...contractForm, maternityLeave: e.target.value })} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Paternity</label>
-                  <Input type="number" value={contractForm.paternityLeave} onChange={(e) => setContractForm({ ...contractForm, paternityLeave: e.target.value })} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Compassionate</label>
-                  <Input type="number" value={contractForm.compassionateLeave} onChange={(e) => setContractForm({ ...contractForm, compassionateLeave: e.target.value })} />
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Notes (promotion, demotion, etc.)</label>
-              <Input
-                placeholder="Reason for update..."
-                value={contractForm.notes}
-                onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" type="button" onClick={() => setEditContractOpen(false)}>Cancel</Button>
-              <Button type="submit">Save Changes</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Payslip Dialog */}
-      <Dialog open={viewPayslipOpen} onOpenChange={setViewPayslipOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Payslip Details</DialogTitle>
-            <DialogDescription>{selectedPayslip?.payslipId}</DialogDescription>
-          </DialogHeader>
-          {selectedPayslip && (
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <span className="text-muted-foreground">Employee</span>
-                  <p className="font-medium">{selectedPayslip.employeeId?.firstName} {selectedPayslip.employeeId?.lastName}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Department</span>
-                  <p>{selectedPayslip.employeeId?.department}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Pay Period</span>
-                  <p>{new Date(selectedPayslip.payPeriod?.year, selectedPayslip.payPeriod?.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Pay Date</span>
-                  <p>{new Date(selectedPayslip.payDate).toLocaleDateString()}</p>
-                </div>
-              </div>
-              <div className="border-t pt-2 space-y-1">
-                <div className="flex justify-between"><span>Basic Salary</span><span className="font-mono">{selectedPayslip.currency} {selectedPayslip.basicSalary?.toLocaleString()}</span></div>
-                {selectedPayslip.overtimePay > 0 && (
-                  <div className="flex justify-between"><span>Overtime Pay</span><span className="font-mono">{selectedPayslip.currency} {selectedPayslip.overtimePay?.toLocaleString()}</span></div>
-                )}
-                <div className="flex justify-between font-medium border-t pt-1"><span>Total Earnings</span><span className="font-mono">{selectedPayslip.currency} {selectedPayslip.totalEarnings?.toLocaleString()}</span></div>
-              </div>
-              <div className="border-t pt-2 space-y-1 text-red-600">
-                <div className="flex justify-between"><span>PAYE</span><span className="font-mono">- {selectedPayslip.paye?.toLocaleString()}</span></div>
-                <div className="flex justify-between"><span>NSSF</span><span className="font-mono">- {selectedPayslip.nssf?.toLocaleString()}</span></div>
-                <div className="flex justify-between"><span>NHIF</span><span className="font-mono">- {selectedPayslip.nhif?.toLocaleString()}</span></div>
-                <div className="flex justify-between font-medium border-t pt-1"><span>Total Deductions</span><span className="font-mono">- {selectedPayslip.totalDeductions?.toLocaleString()}</span></div>
-              </div>
-              <div className="border-t pt-2">
-                <div className="flex justify-between text-base font-bold">
-                  <span>Net Pay</span>
-                  <span className="text-green-700">{selectedPayslip.currency} {selectedPayslip.netPay?.toLocaleString()}</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-1">
-                <Badge variant="outline" className={getStatusBadge(selectedPayslip.status)}>
-                  {selectedPayslip.status}
-                </Badge>
-                <div className="flex gap-1">
-                  {selectedPayslip.status === 'draft' && (
-                    <Button size="sm" variant="outline" onClick={() => { setViewPayslipOpen(false); handleOpenEditPayslip(selectedPayslip); }}>Edit</Button>
-                  )}
-                  {selectedPayslip.status === 'draft' && (
-                    <Button size="sm" onClick={() => { handleApprovePayslip(selectedPayslip); setViewPayslipOpen(false); }}>Approve</Button>
-                  )}
-                  {selectedPayslip.status === 'approved' && (
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => { handleMarkPayslipPaid(selectedPayslip); setViewPayslipOpen(false); }}>Mark Paid</Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Payslip Dialog */}
-      <Dialog open={editPayslipOpen} onOpenChange={setEditPayslipOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Edit Payslip</DialogTitle>
-            <DialogDescription>
-              {selectedPayslip?.employeeId?.firstName} {selectedPayslip?.employeeId?.lastName} — {selectedPayslip?.payslipId}
-            </DialogDescription>
-          </DialogHeader>
-          <form className="space-y-3" onSubmit={handleSubmitEditPayslip}>
-            <div>
-              <label className="text-sm font-medium">Basic Salary (KES)</label>
-              <Input
-                type="number"
-                value={payslipEditForm.basicSalary}
-                onChange={(e) => setPayslipEditForm({ ...payslipEditForm, basicSalary: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Overtime Pay (KES)</label>
-              <Input
-                type="number"
-                value={payslipEditForm.overtimePay}
-                onChange={(e) => setPayslipEditForm({ ...payslipEditForm, overtimePay: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Notes</label>
-              <Input
-                placeholder="Adjustments, corrections..."
-                value={payslipEditForm.notes}
-                onChange={(e) => setPayslipEditForm({ ...payslipEditForm, notes: e.target.value })}
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" type="button" onClick={() => setEditPayslipOpen(false)}>Cancel</Button>
-              <Button type="submit">Save Changes</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Contract Offer Dialog */}
-      <Dialog open={contractOfferOpen} onOpenChange={setContractOfferOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Send Contract Offer</DialogTitle>
-            <DialogDescription>
-              Send contract offer to {selectedContract?.employeeId?.firstName} {selectedContract?.employeeId?.lastName}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedContract && (
-            <div className="space-y-4">
-              <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Contract ID:</span>
-                  <span className="font-mono">{selectedContract.contractId}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Position:</span>
-                  <span>{selectedContract.title}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Salary:</span>
-                  <span className="font-mono font-medium">{selectedContract.currency} {selectedContract.salary?.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Type:</span>
-                  <span className="capitalize">{selectedContract.contractType?.replace('_', ' ')}</span>
-                </div>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                This will send the contract offer to the employee for review and signing.
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setContractOfferOpen(false)}>Cancel</Button>
-                <Button onClick={handleSendContractOffer}>Send Offer</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Contract Signing Dialog */}
-      <Dialog open={contractSignOpen} onOpenChange={setContractSignOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Sign Employment Contract</DialogTitle>
-            <DialogDescription>
-              Review and sign your employment contract
-            </DialogDescription>
-          </DialogHeader>
-          {selectedContract && (
-            <div className="space-y-6">
-              {/* Contract Details */}
-              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Contract ID:</span>
-                  <span className="font-mono font-medium">{selectedContract.contractId}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Position:</span>
-                  <span className="font-medium">{selectedContract.title}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Salary:</span>
-                  <span className="font-mono font-medium text-lg">{selectedContract.currency} {selectedContract.salary?.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Start Date:</span>
-                  <span>{new Date(selectedContract.startDate).toLocaleDateString()}</span>
-                </div>
-                {selectedContract.endDate && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">End Date:</span>
-                    <span>{new Date(selectedContract.endDate).toLocaleDateString()}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Leave Entitlements */}
-              {selectedContract.leaveEntitlements && (
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-3">Leave Entitlements</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Annual Leave:</span>
-                      <span className="font-medium">{selectedContract.leaveEntitlements.annualLeave} days</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Sick Leave:</span>
-                      <span className="font-medium">{selectedContract.leaveEntitlements.sickLeave} days</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Maternity Leave:</span>
-                      <span className="font-medium">{selectedContract.leaveEntitlements.maternityLeave} days</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Paternity Leave:</span>
-                      <span className="font-medium">{selectedContract.leaveEntitlements.paternityLeave} days</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Compassionate Leave:</span>
-                      <span className="font-medium">{selectedContract.leaveEntitlements.compassionateLeave} days</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="text-sm text-muted-foreground">
-                By signing this contract, you agree to the terms and conditions outlined above.
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setContractSignOpen(false)}>Cancel</Button>
-                <Button onClick={handleSignContract} className="bg-emerald-600 hover:bg-emerald-700">
-                  Sign Contract
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          TAB NAVIGATION - 3 Main + More Menu
-          ═══════════════════════════════════════════════════════════════════ */}
-      <div className="flex gap-1 border-b items-center">
-        {(() => {
-          const mainTabs = user?.role === 'admin' || user?.role === 'staff' ? [
-            { key: 'overview' as const, label: 'Overview', icon: Eye },
-          ] : [
-            { key: 'my-contracts' as const, label: 'My Contracts', icon: FileText },
-            { key: 'my-payslips' as const, label: 'My Payslips', icon: DollarSign },
-          ];
-          
-          const moreTabs = user?.role === 'admin' || user?.role === 'staff' ? [
-            { key: 'employees' as const, label: 'Employees', icon: Users },
-            { key: 'recruitment' as const, label: 'Recruitment', icon: UserPlus },
-            { key: 'contracts' as const, label: 'Contracts', icon: FileText },
-            { key: 'payslips' as const, label: 'Payslips', icon: DollarSign },
-            { key: 'leaves' as const, label: `Leaves${pendingLeaveCount > 0 ? ` (${pendingLeaveCount})` : ''}`, icon: Calendar },
-          ] : [];
-          
-          return (
-            <>
-              {mainTabs.map(tab => (
-                <Button
-                  key={tab.key}
-                  variant={activeTab === tab.key ? 'default' : 'ghost'}
-                  onClick={() => setActiveTab(tab.key)}
-                  size="sm"
-                  className="gap-1.5 rounded-b-none"
-                >
-                  <tab.icon className="h-3.5 w-3.5" />
-                  {tab.label}
-                </Button>
-              ))}
-              {moreTabs.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="gap-1.5 rounded-b-none"
-                    >
-                      <MoreHorizontal className="h-3.5 w-3.5" />
-                      More
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {moreTabs.map(tab => (
-                      <DropdownMenuItem key={tab.key} onClick={() => setActiveTab(tab.key)}>
-                        <tab.icon className="h-4 w-4 mr-2" />
-                        {tab.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </>
-          );
-        })()}
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          OVERVIEW TAB
-          ═══════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'overview' && (
-        <>
-          {/* Recruitment Pipeline Funnel */}
-          <Card className="border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">Recruitment Pipeline</CardTitle>
-              <CardDescription>Applied → Shortlisted → Interview → Hired</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between gap-2">
-                {PIPELINE_STAGES.map((stage, idx) => {
-                  const count = pipelineCounts[stage.key] || 0;
-                  const StageIcon = stage.icon;
-                  return (
-                    <React.Fragment key={stage.key}>
-                      <div className="flex-1 text-center">
-                        <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border-2 ${
-                          count > 0 ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-muted border-muted-foreground/20 text-muted-foreground'
-                        }`}>
-                          {count}
-                        </div>
-                        <div className="mt-1.5 flex items-center justify-center gap-1">
-                          <StageIcon className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-muted-foreground">{stage.label}</span>
-                        </div>
-                      </div>
-                      {idx < PIPELINE_STAGES.length - 1 && (
-                        <ChevronRight className="h-5 w-5 text-muted-foreground/40 shrink-0" />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Department Distribution */}
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">Department Distribution</CardTitle>
-                <CardDescription>Employees by department</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {departmentData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <PieChart>
-                      <Pie
-                        data={departmentData}
-                        cx="50%"
-                        cy="45%"
-                        innerRadius={40}
-                        outerRadius={80}
-                        paddingAngle={3}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                      >
-                        {departmentData.map((_: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={DEPT_COLORS[index % DEPT_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">No department data</div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Payroll Status */}
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">Payroll Overview</CardTitle>
-                <CardDescription>
-                  Total: KES {(payrollOverview?.totalAmount ?? 0).toLocaleString()}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={[
-                    { name: 'Pending', value: payrollOverview?.pending ?? 0, fill: '#f59e0b' },
-                    { name: 'Processed', value: payrollOverview?.processed ?? 0, fill: '#3b82f6' },
-                    { name: 'Paid', value: payrollOverview?.paid ?? 0, fill: '#10b981' },
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" fontSize={11} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                    <YAxis fontSize={11} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                    <Tooltip />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                      {[
-                        { fill: '#f59e0b' },
-                        { fill: '#3b82f6' },
-                        { fill: '#10b981' },
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Employee Activity Logs + Attendance */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Activity Logs */}
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Employee Activity Logs</CardTitle>
-                    <CardDescription>Recent workforce events</CardDescription>
-                  </div>
-                  <Activity className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {activityLogs.length > 0 ? activityLogs.map(log => (
-                    <div key={log.id} className="flex items-start gap-3 text-sm">
-                      <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${
-                        log.type === 'hire' ? 'bg-emerald-500' :
-                        log.type === 'leave' ? 'bg-amber-500' :
-                        log.type === 'termination' ? 'bg-red-500' :
-                        'bg-blue-500'
-                      }`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{log.employee}</p>
-                        <p className="text-xs text-muted-foreground">{log.description}</p>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                        {new Date(log.date).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )) : (
-                    <div className="text-center py-8 text-muted-foreground text-sm">No recent activity</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Attendance Tracking (Future Biometric) */}
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Attendance Tracking</CardTitle>
-                    <CardDescription>Today's workforce status</CardDescription>
-                  </div>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-300 text-amber-700 bg-amber-50">
-                    Biometric Ready
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200">
-                      <div className="text-xl font-bold text-emerald-700">{stats?.overview.activeEmployees ?? 0}</div>
-                      <div className="text-[10px] text-emerald-600">Present</div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
-                      <div className="text-xl font-bold text-amber-700">{onLeaveCount}</div>
-                      <div className="text-[10px] text-amber-600">On Leave</div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-red-50 border border-red-200">
-                      <div className="text-xl font-bold text-red-700">
-                        {Math.max(0, (stats?.overview.totalEmployees ?? 0) - (stats?.overview.activeEmployees ?? 0) - onLeaveCount)}
-                      </div>
-                      <div className="text-[10px] text-red-600">Absent</div>
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground text-center p-2 bg-muted/50 rounded">
-                    Future: Biometric integration for clock-in/clock-out tracking
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Jobs Preview */}
-          <Card className="border shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Open Positions</CardTitle>
-                  <CardDescription>Active job postings</CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setActiveTab('recruitment')} className="gap-1 text-xs">
-                  View All <ChevronRight className="h-3 w-3" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Job ID</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Applications</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Posted</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentJobs.length > 0 ? (
-                      recentJobs.map((job) => (
-                        <TableRow key={job._id}>
-                          <TableCell className="font-mono text-xs">{job.jobId}</TableCell>
-                          <TableCell className="text-sm font-medium">{job.title}</TableCell>
-                          <TableCell className="text-sm">{job.department}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`text-xs ${job.applicationCount === 0 ? 'border-red-200 text-red-600' : ''}`}>
-                              {job.applicationCount}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(job.status)}`}>
-                              {getStatusIcon(job.status)}
-                              <span className="ml-1">{job.status.replace('_', ' ')}</span>
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{new Date(job.postedDate).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleEditJob(job)}>
-                              Edit
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-6 text-muted-foreground text-sm">No job postings</TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          EMPLOYEES TAB
-          ═══════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'employees' && (
-        <Card className="border shadow-sm">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">All Employees</CardTitle>
-                <CardDescription>Role, status, and performance tracking</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="gap-1" onClick={handleExportEmployees}>
-                  <Download className="h-3.5 w-3.5" /> Export
-                </Button>
-                <Button size="sm" className="gap-1" onClick={handleCreateEmployee}>
-                  <Plus className="h-3.5 w-3.5" /> Add Employee
-                </Button>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3 mt-4">
-              <Input
-                placeholder="Search employees..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-xs h-9"
-              />
-              <select
-                value={employeeFilter}
-                onChange={(e) => setEmployeeFilter(e.target.value as any)}
-                className="h-9 px-3 border rounded-lg text-sm bg-background"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="on_leave">On Leave</option>
-                <option value="inactive">Inactive</option>
-                <option value="terminated">Terminated</option>
-              </select>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Role / Position</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Performance</TableHead>
-                    <TableHead className="text-right">Salary (KES)</TableHead>
-                    <TableHead>Hired</TableHead>
-                    <TableHead className="w-20">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredEmployees.length > 0 ? (
-                    filteredEmployees.map(emp => (
-                      <TableRow key={emp._id} className={emp.status === 'on_leave' ? 'bg-amber-50/50' : emp.status === 'terminated' ? 'bg-red-50/30' : ''}>
-                        <TableCell>
-                          <div>
-                            <p className="text-sm font-medium">{emp.firstName} {emp.lastName}</p>
-                            <p className="text-[10px] text-muted-foreground font-mono">{emp.employeeId}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">{emp.position}</TableCell>
-                        <TableCell className="text-sm">{emp.department}</TableCell>
-                        <TableCell>
-                          <span className="text-xs capitalize">{emp.employmentType.replace('_', ' ')}</span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(emp.status)}`}>
-                            {getStatusIcon(emp.status)}
-                            <span className="ml-1">{emp.status.replace('_', ' ')}</span>
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {emp.performanceScore !== undefined ? (
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    emp.performanceScore >= 90 ? 'bg-emerald-500' :
-                                    emp.performanceScore >= 70 ? 'bg-blue-500' :
-                                    emp.performanceScore >= 50 ? 'bg-amber-500' : 'bg-red-500'
-                                  }`}
-                                  style={{ width: `${emp.performanceScore}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-mono text-muted-foreground">{emp.performanceScore}</span>
-                              {emp.performanceScore >= 90 && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground italic">Pending</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm">{emp.salary.toLocaleString()}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{new Date(emp.hireDate).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-0.5">
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="View">
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Calculate Payroll" onClick={() => handlePayrollCalc(emp._id)}>
-                              <Calculator className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                        <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        No employees found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          RECRUITMENT TAB
-          ═══════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'recruitment' && (
-        <>
-          {/* Pipeline Funnel (repeated for recruitment tab) */}
-          <Card className="border shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Recruitment Pipeline</CardTitle>
-                  <CardDescription>Track candidates through hiring stages</CardDescription>
-                </div>
-                <Button size="sm" className="gap-1" onClick={handleCreateJob}>
-                  <Plus className="h-3.5 w-3.5" /> Post Job
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between gap-2 mb-6">
-                {PIPELINE_STAGES.map((stage, idx) => {
-                  const count = pipelineCounts[stage.key] || 0;
-                  const StageIcon = stage.icon;
-                  return (
-                    <React.Fragment key={stage.key}>
-                      <div className="flex-1 text-center">
-                        <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold border-2 ${
-                          count > 0 ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-muted border-muted-foreground/20 text-muted-foreground'
-                        }`}>
-                          {count}
-                        </div>
-                        <div className="mt-2 flex items-center justify-center gap-1">
-                          <StageIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-xs font-medium">{stage.label}</span>
-                        </div>
-                      </div>
-                      {idx < PIPELINE_STAGES.length - 1 && (
-                        <ChevronRight className="h-6 w-6 text-muted-foreground/40 shrink-0" />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Kanban Pipeline Board */}
-          <Card className="border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">Pipeline Board</CardTitle>
-              <CardDescription>Drag candidates between stages to update their status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-3 overflow-x-auto pb-2" style={{ minHeight: 300 }}>
-                {[
-                  { key: 'pending', label: 'Applied', color: 'bg-gray-100 border-gray-300', headerColor: 'bg-gray-200 text-gray-700' },
-                  { key: 'under_review', label: 'Shortlisted', color: 'bg-blue-50 border-blue-300', headerColor: 'bg-blue-100 text-blue-700' },
-                  { key: 'interviewed', label: 'Interview', color: 'bg-yellow-50 border-yellow-300', headerColor: 'bg-yellow-100 text-yellow-700' },
-                  { key: 'offered', label: 'Offered', color: 'bg-purple-50 border-purple-300', headerColor: 'bg-purple-100 text-purple-700' },
-                  { key: 'hired', label: 'Hired', color: 'bg-green-50 border-green-300', headerColor: 'bg-green-100 text-green-700' },
-                  { key: 'rejected', label: 'Rejected', color: 'bg-red-50 border-red-300', headerColor: 'bg-red-100 text-red-700' },
-                ].map(col => {
-                  const apps = recentApplications.filter(a => a.status === col.key || (col.key === 'hired' && a.status === 'hired'));
-                  return (
-                    <div
-                      key={col.key}
-                      className={`flex-1 min-w-[180px] max-w-[220px] rounded-lg border ${col.color} flex flex-col`}
-                      onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-primary'); }}
-                      onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2', 'ring-primary'); }}
-                      onDrop={async (e) => {
-                        e.preventDefault();
-                        e.currentTarget.classList.remove('ring-2', 'ring-primary');
-                        const appId = e.dataTransfer.getData('applicationId');
-                        const app = recentApplications.find(a => a._id === appId);
-                        if (app && app.status !== col.key) {
-                          try {
-                            const res = await apiFetch(`/api/v1/hr/applications/${app._id}/status`, {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ status: col.key }),
-                            });
-                            if (res.ok) {
-                              toast({ title: 'Moved', description: `${app.applicantName} → ${col.label}` });
-                              fetchHRData();
-                            } else {
-                              toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
-                            }
-                          } catch {
-                            toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
-                          }
-                        }
-                      }}
-                    >
-                      <div className={`px-3 py-2 rounded-t-lg ${col.headerColor} font-semibold text-xs flex items-center justify-between`}>
-                        <span>{col.label}</span>
-                        <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center text-[10px]">
-                          {apps.length}
-                        </Badge>
-                      </div>
-                      <div className="p-2 flex-1 space-y-2 min-h-[200px]">
-                        {apps.length === 0 ? (
-                          <div className="text-[10px] text-muted-foreground text-center py-8 opacity-50">
-                            Drop here
-                          </div>
-                        ) : (
-                          apps.map(app => (
-                            <div
-                              key={app._id}
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData('applicationId', app._id);
-                                e.currentTarget.classList.add('opacity-50');
-                              }}
-                              onDragEnd={(e) => {
-                                e.currentTarget.classList.remove('opacity-50');
-                              }}
-                              className="bg-white rounded-md border shadow-sm p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
-                              onClick={() => handleReviewApp(app)}
-                            >
-                              <p className="text-sm font-medium truncate">{app.applicantName}</p>
-                              <p className="text-[10px] text-muted-foreground truncate">{app.title}</p>
-                              <div className="flex items-center justify-between mt-1.5">
-                                <span className="text-[10px] text-muted-foreground">
-                                  {new Date(app.appliedDate).toLocaleDateString()}
-                                </span>
-                                <span className="font-mono text-[9px] text-muted-foreground">{app.applicationId}</span>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Job Postings */}
-          <Card className="border shadow-sm">
-            <CardHeader>
-              <div>
-                <CardTitle className="text-base">Job Postings</CardTitle>
-                <CardDescription>Manage open positions</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Job ID</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Applications</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Posted</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentJobs.length > 0 ? (
-                      recentJobs.map(job => (
-                        <TableRow key={job._id}>
-                          <TableCell className="font-mono text-xs">{job.jobId}</TableCell>
-                          <TableCell className="text-sm font-medium">{job.title}</TableCell>
-                          <TableCell className="text-sm">{job.department}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`text-xs ${job.applicationCount === 0 ? 'border-red-200 text-red-600' : ''}`}>
-                              {job.applicationCount}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(job.status)}`}>
-                              {getStatusIcon(job.status)}
-                              <span className="ml-1">{job.status.replace('_', ' ')}</span>
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{new Date(job.postedDate).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleEditJob(job)}>
-                              Edit
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-6 text-muted-foreground text-sm">No postings</TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          CONTRACTS TAB
-          ═══════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'contracts' && (
-        <Card className="border shadow-sm">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Employee Contracts</CardTitle>
-                <CardDescription>Contract management and renewals</CardDescription>
-              </div>
-              <Button size="sm" className="gap-1" onClick={handleOpenCreateContract}>
-                <Plus className="h-3.5 w-3.5" /> New Contract
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Contract ID</TableHead>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Start</TableHead>
-                    <TableHead>End</TableHead>
-                    <TableHead>Remaining</TableHead>
-                    <TableHead className="text-right">Salary</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {contracts.length > 0 ? (
-                    contracts.map(contract => {
-                      const daysLeft = contract.endDate
-                        ? Math.ceil((new Date(contract.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-                        : null;
-                      const isExpiring = daysLeft !== null && daysLeft >= 0 && daysLeft <= 30;
-                      const isExpired = daysLeft !== null && daysLeft < 0;
-
-                      return (
-                        <TableRow key={contract._id} className={isExpiring ? 'bg-amber-50/50' : isExpired ? 'bg-red-50/30' : ''}>
-                          <TableCell className="font-mono text-xs">{contract.contractId}</TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="text-sm font-medium">{contract.employeeId?.firstName} {contract.employeeId?.lastName}</p>
-                              <p className="text-[10px] text-muted-foreground">{contract.employeeId?.department}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs capitalize">{contract.contractType?.replace('_', ' ')}</TableCell>
-                          <TableCell className="text-sm">{contract.title}</TableCell>
-                          <TableCell className="text-xs">{new Date(contract.startDate).toLocaleDateString()}</TableCell>
-                          <TableCell className="text-xs">
-                            {contract.endDate ? new Date(contract.endDate).toLocaleDateString() : 'Permanent'}
-                          </TableCell>
-                          <TableCell>
-                            {daysLeft !== null ? (
-                              <span className={`text-xs font-medium ${
-                                isExpired ? 'text-red-600' : isExpiring ? 'text-amber-600' : 'text-muted-foreground'
-                              }`}>
-                                {isExpired ? `${Math.abs(daysLeft)}d expired` : `${daysLeft}d`}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm">
-                            {contract.currency} {contract.salary?.toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(contract.status)}`}>
-                              {contract.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              {contract.status === 'draft' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-6 px-2 text-xs"
-                                  onClick={() => {
-                                    setSelectedContract(contract);
-                                    setContractOfferOpen(true);
-                                  }}
-                                >
-                                  Send Offer
-                                </Button>
-                              )}
-                              {contract.status === 'active' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-6 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50"
-                                  onClick={() => handleUpdateContractStatus(contract, 'terminated')}
-                                >
-                                  Terminate
-                                </Button>
-                              )}
-                              {(contract.status === 'expired' || contract.status === 'terminated') && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-6 px-2 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
-                                  onClick={() => handleUpdateContractStatus(contract, 'renewed')}
-                                >
-                                  Renew
-                                </Button>
-                              )}
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="Edit" onClick={() => handleOpenEditContract(contract)}>
-                                <Eye className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                        <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        No contracts found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          PAYSLIPS TAB
-          ═══════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'payslips' && (
-        <Card className="border shadow-sm">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Employee Payslips</CardTitle>
-                <CardDescription>Payroll processing and payment tracking</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="gap-1" onClick={handleGenerateBulkPayslips}>
-                  <Calendar className="h-3.5 w-3.5" /> Generate Bulk
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Payslip ID</TableHead>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Pay Period</TableHead>
-                    <TableHead>Pay Date</TableHead>
-                    <TableHead className="text-right">Net Pay</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-20">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payslips.length > 0 ? (
-                    payslips.map(payslip => (
-                      <TableRow key={payslip._id}>
-                        <TableCell className="font-mono text-xs">{payslip.payslipId}</TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="text-sm font-medium">{payslip.employeeId?.firstName} {payslip.employeeId?.lastName}</p>
-                            <p className="text-[10px] text-muted-foreground">{payslip.employeeId?.department}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {new Date(payslip.payPeriod?.year, payslip.payPeriod?.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                        </TableCell>
-                        <TableCell className="text-xs">{new Date(payslip.payDate).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right font-mono text-sm font-medium">
-                          {payslip.currency} {payslip.netPay?.toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(payslip.status)}`}>
-                            {getStatusIcon(payslip.status)}
-                            <span className="ml-1">{payslip.status}</span>
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-0.5">
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="View" onClick={() => handleViewPayslip(payslip)}>
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                            {payslip.status === 'draft' && (
-                              <Button variant="ghost" size="sm" className="h-7 px-1 text-[10px]" title="Edit" onClick={() => handleOpenEditPayslip(payslip)}>
-                                Edit
-                              </Button>
-                            )}
-                            {payslip.status === 'draft' && (
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Approve" onClick={() => handleApprovePayslip(payslip)}>
-                                <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-                              </Button>
-                            )}
-                            {payslip.status === 'approved' && (
-                              <Button variant="outline" size="sm" className="h-7 px-2 text-[10px] text-green-700 border-green-200" onClick={() => handleMarkPayslipPaid(payslip)}>
-                                Mark Paid
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        No payslips found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          LEAVES TAB (HR/Admin)
-          ═══════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'leaves' && (
-        <Card className="border shadow-sm">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Leave Requests</CardTitle>
-                <CardDescription>Manage employee leave applications</CardDescription>
-              </div>
-              <div className="flex gap-2 text-xs">
-                <Badge variant="outline" className="text-amber-700 bg-amber-50">{leaveRequests.filter(l => l.status === 'pending').length} Pending</Badge>
-                <Badge variant="outline" className="text-green-700 bg-green-50">{leaveRequests.filter(l => l.status === 'approved').length} Approved</Badge>
-                <Badge variant="outline" className="text-red-700 bg-red-50">{leaveRequests.filter(l => l.status === 'rejected').length} Rejected</Badge>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Dates</TableHead>
-                    <TableHead className="text-center">Days</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leaveRequests.length > 0 ? (
-                    leaveRequests.map((leave: any) => (
-                      <TableRow key={leave._id}>
-                        <TableCell className="text-xs font-medium">
-                          {leave.employeeId?.firstName} {leave.employeeId?.lastName}
-                          <p className="text-[10px] text-muted-foreground">{leave.employeeId?.department}</p>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={`text-[10px] ${
-                            leave.leaveType === 'annual' ? 'text-blue-600 bg-blue-50' :
-                            leave.leaveType === 'sick' ? 'text-red-600 bg-red-50' :
-                            leave.leaveType === 'maternity' ? 'text-pink-600 bg-pink-50' :
-                            leave.leaveType === 'paternity' ? 'text-purple-600 bg-purple-50' :
-                            leave.leaveType === 'compassionate' ? 'text-amber-600 bg-amber-50' :
-                            'text-gray-600 bg-gray-50'
-                          }`}>
-                            {leave.leaveType}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {new Date(leave.startDate).toLocaleDateString()} — {new Date(leave.endDate).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-center font-medium">{leave.totalDays}</TableCell>
-                        <TableCell className="text-xs max-w-[180px] truncate">{leave.reason}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={`text-[10px] ${
-                            leave.status === 'pending' ? 'text-amber-700 bg-amber-50' :
-                            leave.status === 'approved' ? 'text-green-700 bg-green-50' :
-                            leave.status === 'rejected' ? 'text-red-700 bg-red-50' :
-                            'text-gray-700 bg-gray-50'
-                          }`}>
-                            {leave.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {leave.doctorLetterUrl && (
-                              <a href={leave.doctorLetterUrl} target="_blank" rel="noopener noreferrer">
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="View Doctor Letter">
-                                  <FileText className="h-3.5 w-3.5 text-blue-600" />
-                                </Button>
-                              </a>
-                            )}
-                            {leave.status === 'pending' && (
-                              <Button variant="outline" size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleReviewLeave(leave)}>
-                                Review
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        <Calendar className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        No leave requests found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Review Leave Dialog */}
-      <Dialog open={reviewLeaveOpen} onOpenChange={setReviewLeaveOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Review Leave Request</DialogTitle>
-            <DialogDescription>Approve or reject this leave application</DialogDescription>
-          </DialogHeader>
-          {selectedLeave && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground text-xs">Employee</span>
-                  <p className="font-medium">{selectedLeave.employeeId?.firstName} {selectedLeave.employeeId?.lastName}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">Department</span>
-                  <p className="font-medium">{selectedLeave.employeeId?.department}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">Leave Type</span>
-                  <p className="font-medium capitalize">{selectedLeave.leaveType}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">Duration</span>
-                  <p className="font-medium">{selectedLeave.totalDays} day(s)</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">Start Date</span>
-                  <p className="font-medium">{new Date(selectedLeave.startDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">End Date</span>
-                  <p className="font-medium">{new Date(selectedLeave.endDate).toLocaleDateString()}</p>
-                </div>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-xs">Reason</span>
-                <p className="text-sm bg-muted/50 rounded p-2 mt-1">{selectedLeave.reason}</p>
-              </div>
-              {selectedLeave.doctorLetterUrl && (
-                <div>
-                  <span className="text-muted-foreground text-xs">Doctor's Letter</span>
-                  <a href={selectedLeave.doctorLetterUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:underline mt-1">
-                    <FileText className="h-4 w-4" /> View attached document
-                  </a>
-                </div>
-              )}
-              <div>
-                <label className="text-sm font-medium">Review Notes (optional)</label>
+                <label className="text-sm font-medium">Description</label>
                 <textarea
-                  className="w-full h-16 px-3 py-2 border rounded-lg text-sm bg-background text-foreground mt-1"
-                  placeholder="Add notes about your decision..."
-                  value={leaveReviewNotes}
-                  onChange={(e) => setLeaveReviewNotes(e.target.value)}
+                  className="w-full h-20 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
+                  placeholder="Job description..."
+                  value={jobForm.description}
+                  onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Closing Date</label>
+                <Input
+                  type="date"
+                  value={jobForm.closingDate ? new Date(jobForm.closingDate).toISOString().split('T')[0] : ''}
+                  onChange={(e) => setJobForm({ ...jobForm, closingDate: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" type="button" onClick={() => setCreateJobOpen(false)}>Cancel</Button>
+                <Button type="submit" className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  Post Job
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Job Dialog */}
+        <Dialog open={editJobOpen} onOpenChange={setEditJobOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Job Posting</DialogTitle>
+              <DialogDescription>Update job posting details</DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={handleSubmitEditJob}>
+              <div>
+                <label className="text-sm font-medium">Job Title</label>
+                <Input
+                  placeholder="Line Cook"
+                  value={jobForm.title}
+                  onChange={(e) => setJobForm({ ...jobForm, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Department</label>
+                <Input
+                  list="job-dept-suggestions"
+                  placeholder="Type or select department"
+                  value={jobForm.department}
+                  onChange={(e) => setJobForm({ ...jobForm, department: e.target.value })}
+                />
+                <datalist id="job-dept-suggestions">
+                  <option value="Kitchen" />
+                  <option value="Service" />
+                  <option value="Delivery" />
+                  <option value="Management" />
+                  <option value="Admin" />
+                  <option value="Finance" />
+                  <option value="Marketing" />
+                  <option value="Operations" />
+                  <option value="IT" />
+                  <option value="Customer Support" />
+                </datalist>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Description</label>
+                <textarea
+                  className="w-full h-20 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
+                  placeholder="Job description..."
+                  value={jobForm.description}
+                  onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Status</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
+                  value={jobForm.status}
+                  onChange={(e) => setJobForm({ ...jobForm, status: e.target.value })}
+                >
+                  <option value="open">Open</option>
+                  <option value="closed">Closed</option>
+                  <option value="on_hold">On Hold</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Closing Date</label>
+                <Input
+                  type="date"
+                  value={jobForm.closingDate ? new Date(jobForm.closingDate).toISOString().split('T')[0] : ''}
+                  onChange={(e) => setJobForm({ ...jobForm, closingDate: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" type="button" onClick={() => setEditJobOpen(false)}>Cancel</Button>
+                <Button type="submit" className="gap-1.5">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Application Review Dialog */}
+        <Dialog open={reviewAppOpen} onOpenChange={setReviewAppOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Review Application</DialogTitle>
+              <DialogDescription>Update candidate pipeline status</DialogDescription>
+            </DialogHeader>
+            {selectedApp && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Application ID</span>
+                    <p className="font-mono text-xs">{selectedApp.applicationId}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Applied</span>
+                    <p>{new Date(selectedApp.appliedDate).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Candidate</span>
+                    <p className="font-medium">{selectedApp.applicantName}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Position</span>
+                    <p>{selectedApp.title}</p>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Current Status</span>
+                  <div className="mt-1">
+                    <Badge variant="outline" className={`${getStatusBadge(selectedApp.status)}`}>
+                      {getStatusIcon(selectedApp.status)}
+                      <span className="ml-1 capitalize">{selectedApp.status.replace('_', ' ')}</span>
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm font-medium">Move to Stage</span>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <Button
+                      size="sm"
+                      variant={selectedApp.status === 'pending' ? 'default' : 'outline'}
+                      disabled={updatingStatus || selectedApp.status === 'pending'}
+                      onClick={() => handleUpdateAppStatus('pending')}
+                    >
+                      Applied
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={selectedApp.status === 'under_review' ? 'default' : 'outline'}
+                      disabled={updatingStatus || selectedApp.status === 'under_review'}
+                      onClick={() => handleUpdateAppStatus('under_review')}
+                    >
+                      Shortlisted
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={selectedApp.status === 'interviewed' ? 'default' : 'outline'}
+                      disabled={updatingStatus || selectedApp.status === 'interviewed'}
+                      onClick={() => handleUpdateAppStatus('interviewed')}
+                    >
+                      Interview
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={selectedApp.status === 'offered' ? 'default' : 'outline'}
+                      disabled={updatingStatus || selectedApp.status === 'offered'}
+                      onClick={() => handleUpdateAppStatus('offered')}
+                    >
+                      Offered
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={selectedApp.status === 'hired' ? 'default' : 'outline'}
+                      className={selectedApp.status !== 'hired' ? 'border-green-300 text-green-700 hover:bg-green-50' : ''}
+                      disabled={updatingStatus || selectedApp.status === 'hired'}
+                      onClick={() => handleUpdateAppStatus('hired')}
+                    >
+                      Hired
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={selectedApp.status === 'rejected' ? 'default' : 'outline'}
+                      className={selectedApp.status !== 'rejected' ? 'border-red-300 text-red-700 hover:bg-red-50' : ''}
+                      disabled={updatingStatus || selectedApp.status === 'rejected'}
+                      onClick={() => handleUpdateAppStatus('rejected')}
+                    >
+                      Rejected
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-2">
+                  <Button variant="outline" onClick={() => setReviewAppOpen(false)}>Close</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Contract Dialog */}
+        <Dialog open={createContractOpen} onOpenChange={setCreateContractOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create New Contract</DialogTitle>
+              <DialogDescription>Create an employment contract</DialogDescription>
+            </DialogHeader>
+            <form className="space-y-3" onSubmit={handleSubmitContract}>
+              <div>
+                <label className="text-sm font-medium">Employee</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
+                  value={contractForm.employeeId}
+                  onChange={(e) => setContractForm({ ...contractForm, employeeId: e.target.value })}
+                  required
+                >
+                  <option value="">Select employee...</option>
+                  {employees.map(emp => (
+                    <option key={emp._id} value={emp._id}>{emp.firstName} {emp.lastName} - {emp.position}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium">Contract Type</label>
+                  <select
+                    className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
+                    value={contractForm.contractType}
+                    onChange={(e) => setContractForm({ ...contractForm, contractType: e.target.value })}
+                  >
+                    <option value="permanent">Permanent</option>
+                    <option value="fixed_term">Fixed Term</option>
+                    <option value="casual">Casual</option>
+                    <option value="consultancy">Consultancy</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Salary (KES)</label>
+                  <Input
+                    type="number"
+                    placeholder="50000"
+                    value={contractForm.salary}
+                    onChange={(e) => setContractForm({ ...contractForm, salary: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Title</label>
+                <Input
+                  placeholder="Software Engineer - Employment Contract"
+                  value={contractForm.title}
+                  onChange={(e) => setContractForm({ ...contractForm, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium">Start Date</label>
+                  <Input type="date" value={contractForm.startDate} onChange={(e) => setContractForm({ ...contractForm, startDate: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">End Date</label>
+                  <Input type="date" value={contractForm.endDate} onChange={(e) => setContractForm({ ...contractForm, endDate: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Terms</label>
+                <textarea
+                  className="w-full h-16 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
+                  value={contractForm.terms}
+                  onChange={(e) => setContractForm({ ...contractForm, terms: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Leave Entitlements (days/year)</label>
+                <div className="grid grid-cols-3 gap-2 mt-1">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Annual</label>
+                    <Input type="number" value={contractForm.annualLeave} onChange={(e) => setContractForm({ ...contractForm, annualLeave: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Sick</label>
+                    <Input type="number" value={contractForm.sickLeave} onChange={(e) => setContractForm({ ...contractForm, sickLeave: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Maternity</label>
+                    <Input type="number" value={contractForm.maternityLeave} onChange={(e) => setContractForm({ ...contractForm, maternityLeave: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Paternity</label>
+                    <Input type="number" value={contractForm.paternityLeave} onChange={(e) => setContractForm({ ...contractForm, paternityLeave: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Compassionate</label>
+                    <Input type="number" value={contractForm.compassionateLeave} onChange={(e) => setContractForm({ ...contractForm, compassionateLeave: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Notes</label>
+                <Input
+                  placeholder="Additional notes..."
+                  value={contractForm.notes}
+                  onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setReviewLeaveOpen(false)}>Cancel</Button>
-                <Button variant="destructive" onClick={() => handleSubmitLeaveReview('rejected')}>Reject</Button>
-                <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleSubmitLeaveReview('approved')}>Approve</Button>
+                <Button variant="outline" type="button" onClick={() => setCreateContractOpen(false)}>Cancel</Button>
+                <Button type="submit" className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  Create Contract
+                </Button>
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            </form>
+          </DialogContent>
+        </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          MY CONTRACTS TAB (Employee View)
-          ═══════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'my-contracts' && (
-        <Card className="border shadow-sm">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">My Employment Contracts</CardTitle>
-                <CardDescription>View and sign your employment contracts</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {contracts.length > 0 ? (
-                contracts.map(contract => (
-                  <Card key={contract._id} className="border">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-sm">{contract.title}</CardTitle>
-                          <CardDescription className="text-xs">
-                            Contract ID: {contract.contractId}
-                          </CardDescription>
-                        </div>
-                        <Badge variant="outline" className={`text-[10px] px-2 py-1 ${getStatusBadge(contract.status)}`}>
-                          {contract.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                        <div>
-                          <span className="text-muted-foreground">Salary:</span>
-                          <span className="font-mono font-medium ml-2">{contract.currency} {contract.salary?.toLocaleString()}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Start Date:</span>
-                          <span className="ml-2">{new Date(contract.startDate).toLocaleDateString()}</span>
-                        </div>
-                        {contract.endDate && (
-                          <div>
-                            <span className="text-muted-foreground">End Date:</span>
-                            <span className="ml-2">{new Date(contract.endDate).toLocaleDateString()}</span>
-                          </div>
-                        )}
-                        <div>
-                          <span className="text-muted-foreground">Type:</span>
-                          <span className="ml-2 capitalize">{contract.contractType?.replace('_', ' ')}</span>
-                        </div>
-                      </div>
-
-                      {contract.leaveEntitlements && (
-                        <div className="mb-4 p-3 bg-muted/50 rounded-lg">
-                          <h4 className="text-sm font-medium mb-2">Leave Entitlements</h4>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Annual Leave:</span>
-                              <span>{contract.leaveEntitlements.annualLeave} days</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Sick Leave:</span>
-                              <span>{contract.leaveEntitlements.sickLeave} days</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Maternity Leave:</span>
-                              <span>{contract.leaveEntitlements.maternityLeave} days</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Paternity Leave:</span>
-                              <span>{contract.leaveEntitlements.paternityLeave} days</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Compassionate Leave:</span>
-                              <span>{contract.leaveEntitlements.compassionateLeave} days</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex justify-end gap-2">
-                        {contract.status === 'offered' && (
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setSelectedContract(contract);
-                              setContractSignOpen(true);
-                            }}
-                            className="bg-emerald-600 hover:bg-emerald-700"
-                          >
-                            Sign Contract
-                          </Button>
-                        )}
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-3.5 w-3.5 mr-1" />
-                          View Details
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p>No contracts found</p>
+        {/* Edit Contract Dialog */}
+        <Dialog open={editContractOpen} onOpenChange={setEditContractOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Contract</DialogTitle>
+              <DialogDescription>
+                {selectedEditContract?.employeeId?.firstName} {selectedEditContract?.employeeId?.lastName} — {selectedEditContract?.contractId}
+              </DialogDescription>
+            </DialogHeader>
+            <form className="space-y-3" onSubmit={handleSubmitEditContract}>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium">Contract Type</label>
+                  <select
+                    className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
+                    value={contractForm.contractType}
+                    onChange={(e) => setContractForm({ ...contractForm, contractType: e.target.value })}
+                  >
+                    <option value="permanent">Permanent</option>
+                    <option value="fixed_term">Fixed Term</option>
+                    <option value="casual">Casual</option>
+                    <option value="consultancy">Consultancy</option>
+                  </select>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          MY PAYSLIPS TAB (Employee View)
-          ═══════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'my-payslips' && (
-        <Card className="border shadow-sm">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">My Payslips</CardTitle>
-                <CardDescription>View your salary slips and payment history</CardDescription>
+                <div>
+                  <label className="text-sm font-medium">Salary (KES)</label>
+                  <Input
+                    type="number"
+                    value={contractForm.salary}
+                    onChange={(e) => setContractForm({ ...contractForm, salary: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
+              <div>
+                <label className="text-sm font-medium">Title</label>
+                <Input
+                  value={contractForm.title}
+                  onChange={(e) => setContractForm({ ...contractForm, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium">Start Date</label>
+                  <Input type="date" value={contractForm.startDate} onChange={(e) => setContractForm({ ...contractForm, startDate: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">End Date</label>
+                  <Input type="date" value={contractForm.endDate} onChange={(e) => setContractForm({ ...contractForm, endDate: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Status</label>
+                <select
+                  className="w-full h-9 px-3 border rounded-lg text-sm bg-background text-foreground"
+                  value={selectedEditContract?.status || 'draft'}
+                  onChange={(e) => setSelectedEditContract(prev => prev ? { ...prev, status: e.target.value } : prev)}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="offered">Offered</option>
+                  <option value="active">Active</option>
+                  <option value="expired">Expired</option>
+                  <option value="terminated">Terminated</option>
+                  <option value="renewed">Renewed</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Terms</label>
+                <textarea
+                  className="w-full h-16 px-3 py-2 border rounded-lg text-sm bg-background text-foreground"
+                  value={contractForm.terms}
+                  onChange={(e) => setContractForm({ ...contractForm, terms: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Leave Entitlements (days/year)</label>
+                <div className="grid grid-cols-3 gap-2 mt-1">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Annual</label>
+                    <Input type="number" value={contractForm.annualLeave} onChange={(e) => setContractForm({ ...contractForm, annualLeave: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Sick</label>
+                    <Input type="number" value={contractForm.sickLeave} onChange={(e) => setContractForm({ ...contractForm, sickLeave: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Maternity</label>
+                    <Input type="number" value={contractForm.maternityLeave} onChange={(e) => setContractForm({ ...contractForm, maternityLeave: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Paternity</label>
+                    <Input type="number" value={contractForm.paternityLeave} onChange={(e) => setContractForm({ ...contractForm, paternityLeave: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Compassionate</label>
+                    <Input type="number" value={contractForm.compassionateLeave} onChange={(e) => setContractForm({ ...contractForm, compassionateLeave: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Notes (promotion, demotion, etc.)</label>
+                <Input
+                  placeholder="Reason for update..."
+                  value={contractForm.notes}
+                  onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" type="button" onClick={() => setEditContractOpen(false)}>Cancel</Button>
+                <Button type="submit" className="gap-1.5">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Payslip Dialog */}
+        <Dialog open={viewPayslipOpen} onOpenChange={setViewPayslipOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Payslip Details</DialogTitle>
+              <DialogDescription>{selectedPayslip?.payslipId}</DialogDescription>
+            </DialogHeader>
+            {selectedPayslip && (
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-muted-foreground">Employee</span>
+                    <p className="font-medium">{selectedPayslip.employeeId?.firstName} {selectedPayslip.employeeId?.lastName}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Department</span>
+                    <p>{selectedPayslip.employeeId?.department}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Pay Period</span>
+                    <p>{new Date(selectedPayslip.payPeriod?.year, selectedPayslip.payPeriod?.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Pay Date</span>
+                    <p>{new Date(selectedPayslip.payDate).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <div className="border-t pt-2 space-y-1">
+                  <div className="flex justify-between"><span>Basic Salary</span><span className="font-mono">{selectedPayslip.currency} {selectedPayslip.basicSalary?.toLocaleString()}</span></div>
+                  {selectedPayslip.overtimePay > 0 && (
+                    <div className="flex justify-between"><span>Overtime Pay</span><span className="font-mono">{selectedPayslip.currency} {selectedPayslip.overtimePay?.toLocaleString()}</span></div>
+                  )}
+                  <div className="flex justify-between font-medium border-t pt-1"><span>Total Earnings</span><span className="font-mono">{selectedPayslip.currency} {selectedPayslip.totalEarnings?.toLocaleString()}</span></div>
+                </div>
+                <div className="border-t pt-2 space-y-1 text-red-600">
+                  <div className="flex justify-between"><span>PAYE</span><span className="font-mono">- {selectedPayslip.paye?.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span>NSSF</span><span className="font-mono">- {selectedPayslip.nssf?.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span>NHIF</span><span className="font-mono">- {selectedPayslip.nhif?.toLocaleString()}</span></div>
+                  <div className="flex justify-between font-medium border-t pt-1"><span>Total Deductions</span><span className="font-mono">- {selectedPayslip.totalDeductions?.toLocaleString()}</span></div>
+                </div>
+                <div className="border-t pt-2">
+                  <div className="flex justify-between text-base font-bold">
+                    <span>Net Pay</span>
+                    <span className="text-green-700">{selectedPayslip.currency} {selectedPayslip.netPay?.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <Badge variant="outline" className={getStatusBadge(selectedPayslip.status)}>
+                    {selectedPayslip.status}
+                  </Badge>
+                  <div className="flex gap-1">
+                    {selectedPayslip.status === 'draft' && (
+                      <Button size="sm" variant="outline" onClick={() => { setViewPayslipOpen(false); handleOpenEditPayslip(selectedPayslip); }}>Edit</Button>
+                    )}
+                    {selectedPayslip.status === 'draft' && (
+                      <Button size="sm" onClick={() => { handleApprovePayslip(selectedPayslip); setViewPayslipOpen(false); }}>Approve</Button>
+                    )}
+                    {selectedPayslip.status === 'approved' && (
+                      <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => { handleMarkPayslipPaid(selectedPayslip); setViewPayslipOpen(false); }}>Mark Paid</Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Payslip Dialog */}
+        <Dialog open={editPayslipOpen} onOpenChange={setEditPayslipOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Edit Payslip</DialogTitle>
+              <DialogDescription>
+                {selectedPayslip?.employeeId?.firstName} {selectedPayslip?.employeeId?.lastName} — {selectedPayslip?.payslipId}
+              </DialogDescription>
+            </DialogHeader>
+            <form className="space-y-3" onSubmit={handleSubmitEditPayslip}>
+              <div>
+                <label className="text-sm font-medium">Basic Salary (KES)</label>
+                <Input
+                  type="number"
+                  value={payslipEditForm.basicSalary}
+                  onChange={(e) => setPayslipEditForm({ ...payslipEditForm, basicSalary: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Overtime Pay (KES)</label>
+                <Input
+                  type="number"
+                  value={payslipEditForm.overtimePay}
+                  onChange={(e) => setPayslipEditForm({ ...payslipEditForm, overtimePay: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Notes</label>
+                <Input
+                  placeholder="Adjustments, corrections..."
+                  value={payslipEditForm.notes}
+                  onChange={(e) => setPayslipEditForm({ ...payslipEditForm, notes: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" type="button" onClick={() => setEditPayslipOpen(false)}>Cancel</Button>
+                <Button type="submit" className="gap-1.5">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Contract Offer Dialog */}
+        <Dialog open={contractOfferOpen} onOpenChange={setContractOfferOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Send Contract Offer</DialogTitle>
+              <DialogDescription>
+                Send contract offer to {selectedContract?.employeeId?.firstName} {selectedContract?.employeeId?.lastName}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedContract && (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Contract ID:</span>
+                    <span className="font-mono">{selectedContract.contractId}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Position:</span>
+                    <span>{selectedContract.title}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Salary:</span>
+                    <span className="font-mono font-medium">{selectedContract.currency} {selectedContract.salary?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Type:</span>
+                    <span className="capitalize">{selectedContract.contractType?.replace('_', ' ')}</span>
+                  </div>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  This will send the contract offer to the employee for review and signing.
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setContractOfferOpen(false)}>Cancel</Button>
+                  <Button onClick={handleSendContractOffer} className="gap-1.5">
+                    <Send className="h-3.5 w-3.5" />
+                    Send Offer
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Contract Signing Dialog */}
+        <Dialog open={contractSignOpen} onOpenChange={setContractSignOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Sign Employment Contract</DialogTitle>
+              <DialogDescription>
+                Review and sign your employment contract
+              </DialogDescription>
+            </DialogHeader>
+            {selectedContract && (
+              <div className="space-y-6">
+                <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Contract ID:</span>
+                    <span className="font-mono font-medium">{selectedContract.contractId}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Position:</span>
+                    <span className="font-medium">{selectedContract.title}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Salary:</span>
+                    <span className="font-mono font-medium text-lg">{selectedContract.currency} {selectedContract.salary?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Start Date:</span>
+                    <span>{new Date(selectedContract.startDate).toLocaleDateString()}</span>
+                  </div>
+                  {selectedContract.endDate && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">End Date:</span>
+                      <span>{new Date(selectedContract.endDate).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
+
+                {selectedContract.leaveEntitlements && (
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium mb-3">Leave Entitlements</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Annual Leave:</span>
+                        <span className="font-medium">{selectedContract.leaveEntitlements.annualLeave} days</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Sick Leave:</span>
+                        <span className="font-medium">{selectedContract.leaveEntitlements.sickLeave} days</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Maternity Leave:</span>
+                        <span className="font-medium">{selectedContract.leaveEntitlements.maternityLeave} days</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Paternity Leave:</span>
+                        <span className="font-medium">{selectedContract.leaveEntitlements.paternityLeave} days</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Compassionate Leave:</span>
+                        <span className="font-medium">{selectedContract.leaveEntitlements.compassionateLeave} days</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-sm text-muted-foreground">
+                  By signing this contract, you agree to the terms and conditions outlined above.
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setContractSignOpen(false)}>Cancel</Button>
+                  <Button onClick={handleSignContract} className="bg-emerald-600 hover:bg-emerald-700 gap-1.5">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    Sign Contract
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* TABS */}
+        <div className="flex gap-1 border-b items-center">
+          {(() => {
+            const mainTabs = user?.role === 'admin' || user?.role === 'staff' ? [
+              { key: 'overview' as const, label: 'Overview', icon: Eye },
+            ] : [
+              { key: 'my-contracts' as const, label: 'My Contracts', icon: FileText },
+              { key: 'my-payslips' as const, label: 'My Payslips', icon: DollarSign },
+            ];
+            
+            const moreTabs = user?.role === 'admin' || user?.role === 'staff' ? [
+              { key: 'employees' as const, label: 'Employees', icon: Users },
+              { key: 'recruitment' as const, label: 'Recruitment', icon: UserPlus },
+              { key: 'contracts' as const, label: 'Contracts', icon: FileText },
+              { key: 'payslips' as const, label: 'Payslips', icon: DollarSign },
+              { key: 'leaves' as const, label: `Leaves${pendingLeaveCount > 0 ? ` (${pendingLeaveCount})` : ''}`, icon: Calendar },
+            ] : [];
+            
+            return (
+              <>
+                {mainTabs.map(tab => (
+                  <Button
+                    key={tab.key}
+                    variant={activeTab === tab.key ? 'default' : 'ghost'}
+                    onClick={() => setActiveTab(tab.key)}
+                    size="sm"
+                    className="gap-1.5 rounded-b-none"
+                  >
+                    <tab.icon className="h-3.5 w-3.5" />
+                    {tab.label}
+                  </Button>
+                ))}
+                {moreTabs.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5 rounded-b-none"
+                      >
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                        More
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {moreTabs.map(tab => (
+                        <DropdownMenuItem key={tab.key} onClick={() => setActiveTab(tab.key)}>
+                          <tab.icon className="h-4 w-4 mr-2" />
+                          {tab.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </>
+            );
+          })()}
+        </div>
+
+        {/* OVERVIEW TAB */}
+        {activeTab === 'overview' && (
+          <>
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Recruitment Pipeline</CardTitle>
+                <CardDescription>Applied → Shortlisted → Interview → Hired</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between gap-2">
+                  {PIPELINE_STAGES.map((stage, idx) => {
+                    const count = pipelineCounts[stage.key] || 0;
+                    const StageIcon = stage.icon;
+                    return (
+                      <React.Fragment key={stage.key}>
+                        <div className="flex-1 text-center">
+                          <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border-2 ${
+                            count > 0 ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-muted border-muted-foreground/20 text-muted-foreground'
+                          }`}>
+                            {count}
+                          </div>
+                          <div className="mt-1.5 flex items-center justify-center gap-1">
+                            <StageIcon className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs font-medium text-muted-foreground">{stage.label}</span>
+                          </div>
+                        </div>
+                        {idx < PIPELINE_STAGES.length - 1 && (
+                          <ChevronRight className="h-5 w-5 text-muted-foreground/40 shrink-0" />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-base">Department Distribution</CardTitle>
+                  <CardDescription>Employees by department</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {departmentData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart>
+                        <Pie
+                          data={departmentData}
+                          cx="50%"
+                          cy="45%"
+                          innerRadius={40}
+                          outerRadius={80}
+                          paddingAngle={3}
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          labelLine={false}
+                        >
+                          {departmentData.map((_: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={DEPT_COLORS[index % DEPT_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">No department data</div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-base">Payroll Overview</CardTitle>
+                  <CardDescription>
+                    Total: KES {(payrollOverview?.totalAmount ?? 0).toLocaleString()}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={[
+                      { name: 'Pending', value: payrollOverview?.pending ?? 0, fill: '#f59e0b' },
+                      { name: 'Processed', value: payrollOverview?.processed ?? 0, fill: '#3b82f6' },
+                      { name: 'Paid', value: payrollOverview?.paid ?? 0, fill: '#10b981' },
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="name" fontSize={11} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                      <YAxis fontSize={11} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                      <RechartsTooltip />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        {[
+                          { fill: '#f59e0b' },
+                          { fill: '#3b82f6' },
+                          { fill: '#10b981' },
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Payslip ID</TableHead>
-                    <TableHead>Period</TableHead>
-                    <TableHead>Pay Date</TableHead>
-                    <TableHead className="text-right">Net Pay</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payslips.length > 0 ? (
-                    payslips.map(payslip => (
-                      <TableRow key={payslip._id}>
-                        <TableCell className="font-mono text-xs">{payslip.payslipId}</TableCell>
-                        <TableCell className="text-xs">
-                          {new Date(payslip.payPeriod?.year, payslip.payPeriod?.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                        </TableCell>
-                        <TableCell className="text-xs">{new Date(payslip.payDate).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right font-mono text-sm font-medium">
-                          {payslip.currency} {payslip.netPay?.toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(payslip.status)}`}>
-                            {getStatusIcon(payslip.status)}
-                            <span className="ml-1">{payslip.status}</span>
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">Employee Activity Logs</CardTitle>
+                      <CardDescription>Recent workforce events</CardDescription>
+                    </div>
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {activityLogs.length > 0 ? activityLogs.map(log => (
+                      <div key={log.id} className="flex items-start gap-3 text-sm">
+                        <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${
+                          log.type === 'hire' ? 'bg-emerald-500' :
+                          log.type === 'leave' ? 'bg-amber-500' :
+                          log.type === 'termination' ? 'bg-red-500' :
+                          'bg-blue-500'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{log.employee}</p>
+                          <p className="text-xs text-muted-foreground">{log.description}</p>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {new Date(log.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )) : (
+                      <div className="text-center py-8 text-muted-foreground text-sm">No recent activity</div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">Attendance Tracking</CardTitle>
+                      <CardDescription>Today's workforce status</CardDescription>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-300 text-amber-700 bg-amber-50">
+                      Biometric Ready
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                        <div className="text-xl font-bold text-emerald-700">{stats?.overview.activeEmployees ?? 0}</div>
+                        <div className="text-[10px] text-emerald-600">Present</div>
+                      </div>
+                      <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                        <div className="text-xl font-bold text-amber-700">{onLeaveCount}</div>
+                        <div className="text-[10px] text-amber-600">On Leave</div>
+                      </div>
+                      <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+                        <div className="text-xl font-bold text-red-700">
+                          {Math.max(0, (stats?.overview.totalEmployees ?? 0) - (stats?.overview.activeEmployees ?? 0) - onLeaveCount)}
+                        </div>
+                        <div className="text-[10px] text-red-600">Absent</div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground text-center p-2 bg-muted/50 rounded">
+                      Future: Biometric integration for clock-in/clock-out tracking
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Open Positions</CardTitle>
+                    <CardDescription>Active job postings</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('recruitment')} className="gap-1 text-xs">
+                    View All <ChevronRight className="h-3 w-3" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Job ID</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Applications</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Posted</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentJobs.length > 0 ? (
+                        recentJobs.map((job) => (
+                          <TableRow key={job._id} className="hover:bg-muted/30">
+                            <TableCell className="font-mono text-xs">{job.jobId}</TableCell>
+                            <TableCell className="text-sm font-medium">{job.title}</TableCell>
+                            <TableCell className="text-sm">{job.department}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-xs ${job.applicationCount === 0 ? 'border-red-200 text-red-600' : ''}`}>
+                                {job.applicationCount}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(job.status)}`}>
+                                {getStatusIcon(job.status)}
+                                <span className="ml-1">{job.status.replace('_', ' ')}</span>
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{new Date(job.postedDate).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleEditJob(job)}>
+                                Edit
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-6 text-muted-foreground text-sm">No job postings</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {/* EMPLOYEES TAB */}
+        {activeTab === 'employees' && (
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">All Employees</CardTitle>
+                  <CardDescription>Role, status, and performance tracking</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-1" onClick={handleExportEmployees}>
+                        <Download className="h-3.5 w-3.5" /> Export
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Export as CSV</TooltipContent>
+                  </Tooltip>
+                  <Button size="sm" className="gap-1" onClick={handleCreateEmployee}>
+                    <Plus className="h-3.5 w-3.5" /> Add Employee
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3 mt-4">
+                <Input
+                  placeholder="Search employees..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-xs h-9"
+                />
+                <select
+                  value={employeeFilter}
+                  onChange={(e) => setEmployeeFilter(e.target.value as any)}
+                  className="h-9 px-3 border rounded-lg text-sm bg-background"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="on_leave">On Leave</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="terminated">Terminated</option>
+                </select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Role / Position</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Performance</TableHead>
+                      <TableHead className="text-right">Salary (KES)</TableHead>
+                      <TableHead>Hired</TableHead>
+                      <TableHead className="w-20">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEmployees.length > 0 ? (
+                      filteredEmployees.map(emp => (
+                        <TableRow key={emp._id} className={`hover:bg-muted/30 ${emp.status === 'on_leave' ? 'bg-amber-50/50' : emp.status === 'terminated' ? 'bg-red-50/30' : ''}`}>
+                          <TableCell>
+                            <div>
+                              <p className="text-sm font-medium">{emp.firstName} {emp.lastName}</p>
+                              <p className="text-[10px] text-muted-foreground font-mono">{emp.employeeId}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">{emp.position}</TableCell>
+                          <TableCell className="text-sm">{emp.department}</TableCell>
+                          <TableCell>
+                            <span className="text-xs capitalize">{emp.employmentType.replace('_', ' ')}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(emp.status)}`}>
+                              {getStatusIcon(emp.status)}
+                              <span className="ml-1">{emp.status.replace('_', ' ')}</span>
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {emp.performanceScore !== undefined ? (
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      emp.performanceScore >= 90 ? 'bg-emerald-500' :
+                                      emp.performanceScore >= 70 ? 'bg-blue-500' :
+                                      emp.performanceScore >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                                    }`}
+                                    style={{ width: `${emp.performanceScore}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs font-mono text-muted-foreground">{emp.performanceScore}</span>
+                                {emp.performanceScore >= 90 && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground italic">Pending</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm">{emp.salary.toLocaleString()}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{new Date(emp.hireDate).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-0.5">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View details</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handlePayrollCalc(emp._id)}>
+                                    <Calculator className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Calculate payroll</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                          <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          No employees found
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* RECRUITMENT TAB */}
+        {activeTab === 'recruitment' && (
+          <>
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Recruitment Pipeline</CardTitle>
+                    <CardDescription>Track candidates through hiring stages</CardDescription>
+                  </div>
+                  <Button size="sm" className="gap-1" onClick={handleCreateJob}>
+                    <Plus className="h-3.5 w-3.5" /> Post Job
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between gap-2 mb-6">
+                  {PIPELINE_STAGES.map((stage, idx) => {
+                    const count = pipelineCounts[stage.key] || 0;
+                    const StageIcon = stage.icon;
+                    return (
+                      <React.Fragment key={stage.key}>
+                        <div className="flex-1 text-center">
+                          <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold border-2 ${
+                            count > 0 ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-muted border-muted-foreground/20 text-muted-foreground'
+                          }`}>
+                            {count}
+                          </div>
+                          <div className="mt-2 flex items-center justify-center gap-1">
+                            <StageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-xs font-medium">{stage.label}</span>
+                          </div>
+                        </div>
+                        {idx < PIPELINE_STAGES.length - 1 && (
+                          <ChevronRight className="h-6 w-6 text-muted-foreground/40 shrink-0" />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Pipeline Board</CardTitle>
+                <CardDescription>Drag candidates between stages to update their status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-3 overflow-x-auto pb-2" style={{ minHeight: 300 }}>
+                  {[
+                    { key: 'pending', label: 'Applied', color: 'bg-gray-100 border-gray-300', headerColor: 'bg-gray-200 text-gray-700' },
+                    { key: 'under_review', label: 'Shortlisted', color: 'bg-blue-50 border-blue-300', headerColor: 'bg-blue-100 text-blue-700' },
+                    { key: 'interviewed', label: 'Interview', color: 'bg-yellow-50 border-yellow-300', headerColor: 'bg-yellow-100 text-yellow-700' },
+                    { key: 'offered', label: 'Offered', color: 'bg-purple-50 border-purple-300', headerColor: 'bg-purple-100 text-purple-700' },
+                    { key: 'hired', label: 'Hired', color: 'bg-green-50 border-green-300', headerColor: 'bg-green-100 text-green-700' },
+                    { key: 'rejected', label: 'Rejected', color: 'bg-red-50 border-red-300', headerColor: 'bg-red-100 text-red-700' },
+                  ].map(col => {
+                    const apps = recentApplications.filter(a => a.status === col.key || (col.key === 'hired' && a.status === 'hired'));
+                    return (
+                      <div
+                        key={col.key}
+                        className={`flex-1 min-w-[180px] max-w-[220px] rounded-lg border ${col.color} flex flex-col`}
+                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-primary'); }}
+                        onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2', 'ring-primary'); }}
+                        onDrop={async (e) => {
+                          e.preventDefault();
+                          e.currentTarget.classList.remove('ring-2', 'ring-primary');
+                          const appId = e.dataTransfer.getData('applicationId');
+                          const app = recentApplications.find(a => a._id === appId);
+                          if (app && app.status !== col.key) {
+                            try {
+                              const res = await apiFetch(`/api/v1/hr/applications/${app._id}/status`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ status: col.key }),
+                              });
+                              if (res.ok) {
+                                toast({ title: 'Moved', description: `${app.applicantName} → ${col.label}` });
+                                fetchHRData();
+                              } else {
+                                toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
+                              }
+                            } catch {
+                              toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
+                            }
+                          }
+                        }}
+                      >
+                        <div className={`px-3 py-2 rounded-t-lg ${col.headerColor} font-semibold text-xs flex items-center justify-between`}>
+                          <span>{col.label}</span>
+                          <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                            {apps.length}
+                          </Badge>
+                        </div>
+                        <div className="p-2 flex-1 space-y-2 min-h-[200px]">
+                          {apps.length === 0 ? (
+                            <div className="text-[10px] text-muted-foreground text-center py-8 opacity-50">
+                              Drop here
+                            </div>
+                          ) : (
+                            apps.map(app => (
+                              <div
+                                key={app._id}
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('applicationId', app._id);
+                                  e.currentTarget.classList.add('opacity-50');
+                                }}
+                                onDragEnd={(e) => {
+                                  e.currentTarget.classList.remove('opacity-50');
+                                }}
+                                className="bg-white rounded-md border shadow-sm p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
+                                onClick={() => handleReviewApp(app)}
+                              >
+                                <p className="text-sm font-medium truncate">{app.applicantName}</p>
+                                <p className="text-[10px] text-muted-foreground truncate">{app.title}</p>
+                                <div className="flex items-center justify-between mt-1.5">
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {new Date(app.appliedDate).toLocaleDateString()}
+                                  </span>
+                                  <span className="font-mono text-[9px] text-muted-foreground">{app.applicationId}</span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <div>
+                  <CardTitle className="text-base">Job Postings</CardTitle>
+                  <CardDescription>Manage open positions</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Job ID</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Applications</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Posted</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentJobs.length > 0 ? (
+                        recentJobs.map(job => (
+                          <TableRow key={job._id} className="hover:bg-muted/30">
+                            <TableCell className="font-mono text-xs">{job.jobId}</TableCell>
+                            <TableCell className="text-sm font-medium">{job.title}</TableCell>
+                            <TableCell className="text-sm">{job.department}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-xs ${job.applicationCount === 0 ? 'border-red-200 text-red-600' : ''}`}>
+                                {job.applicationCount}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(job.status)}`}>
+                                {getStatusIcon(job.status)}
+                                <span className="ml-1">{job.status.replace('_', ' ')}</span>
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{new Date(job.postedDate).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleEditJob(job)}>
+                                Edit
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-6 text-muted-foreground text-sm">No postings</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {/* CONTRACTS TAB */}
+        {activeTab === 'contracts' && (
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Employee Contracts</CardTitle>
+                  <CardDescription>Contract management and renewals</CardDescription>
+                </div>
+                <Button size="sm" className="gap-1" onClick={handleOpenCreateContract}>
+                  <Plus className="h-3.5 w-3.5" /> New Contract
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        No payslips found
-                      </TableCell>
+                      <TableHead>Contract ID</TableHead>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Start</TableHead>
+                      <TableHead>End</TableHead>
+                      <TableHead>Remaining</TableHead>
+                      <TableHead className="text-right">Salary</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+                  </TableHeader>
+                  <TableBody>
+                    {contracts.length > 0 ? (
+                      contracts.map(contract => {
+                        const daysLeft = contract.endDate
+                          ? Math.ceil((new Date(contract.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                          : null;
+                        const isExpiring = daysLeft !== null && daysLeft >= 0 && daysLeft <= 30;
+                        const isExpired = daysLeft !== null && daysLeft < 0;
+
+                        return (
+                          <TableRow key={contract._id} className={`hover:bg-muted/30 ${isExpiring ? 'bg-amber-50/50' : isExpired ? 'bg-red-50/30' : ''}`}>
+                            <TableCell className="font-mono text-xs">{contract.contractId}</TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="text-sm font-medium">{contract.employeeId?.firstName} {contract.employeeId?.lastName}</p>
+                                <p className="text-[10px] text-muted-foreground">{contract.employeeId?.department}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs capitalize">{contract.contractType?.replace('_', ' ')}</TableCell>
+                            <TableCell className="text-sm">{contract.title}</TableCell>
+                            <TableCell className="text-xs">{new Date(contract.startDate).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-xs">
+                              {contract.endDate ? new Date(contract.endDate).toLocaleDateString() : 'Permanent'}
+                            </TableCell>
+                            <TableCell>
+                              {daysLeft !== null ? (
+                                <span className={`text-xs font-medium ${
+                                  isExpired ? 'text-red-600' : isExpiring ? 'text-amber-600' : 'text-muted-foreground'
+                                }`}>
+                                  {isExpired ? `${Math.abs(daysLeft)}d expired` : `${daysLeft}d`}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm">
+                              {contract.currency} {contract.salary?.toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(contract.status)}`}>
+                                {contract.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                {contract.status === 'draft' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs"
+                                    onClick={() => {
+                                      setSelectedContract(contract);
+                                      setContractOfferOpen(true);
+                                    }}
+                                  >
+                                    Send Offer
+                                  </Button>
+                                )}
+                                {contract.status === 'active' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                    onClick={() => handleUpdateContractStatus(contract, 'terminated')}
+                                  >
+                                    Terminate
+                                  </Button>
+                                )}
+                                {(contract.status === 'expired' || contract.status === 'terminated') && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                                    onClick={() => handleUpdateContractStatus(contract, 'renewed')}
+                                  >
+                                    Renew
+                                  </Button>
+                                )}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleOpenEditContract(contract)}>
+                                      <Eye className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>View/Edit</TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                          <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          No contracts found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* PAYSLIPS TAB */}
+        {activeTab === 'payslips' && (
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Employee Payslips</CardTitle>
+                  <CardDescription>Payroll processing and payment tracking</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="gap-1" onClick={handleGenerateBulkPayslips}>
+                    <Calendar className="h-3.5 w-3.5" /> Generate Bulk
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Payslip ID</TableHead>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Pay Period</TableHead>
+                      <TableHead>Pay Date</TableHead>
+                      <TableHead className="text-right">Net Pay</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-20">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payslips.length > 0 ? (
+                      payslips.map(payslip => (
+                        <TableRow key={payslip._id} className="hover:bg-muted/30">
+                          <TableCell className="font-mono text-xs">{payslip.payslipId}</TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="text-sm font-medium">{payslip.employeeId?.firstName} {payslip.employeeId?.lastName}</p>
+                              <p className="text-[10px] text-muted-foreground">{payslip.employeeId?.department}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {new Date(payslip.payPeriod?.year, payslip.payPeriod?.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          </TableCell>
+                          <TableCell className="text-xs">{new Date(payslip.payDate).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right font-mono text-sm font-medium">
+                            {payslip.currency} {payslip.netPay?.toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(payslip.status)}`}>
+                              {getStatusIcon(payslip.status)}
+                              <span className="ml-1">{payslip.status}</span>
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-0.5">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleViewPayslip(payslip)}>
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View details</TooltipContent>
+                              </Tooltip>
+                              {payslip.status === 'draft' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-7 px-1 text-[10px]" onClick={() => handleOpenEditPayslip(payslip)}>
+                                      Edit
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Edit payslip</TooltipContent>
+                                </Tooltip>
+                              )}
+                              {payslip.status === 'draft' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleApprovePayslip(payslip)}>
+                                      <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Approve payslip</TooltipContent>
+                                </Tooltip>
+                              )}
+                              {payslip.status === 'approved' && (
+                                <Button variant="outline" size="sm" className="h-7 px-2 text-[10px] text-green-700 border-green-200" onClick={() => handleMarkPayslipPaid(payslip)}>
+                                  Mark Paid
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          No payslips found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* LEAVES TAB */}
+        {activeTab === 'leaves' && (
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Leave Requests</CardTitle>
+                  <CardDescription>Manage employee leave applications</CardDescription>
+                </div>
+                <div className="flex gap-2 text-xs">
+                  <Badge variant="outline" className="text-amber-700 bg-amber-50">{leaveRequests.filter(l => l.status === 'pending').length} Pending</Badge>
+                  <Badge variant="outline" className="text-green-700 bg-green-50">{leaveRequests.filter(l => l.status === 'approved').length} Approved</Badge>
+                  <Badge variant="outline" className="text-red-700 bg-red-50">{leaveRequests.filter(l => l.status === 'rejected').length} Rejected</Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Dates</TableHead>
+                      <TableHead className="text-center">Days</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leaveRequests.length > 0 ? (
+                      leaveRequests.map((leave: any) => (
+                        <TableRow key={leave._id} className="hover:bg-muted/30">
+                          <TableCell className="text-xs font-medium">
+                            {leave.employeeId?.firstName} {leave.employeeId?.lastName}
+                            <p className="text-[10px] text-muted-foreground">{leave.employeeId?.department}</p>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={`text-[10px] ${
+                              leave.leaveType === 'annual' ? 'text-blue-600 bg-blue-50' :
+                              leave.leaveType === 'sick' ? 'text-red-600 bg-red-50' :
+                              leave.leaveType === 'maternity' ? 'text-pink-600 bg-pink-50' :
+                              leave.leaveType === 'paternity' ? 'text-purple-600 bg-purple-50' :
+                              leave.leaveType === 'compassionate' ? 'text-amber-600 bg-amber-50' :
+                              'text-gray-600 bg-gray-50'
+                            }`}>
+                              {leave.leaveType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {new Date(leave.startDate).toLocaleDateString()} — {new Date(leave.endDate).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-center font-medium">{leave.totalDays}</TableCell>
+                          <TableCell className="text-xs max-w-[180px] truncate">{leave.reason}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={`text-[10px] ${
+                              leave.status === 'pending' ? 'text-amber-700 bg-amber-50' :
+                              leave.status === 'approved' ? 'text-green-700 bg-green-50' :
+                              leave.status === 'rejected' ? 'text-red-700 bg-red-50' :
+                              'text-gray-700 bg-gray-50'
+                            }`}>
+                              {leave.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {leave.doctorLetterUrl && (
+                                <a href={leave.doctorLetterUrl} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="View Doctor Letter">
+                                    <FileText className="h-3.5 w-3.5 text-blue-600" />
+                                  </Button>
+                                </a>
+                              )}
+                              {leave.status === 'pending' && (
+                                <Button variant="outline" size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleReviewLeave(leave)}>
+                                  Review
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          <Calendar className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          No leave requests found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* MY CONTRACTS TAB */}
+        {activeTab === 'my-contracts' && (
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">My Employment Contracts</CardTitle>
+                  <CardDescription>View and sign your employment contracts</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {contracts.length > 0 ? (
+                  contracts.map(contract => (
+                    <Card key={contract._id} className="border">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-sm">{contract.title}</CardTitle>
+                            <CardDescription className="text-xs">
+                              Contract ID: {contract.contractId}
+                            </CardDescription>
+                          </div>
+                          <Badge variant="outline" className={`text-[10px] px-2 py-1 ${getStatusBadge(contract.status)}`}>
+                            {contract.status}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                          <div>
+                            <span className="text-muted-foreground">Salary:</span>
+                            <span className="font-mono font-medium ml-2">{contract.currency} {contract.salary?.toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Start Date:</span>
+                            <span className="ml-2">{new Date(contract.startDate).toLocaleDateString()}</span>
+                          </div>
+                          {contract.endDate && (
+                            <div>
+                              <span className="text-muted-foreground">End Date:</span>
+                              <span className="ml-2">{new Date(contract.endDate).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                          <div>
+                            <span className="text-muted-foreground">Type:</span>
+                            <span className="ml-2 capitalize">{contract.contractType?.replace('_', ' ')}</span>
+                          </div>
+                        </div>
+
+                        {contract.leaveEntitlements && (
+                          <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                            <h4 className="text-sm font-medium mb-2">Leave Entitlements</h4>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Annual Leave:</span>
+                                <span>{contract.leaveEntitlements.annualLeave} days</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Sick Leave:</span>
+                                <span>{contract.leaveEntitlements.sickLeave} days</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Maternity Leave:</span>
+                                <span>{contract.leaveEntitlements.maternityLeave} days</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Paternity Leave:</span>
+                                <span>{contract.leaveEntitlements.paternityLeave} days</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Compassionate Leave:</span>
+                                <span>{contract.leaveEntitlements.compassionateLeave} days</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex justify-end gap-2">
+                          {contract.status === 'offered' && (
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setSelectedContract(contract);
+                                setContractSignOpen(true);
+                              }}
+                              className="bg-emerald-600 hover:bg-emerald-700"
+                            >
+                              Sign Contract
+                            </Button>
+                          )}
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            View Details
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <p>No contracts found</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* MY PAYSLIPS TAB */}
+        {activeTab === 'my-payslips' && (
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">My Payslips</CardTitle>
+                  <CardDescription>View your salary slips and payment history</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Payslip ID</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Pay Date</TableHead>
+                      <TableHead className="text-right">Net Pay</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payslips.length > 0 ? (
+                      payslips.map(payslip => (
+                        <TableRow key={payslip._id} className="hover:bg-muted/30">
+                          <TableCell className="font-mono text-xs">{payslip.payslipId}</TableCell>
+                          <TableCell className="text-xs">
+                            {new Date(payslip.payPeriod?.year, payslip.payPeriod?.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          </TableCell>
+                          <TableCell className="text-xs">{new Date(payslip.payDate).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right font-mono text-sm font-medium">
+                            {payslip.currency} {payslip.netPay?.toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBadge(payslip.status)}`}>
+                              {getStatusIcon(payslip.status)}
+                              <span className="ml-1">{payslip.status}</span>
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View details</TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          No payslips found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Review Leave Dialog */}
+        <Dialog open={reviewLeaveOpen} onOpenChange={setReviewLeaveOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Review Leave Request</DialogTitle>
+              <DialogDescription>Approve or reject this leave application</DialogDescription>
+            </DialogHeader>
+            {selectedLeave && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground text-xs">Employee</span>
+                    <p className="font-medium">{selectedLeave.employeeId?.firstName} {selectedLeave.employeeId?.lastName}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Department</span>
+                    <p className="font-medium">{selectedLeave.employeeId?.department}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Leave Type</span>
+                    <p className="font-medium capitalize">{selectedLeave.leaveType}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Duration</span>
+                    <p className="font-medium">{selectedLeave.totalDays} day(s)</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Start Date</span>
+                    <p className="font-medium">{new Date(selectedLeave.startDate).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">End Date</span>
+                    <p className="font-medium">{new Date(selectedLeave.endDate).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Reason</span>
+                  <p className="text-sm bg-muted/50 rounded p-2 mt-1">{selectedLeave.reason}</p>
+                </div>
+                {selectedLeave.doctorLetterUrl && (
+                  <div>
+                    <span className="text-muted-foreground text-xs">Doctor's Letter</span>
+                    <a href={selectedLeave.doctorLetterUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:underline mt-1">
+                      <FileText className="h-4 w-4" /> View attached document
+                    </a>
+                  </div>
+                )}
+                <div>
+                  <label className="text-sm font-medium">Review Notes (optional)</label>
+                  <textarea
+                    className="w-full h-16 px-3 py-2 border rounded-lg text-sm bg-background text-foreground mt-1"
+                    placeholder="Add notes about your decision..."
+                    value={leaveReviewNotes}
+                    onChange={(e) => setLeaveReviewNotes(e.target.value)}
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setReviewLeaveOpen(false)}>Cancel</Button>
+                  <Button variant="destructive" onClick={() => handleSubmitLeaveReview('rejected')}>Reject</Button>
+                  <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleSubmitLeaveReview('approved')}>Approve</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
   );
 }

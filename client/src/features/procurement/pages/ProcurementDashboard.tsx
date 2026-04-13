@@ -371,24 +371,36 @@ export const ProcurementDashboard: React.FC = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger value="kanban" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <LayoutGrid className="h-4 w-4" />
-              Kanban Board
-            </TabsTrigger>
-            <TabsTrigger value="requests" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <ClipboardList className="h-4 w-4" />
-              Purchase Requests
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Truck className="h-4 w-4" />
-              Purchase Orders
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-2">
+            <TabsList className="bg-muted/50 p-1">
+              <TabsTrigger value="kanban" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <LayoutGrid className="h-4 w-4" />
+                Kanban Board
+              </TabsTrigger>
+            </TabsList>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <MoreHorizontal className="h-4 w-4" />
+                  More
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={() => setActiveTab('requests')}>
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Purchase Requests
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab('orders')}>
+                  <Truck className="h-4 w-4 mr-2" />
+                  Purchase Orders
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab('analytics')}>
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Analytics
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           <TabsContent value="kanban" className="space-y-4">
             {loading ? (
