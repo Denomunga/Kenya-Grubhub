@@ -7,6 +7,7 @@ import ProductSearch from "@/components/search/ProductSearch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, GitCompare, Heart, ShoppingBag, Plus, Minus, Trash, Trash2, MapPin, Phone, ShoppingCart } from "lucide-react";
@@ -1144,12 +1145,32 @@ export default function Menu() {
 
           <div className="flex flex-col md:flex-row justify-between items-end gap-4 mt-6 relative">
            <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
-             <TabsList className="bg-muted w-full overflow-x-auto flex-nowrap p-1">
-               {categories.map(cat => (
+             <TabsList className="bg-muted w-full flex-nowrap p-1">
+               {categories.slice(0, 3).map(cat => (
                  <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm px-3 py-2 min-w-20 sm:min-w-[100px]">
                    {cat}
                  </TabsTrigger>
                ))}
+               {categories.length > 3 && (
+                 <DropdownMenu>
+                   <DropdownMenuTrigger asChild>
+                     <TabsTrigger value="_more" className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm px-3 py-2">
+                       More ▾
+                     </TabsTrigger>
+                   </DropdownMenuTrigger>
+                   <DropdownMenuContent align="start">
+                     {categories.slice(3).map(cat => (
+                       <DropdownMenuItem
+                         key={cat}
+                         onClick={() => setActiveCategory(cat)}
+                         className={activeCategory === cat ? 'bg-accent font-medium' : ''}
+                       >
+                         {cat}
+                       </DropdownMenuItem>
+                     ))}
+                   </DropdownMenuContent>
+                 </DropdownMenu>
+               )}
              </TabsList>
            </Tabs>
          </div>
