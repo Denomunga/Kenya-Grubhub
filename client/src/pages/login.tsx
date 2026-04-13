@@ -265,7 +265,7 @@ export default function Login() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="signup-username">Username</Label>
-                        <Input id="signup-username" placeholder="Letters, numbers, _" value={signupForm.username} onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })} disabled={authState === 'loading'} maxLength={30} required />
+                        <Input id="signup-username" placeholder=" Enter Username" value={signupForm.username} onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })} disabled={authState === 'loading'} maxLength={30} required />
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -274,7 +274,7 @@ export default function Login() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-phone">Phone (Optional)</Label>
-                      <Input id="signup-phone" placeholder="Enter Phone no." value={signupForm.phone} onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })} disabled={authState === 'loading'} maxLength={20} />
+                      <Input id="signup-phone" placeholder="Enter Phone no..." value={signupForm.phone} onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })} disabled={authState === 'loading'} maxLength={20} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-password">Password</Label>
