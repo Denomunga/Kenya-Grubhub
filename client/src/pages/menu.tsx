@@ -37,7 +37,7 @@ import ProductImageViewer, { ProductImage } from "@/components/ui/ProductImageVi
 import LocationPicker from '@/components/ui/LocationPicker';
 import OrderConfirmation from '@/components/ui/OrderConfirmation';
 import { SEOMetaTags } from "@/components/seo/SEOMetaTags";
-import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
+//import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { useShop } from "@/lib/shop";
 import {
   Tooltip,
@@ -618,7 +618,7 @@ export default function Menu() {
           keywords="product catalog Kenya, laptops catalog, mobile phones catalog, stationery catalog, electronics shopping Kenya, HP laptops Kenya, Dell laptops Kenya"
           structuredData={categoryStructuredData}
         />
-        <Breadcrumbs items={[{ name: 'Home', url: '/' }]} />
+        {/* <Breadcrumbs items={[{ name: 'Home', url: '/' }]} /> */}
         <div className="min-h-screen w-full particle-container gradient-mesh">
           <div className="container mx-auto px-6 py-14">
             <div className="mb-8">
