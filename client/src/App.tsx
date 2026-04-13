@@ -86,7 +86,7 @@ window.fetch = async (...args) => {
 // Lazy load components for code splitting
 const Home = lazy(() => import("@/pages/home"));
 const Menu = lazy(() => import("@/pages/menu"));
-const Auth = lazy(() => import("@/pages/auth"));
+const Login = lazy(() => import("@/pages/login"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const Chat = lazy(() => import("@/pages/chat"));
 const Profile = lazy(() => import("@/pages/profile"));
@@ -127,7 +127,7 @@ function Router() {
               <Route path="/menu" component={Menu} />
               <Route path="/favorites" component={RedirectToMenu} />
               <Route path="/compare" component={RedirectToMenu} />
-              <Route path="/login" component={Auth} />
+              <Route path="/login" component={Login} />
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/chat" component={Chat} />
               <Route path="/profile" component={Profile} />
