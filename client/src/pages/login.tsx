@@ -63,6 +63,23 @@ export default function Login() {
 
   const switchMode = (newMode: 'login' | 'signup') => { setMode(newMode); setAuthState('idle'); setErrorMessage(''); };
 
+  const getPasswordStrength = (pw: string) => {
+    if (!pw) return { score: 0, label: '', color: '' };
+    let score = 0;
+    if (pw.length >= 6) score++;
+    if (pw.length >= 10) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[a-z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    if (score <= 2) return { score, label: 'Weak', color: 'bg-red-500' };
+    if (score <= 4) return { score, label: 'Fair', color: 'bg-yellow-500' };
+    return { score, label: 'Strong', color: 'bg-green-500' };
+  };
+
+  const pwStrength = getPasswordStrength(signupForm.password);
+  const passwordsMatch = signupForm.confirmPassword && signupForm.password === signupForm.confirmPassword;
+
   return (
     <div className="min-h-screen flex">
       {/* Left Hero Section */}
@@ -225,30 +242,47 @@ export default function Login() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <Label htmlFor="signup-name">Full Name</Label>
-                        <Input id="signup-name" placeholder="John Doe" value={signupForm.name} onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })} disabled={authState === 'loading'} required />
+                        <Input id="signup-name" placeholder="Enter full name" value={signupForm.name} onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })} disabled={authState === 'loading'} required />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="signup-username">Username</Label>
-                        <Input id="signup-username" placeholder="johndoe" value={signupForm.username} onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })} disabled={authState === 'loading'} required />
+                        <Input id="signup-username" placeholder="Enter username" value={signupForm.username} onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })} disabled={authState === 'loading'} required />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-email">Email</Label>
-                      <Input id="signup-email" type="email" placeholder="john@company.com" value={signupForm.email} onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })} disabled={authState === 'loading'} required />
+                      <Input id="signup-email" type="email" placeholder="Enter Email" value={signupForm.email} onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })} disabled={authState === 'loading'} required />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-phone">Phone (Optional)</Label>
-                      <Input id="signup-phone" placeholder="+254700000000" value={signupForm.phone} onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })} disabled={authState === 'loading'} />
+                      <Input id="signup-phone" placeholder="Enter Phone no." value={signupForm.phone} onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })} disabled={authState === 'loading'} />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-password">Password</Label>
-                        <Input id="signup-password" type="password" placeholder="Min 6 chars" value={signupForm.password} onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })} disabled={authState === 'loading'} required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-confirm">Confirm</Label>
-                        <Input id="signup-confirm" type="password" placeholder="Confirm password" value={signupForm.confirmPassword} onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })} disabled={authState === 'loading'} required />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Password</Label>
+                      <Input id="signup-password" type={showPassword ? "text" : "password"} placeholder="Min 6 chars" value={signupForm.password} onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })} disabled={authState === 'loading'} required />
+                      {signupForm.password && (
+                        <div className="space-y-1">
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5, 6].map(i => (
+                              <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${i <= pwStrength.score ? pwStrength.color : 'bg-muted'}`} />
+                            ))}
+                          </div>
+                          <p className={`text-xs font-medium ${pwStrength.label === 'Weak' ? 'text-red-500' : pwStrength.label === 'Fair' ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {pwStrength.label}
+                            {pwStrength.label === 'Weak' && ' — add uppercase, numbers & symbols'}
+                            {pwStrength.label === 'Fair' && ' — add more variety for strength'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-confirm">Confirm Password</Label>
+                      <Input id="signup-confirm" type="password" placeholder="Confirm password" value={signupForm.confirmPassword} onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })} disabled={authState === 'loading'} required />
+                      {signupForm.confirmPassword && (
+                        <p className={`text-xs font-medium ${passwordsMatch ? 'text-green-600' : 'text-red-500'}`}>
+                          {passwordsMatch ? '✓ Passwords match' : '✗ Passwords do not match'}
+                        </p>
+                      )}
                     </div>
                     <Button
                       type="submit"
