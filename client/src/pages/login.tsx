@@ -3,6 +3,7 @@ import { useHybridAuth } from "@/lib/hybrid-auth";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Laptop, ArrowRight, Loader2, CheckCircle, AlertCircle, Shield, MapPin, Clock, Mail, Eye, EyeOff, UserPlus } from "lucide-react";
@@ -10,14 +11,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 
 export default function Login() {
-  const { loginWithGoogle, login, register, isAuthenticated } = useHybridAuth();
+  const { loginWithGoogle, login, register, forgotPassword, isAuthenticated } = useHybridAuth();
   const [, setLocation] = useLocation();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [authState, setAuthState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ username: '', email: '', name: '', password: '', confirmPassword: '', phone: '' });
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotState, setForgotState] = useState<'idle' | 'loading' | 'sent'>('idle');
 
   const { user } = useHybridAuth();
   React.useEffect(() => {
@@ -45,19 +49,28 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginForm.username || !loginForm.password) { setErrorMessage('Please fill in all fields'); setAuthState('error'); return; }
+    if (!loginForm.email.trim() || !loginForm.password) { setErrorMessage('Please fill in all fields'); setAuthState('error'); return; }
+    if (loginForm.password.length > 128) { setErrorMessage('Password too long'); setAuthState('error'); return; }
     setAuthState('loading'); setErrorMessage('');
-    const success = await login(loginForm.username, loginForm.password);
-    if (success) { setAuthState('success'); } else { setAuthState('error'); setErrorMessage('Invalid username or password'); setTimeout(() => setAuthState('idle'), 3000); }
+    const success = await login(loginForm.email.trim(), loginForm.password);
+    if (success) { setAuthState('success'); } else { setAuthState('error'); setErrorMessage('Invalid email or password. If locked, wait 15 minutes.'); setTimeout(() => setAuthState('idle'), 5000); }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!signupForm.username || !signupForm.email || !signupForm.name || !signupForm.password) { setErrorMessage('Please fill in all required fields'); setAuthState('error'); return; }
+    if (!signupForm.username.trim() || !signupForm.email.trim() || !signupForm.name.trim() || !signupForm.password) { setErrorMessage('Please fill in all required fields'); setAuthState('error'); return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(signupForm.username.trim())) { setErrorMessage('Username can only contain letters, numbers, and underscores'); setAuthState('error'); return; }
+    if (signupForm.username.trim().length < 3 || signupForm.username.trim().length > 30) { setErrorMessage('Username must be 3-30 characters'); setAuthState('error'); return; }
+    if (signupForm.name.trim().length < 2 || signupForm.name.trim().length > 50) { setErrorMessage('Name must be 2-50 characters'); setAuthState('error'); return; }
     if (signupForm.password !== signupForm.confirmPassword) { setErrorMessage('Passwords do not match'); setAuthState('error'); return; }
-    if (signupForm.password.length < 6) { setErrorMessage('Password must be at least 6 characters'); setAuthState('error'); return; }
+    if (signupForm.password.length < 8) { setErrorMessage('Password must be at least 8 characters'); setAuthState('error'); return; }
+    if (signupForm.password.length > 128) { setErrorMessage('Password must be 128 characters or less'); setAuthState('error'); return; }
+    if (!/[A-Z]/.test(signupForm.password)) { setErrorMessage('Password must contain at least one uppercase letter'); setAuthState('error'); return; }
+    if (!/[a-z]/.test(signupForm.password)) { setErrorMessage('Password must contain at least one lowercase letter'); setAuthState('error'); return; }
+    if (!/\d/.test(signupForm.password)) { setErrorMessage('Password must contain at least one number'); setAuthState('error'); return; }
+    if (signupForm.phone && (signupForm.phone.trim().length < 7 || signupForm.phone.trim().length > 20)) { setErrorMessage('Phone must be 7-20 characters if provided'); setAuthState('error'); return; }
     setAuthState('loading'); setErrorMessage('');
-    const success = await register(signupForm.username, signupForm.email, signupForm.password, signupForm.name, signupForm.phone || undefined);
+    const success = await register(signupForm.username.trim(), signupForm.email.trim(), signupForm.password, signupForm.name.trim(), signupForm.phone?.trim() || undefined);
     if (success) { setAuthState('success'); } else { setAuthState('error'); setErrorMessage('Registration failed. Username or email may already exist.'); setTimeout(() => setAuthState('idle'), 3000); }
   };
 
@@ -66,8 +79,8 @@ export default function Login() {
   const getPasswordStrength = (pw: string) => {
     if (!pw) return { score: 0, label: '', color: '' };
     let score = 0;
-    if (pw.length >= 6) score++;
-    if (pw.length >= 10) score++;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
     if (/[A-Z]/.test(pw)) score++;
     if (/[a-z]/.test(pw)) score++;
     if (/[0-9]/.test(pw)) score++;
@@ -183,13 +196,15 @@ export default function Login() {
                     className="space-y-4"
                   >
                     <div className="space-y-2">
-                      <Label htmlFor="username">Username</Label>
+                      <Label htmlFor="login-email">Email</Label>
                       <Input
-                        id="username"
-                        placeholder="Enter your username"
-                        value={loginForm.username}
-                        onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                        id="login-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={loginForm.email}
+                        onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                         disabled={authState === 'loading'}
+                        maxLength={100}
                         required
                       />
                     </div>
@@ -204,6 +219,7 @@ export default function Login() {
                           onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                           disabled={authState === 'loading'}
                           className="pr-10"
+                          maxLength={128}
                           required
                         />
                         <Button
@@ -215,6 +231,9 @@ export default function Login() {
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button type="button" variant="link" className="px-0 h-auto text-xs text-blue-600 hover:text-blue-700" onClick={() => { setForgotOpen(true); setForgotState('idle'); setForgotEmail(''); }}>Forgot password?</Button>
                       </div>
                     </div>
                     <Button
@@ -242,24 +261,24 @@ export default function Login() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <Label htmlFor="signup-name">Full Name</Label>
-                        <Input id="signup-name" placeholder="Enter full name" value={signupForm.name} onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })} disabled={authState === 'loading'} required />
+                        <Input id="signup-name" placeholder="Enter full name" value={signupForm.name} onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })} disabled={authState === 'loading'} maxLength={50} required />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="signup-username">Username</Label>
-                        <Input id="signup-username" placeholder="Enter username" value={signupForm.username} onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })} disabled={authState === 'loading'} required />
+                        <Input id="signup-username" placeholder="Letters, numbers, _" value={signupForm.username} onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })} disabled={authState === 'loading'} maxLength={30} required />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-email">Email</Label>
-                      <Input id="signup-email" type="email" placeholder="Enter Email" value={signupForm.email} onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })} disabled={authState === 'loading'} required />
+                      <Input id="signup-email" type="email" placeholder="Enter Email" value={signupForm.email} onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })} disabled={authState === 'loading'} maxLength={100} required />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-phone">Phone (Optional)</Label>
-                      <Input id="signup-phone" placeholder="Enter Phone no." value={signupForm.phone} onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })} disabled={authState === 'loading'} />
+                      <Input id="signup-phone" placeholder="Enter Phone no." value={signupForm.phone} onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })} disabled={authState === 'loading'} maxLength={20} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-password">Password</Label>
-                      <Input id="signup-password" type={showPassword ? "text" : "password"} placeholder="Min 6 chars" value={signupForm.password} onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })} disabled={authState === 'loading'} required />
+                      <Input id="signup-password" type={showPassword ? "text" : "password"} placeholder="Min 8 chars, Aa1!" value={signupForm.password} onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })} disabled={authState === 'loading'} maxLength={128} required />
                       {signupForm.password && (
                         <div className="space-y-1">
                           <div className="flex gap-1">
@@ -277,7 +296,7 @@ export default function Login() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-confirm">Confirm Password</Label>
-                      <Input id="signup-confirm" type="password" placeholder="Confirm password" value={signupForm.confirmPassword} onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })} disabled={authState === 'loading'} required />
+                      <Input id="signup-confirm" type="password" placeholder="Confirm password" value={signupForm.confirmPassword} onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })} disabled={authState === 'loading'} maxLength={128} required />
                       {signupForm.confirmPassword && (
                         <p className={`text-xs font-medium ${passwordsMatch ? 'text-green-600' : 'text-red-500'}`}>
                           {passwordsMatch ? '✓ Passwords match' : '✗ Passwords do not match'}
@@ -394,6 +413,51 @@ export default function Login() {
           </div>
         </motion.div>
       </div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>Enter your email and we'll send you a link to reset your password.</DialogDescription>
+          </DialogHeader>
+          {forgotState === 'sent' ? (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <div className="bg-green-100 p-3 rounded-full">
+                <Mail className="h-6 w-6 text-green-600" />
+              </div>
+              <p className="text-sm text-center text-muted-foreground">If that email is registered, a reset link has been sent. Check your inbox.</p>
+            </div>
+          ) : (
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!forgotEmail) return;
+              setForgotState('loading');
+              const success = await forgotPassword(forgotEmail);
+              setForgotState(success ? 'sent' : 'idle');
+            }} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">Email</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  disabled={forgotState === 'loading'}
+                  required
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setForgotOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={forgotState === 'loading'}>
+                  {forgotState === 'loading' ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : 'Send Reset Link'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

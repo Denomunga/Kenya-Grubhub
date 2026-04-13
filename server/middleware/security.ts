@@ -68,10 +68,10 @@ export const validateRegistration = [
 ];
 
 export const validateLogin = [
-  body('username')
-    .notEmpty()
-    .withMessage('Username is required')
-    .trim(),
+  body('email')
+    .isEmail()
+    .withMessage('Valid email is required')
+    .normalizeEmail(),
   body('password')
     .notEmpty()
     .withMessage('Password is required'),

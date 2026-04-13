@@ -273,14 +273,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     validateRegistration,
     handleValidationErrors,
     [
-      body("username").trim().isLength({ min: 2 }).withMessage("Username must be at least 2 characters"),
+      body("username").trim().isLength({ min: 3, max: 30 }).withMessage("Username must be 3-30 characters")
+        .matches(/^[a-zA-Z0-9_]+$/).withMessage("Username can only contain letters, numbers, and underscores"),
       body("email").isEmail().normalizeEmail().withMessage("Valid email is required"),
-      body("password").isLength({ min: 8 }).withMessage("Password must be at least 8 characters")
+      body("password").isLength({ min: 8, max: 128 }).withMessage("Password must be 8-128 characters")
         .matches(/[A-Z]/).withMessage("Password must contain at least one uppercase letter")
         .matches(/[a-z]/).withMessage("Password must contain at least one lowercase letter")
         .matches(/\d/).withMessage("Password must contain at least one number"),
-      body("name").trim().notEmpty().withMessage("Name is required"),
-      body("phone").trim().isLength({ min: 7 }).withMessage("Phone is required and must be valid"),
+      body("name").trim().isLength({ min: 2, max: 50 }).withMessage("Name must be 2-50 characters"),
+      body("phone").optional().trim().isLength({ min: 7, max: 20 }).withMessage("Phone must be 7-20 characters if provided"),
     ],
     async (req: Request, res: Response) => {
       try {
@@ -369,21 +370,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     validateLogin,
     handleValidationErrors,
     [
-      body("username").trim().notEmpty().withMessage("Username is required"),
-      body("password").notEmpty().withMessage("Password is required"),
+      body("email").isEmail().normalizeEmail().withMessage("Valid email is required"),
+      body("password").notEmpty().withMessage("Password is required").isLength({ max: 128 }).withMessage("Password too long"),
     ],
     async (req: Request, res: Response) => {
       try {
-        const { username, password } = req.body;
+        const { email, password } = req.body;
 
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
         if (!user) {
           return res.status(401).json({ message: "Invalid credentials" });
         }
 
+        // Check account lockout
+        if (user.loginAttempts && user.loginAttempts >= 10 && user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+          const remaining = Math.ceil((new Date(user.lockedUntil).getTime() - Date.now()) / 60000);
+          return res.status(429).json({ message: `Account temporarily locked. Try again in ${remaining} minute${remaining > 1 ? 's' : ''}.` });
+        }
+
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
+          // Track failed attempts
+          const attempts = (user.loginAttempts || 0) + 1;
+          const lockUntil = attempts >= 10 ? new Date(Date.now() + 15 * 60 * 1000) : undefined; // Lock 15 min after 10 failures
+          await User.findByIdAndUpdate(user._id, { loginAttempts: attempts, ...(lockUntil ? { lockedUntil: lockUntil } : { lockedUntil: null }) });
           return res.status(401).json({ message: "Invalid credentials" });
+        }
+
+        // Reset failed attempts on successful login
+        if (user.loginAttempts && user.loginAttempts > 0) {
+          await User.findByIdAndUpdate(user._id, { loginAttempts: 0, lockedUntil: null });
         }
 
         req.session.userId = user._id.toString();
@@ -493,6 +509,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Profile update error:", error);
       res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Forgot password — public endpoint, find user by email and send reset link
+  app.post("/api/auth/forgot-password", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== 'string') return res.status(400).json({ message: 'Email is required' });
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) return res.status(400).json({ message: 'Please provide a valid email address' });
+
+      const user = await User.findOne({ email: email.toLowerCase().trim() });
+      if (!user) {
+        // Don't reveal whether email exists — always return success
+        return res.json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
+      }
+
+      const token = randomBytes(24).toString('hex');
+      const expires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+
+      await User.findByIdAndUpdate(user._id, {
+        pendingPasswordToken: token,
+        pendingPasswordExpires: expires,
+      });
+
+      const frontend = process.env.FRONTEND_URL || `${req.protocol}://${req.get('host')}`;
+      const confirmLink = `${frontend}/auth/confirm-password?token=${token}`;
+
+      const smtpHost = process.env.SMTP_HOST;
+      if (smtpHost) {
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT || 587),
+          secure: !!process.env.SMTP_SECURE,
+          auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+        });
+
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || 'no-reply@kenyanbistro.local',
+          to: user.email,
+          subject: 'Reset your password',
+          text: `Click the link to reset your password: ${confirmLink}`,
+          html: `<p>Click the link to reset your password:</p><p><a href="${confirmLink}">${confirmLink}</a></p>`,
+        });
+      } else {
+        console.log(`Password reset link for ${user.email}: ${confirmLink}`);
+      }
+
+      res.json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
+    } catch (err) {
+      console.error('Forgot password error:', err);
+      res.status(500).json({ message: 'Failed to process request' });
     }
   });
 

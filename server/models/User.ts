@@ -24,6 +24,9 @@ export interface IUser extends Document {
   emailVerified?: boolean;
   // timestamp when sessions for this user were last invalidated
   lastSessionInvalidatedAt?: Date;
+  // Failed login attempt tracking for brute-force protection
+  loginAttempts?: number;
+  lockedUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -83,6 +86,8 @@ const UserSchema = new Schema<IUser>(
     pendingPasswordHash: { type: String },
     pendingPasswordToken: { type: String },
     pendingPasswordExpires: { type: Date },
+    loginAttempts: { type: Number, default: 0 },
+    lockedUntil: { type: Date },
   },
   {
     timestamps: true,

@@ -39,7 +39,7 @@ interface HybridAuthContextType {
   loading: boolean;
   
   // Legacy methods for compatibility
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   register: (username: string, email: string, password: string, name: string, phone?: string) => Promise<boolean>;
   updateProfile: (data: { name?: string; email?: string; avatar?: string }) => Promise<boolean>;
   requestPasswordChange: () => Promise<boolean>;
@@ -47,6 +47,7 @@ interface HybridAuthContextType {
   confirmPasswordReset: (token: string, newPassword: string) => Promise<boolean>;
   confirmPhoneChange: (token: string) => Promise<boolean>;
   updateUserRole: (userId: string, newRole: Role, jobTitle?: string) => Promise<boolean>;
+  forgotPassword: (email: string) => Promise<boolean>;
 }
 
 const HybridAuthContext = createContext<HybridAuthContextType | undefined>(undefined);
@@ -287,13 +288,13 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Legacy login method for form-based authentication
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
       const response = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
@@ -307,7 +308,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
         setSyncedUser(data.user);
         toast({ 
           title: "Login Successful", 
-          description: `Welcome back, ${data.user?.name || username}!` 
+          description: `Welcome back, ${data.user?.name || email}!` 
         });
         return true;
       } else {
@@ -370,6 +371,38 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const forgotPassword = async (email: string) => {
+    try {
+      const response = await apiFetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast({
+          title: "Reset Link Sent",
+          description: data.message || "If that email is registered, a reset link has been sent.",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Request Failed",
+          description: data.message || "Failed to process request",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({
+        title: "Request Failed",
+        description: "Network error. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   return (
     <HybridAuthContext.Provider
       value={{
@@ -395,6 +428,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
         confirmPasswordReset,
         confirmPhoneChange,
         updateUserRole,
+        forgotPassword,
       }}
     >
       {children}
