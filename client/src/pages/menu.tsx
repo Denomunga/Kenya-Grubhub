@@ -1144,35 +1144,37 @@ export default function Menu() {
           </div>
 
           <div className="flex flex-col md:flex-row justify-between items-end gap-4 mt-6 relative">
-           <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
-             <TabsList className="bg-muted w-full flex-nowrap p-1">
-               {categories.slice(0, 2).map(cat => (
-                 <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm px-3 py-2 min-w-20 sm:min-w-[100px]">
-                   {cat}
-                 </TabsTrigger>
-               ))}
-               {categories.length > 2 && (
-                 <DropdownMenu>
-                   <DropdownMenuTrigger asChild>
-                     <TabsTrigger value="_more" className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm px-3 py-2">
-                       More ▾
-                     </TabsTrigger>
-                   </DropdownMenuTrigger>
-                   <DropdownMenuContent align="start">
-                     {categories.slice(3).map(cat => (
-                       <DropdownMenuItem
-                         key={cat}
-                         onClick={() => setActiveCategory(cat)}
-                         className={activeCategory === cat ? 'bg-accent font-medium' : ''}
-                       >
-                         {cat}
-                       </DropdownMenuItem>
-                     ))}
-                   </DropdownMenuContent>
-                 </DropdownMenu>
-               )}
-             </TabsList>
-           </Tabs>
+           <div className="flex items-center gap-2">
+             <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
+               <TabsList className="bg-muted flex-nowrap p-1">
+                 {categories.slice(0, 2).map(cat => (
+                   <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm px-3 py-2 min-w-20 sm:min-w-[100px]">
+                     {cat}
+                   </TabsTrigger>
+                 ))}
+               </TabsList>
+             </Tabs>
+             {categories.length > 2 && (
+               <DropdownMenu>
+                 <DropdownMenuTrigger asChild>
+                   <Button variant="outline" size="sm" className={activeCategory !== 'All' && !categories.slice(0, 2).includes(activeCategory) ? 'bg-accent font-medium' : ''}>
+                     More ▾
+                   </Button>
+                 </DropdownMenuTrigger>
+                 <DropdownMenuContent align="start">
+                   {categories.slice(2).map(cat => (
+                     <DropdownMenuItem
+                       key={cat}
+                       onClick={() => setActiveCategory(cat)}
+                       className={activeCategory === cat ? 'bg-accent font-medium' : ''}
+                     >
+                       {cat}
+                     </DropdownMenuItem>
+                   ))}
+                 </DropdownMenuContent>
+               </DropdownMenu>
+             )}
+           </div>
          </div>
       </div>
 
