@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, GitCompare, Heart, ShoppingBag, Plus, Minus, Trash, Trash2, MapPin, Phone, ShoppingCart } from "lucide-react";
+import { Eye, GitCompare, Heart, ShoppingBag, Plus, Minus, Trash2, MapPin, Phone, ShoppingCart, Star, Loader2, Send } from "lucide-react";
 import { formatPriceKSHS, formatPrice } from "@/lib/format";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -39,6 +39,12 @@ import OrderConfirmation from '@/components/ui/OrderConfirmation';
 import { SEOMetaTags } from "@/components/seo/SEOMetaTags";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { useShop } from "@/lib/shop";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Configuration for added fields that should be displayed
 const ADDED_FIELDS_CONFIG = [
@@ -62,14 +68,12 @@ const ADDED_FIELDS_CONFIG = [
 const renderAddedField = (field: any, item: MenuItem) => {
   const value = item[field.key as keyof MenuItem];
   
-  // Skip if value is null, undefined, or empty
   if (value === null || value === undefined || value === '') return null;
   if (Array.isArray(value) && value.length === 0) return null;
   if (typeof value === 'object' && Object.keys(value).length === 0) return null;
 
   switch (field.type) {
     case 'badge':
-      // For badges, ensure we only pass string/number values
       const displayValue = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
       if (!displayValue) return null;
       
@@ -162,7 +166,6 @@ const renderAddedField = (field: any, item: MenuItem) => {
 const renderAddedFieldForDetails = (field: any, item: MenuItem) => {
   const value = item[field.key as keyof MenuItem];
   
-  // Skip if value is null, undefined, or empty
   if (value === null || value === undefined || value === '') return null;
   if (Array.isArray(value) && value.length === 0) return null;
   if (typeof value === 'object' && Object.keys(value).length === 0) return null;
@@ -171,7 +174,6 @@ const renderAddedFieldForDetails = (field: any, item: MenuItem) => {
 
   switch (field.type) {
     case 'badge':
-      // For badges, ensure we only pass string/number values
       displayValue = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
       if (!displayValue) return null;
       
@@ -198,7 +200,6 @@ const renderAddedFieldForDetails = (field: any, item: MenuItem) => {
       );
 
     case 'conditional-badge':
-      // Stock is handled separately in product details
       return null;
 
     case 'text':
@@ -212,7 +213,6 @@ const renderAddedFieldForDetails = (field: any, item: MenuItem) => {
 
     case 'tags':
     case 'specs':
-      // Tags and specs are handled separately in product details
       return null;
 
     default:
@@ -220,7 +220,6 @@ const renderAddedFieldForDetails = (field: any, item: MenuItem) => {
   }
 };
 
-// Helper small form component to post a review for the currently open product
 function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct }: { 
   itemId: string; 
   reviewRating: number; 
@@ -231,6 +230,7 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
   const { toast } = useToast();
   const [reviewComment, setReviewComment] = useState("");
   const [isRatingOnly, setIsRatingOnly] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     if (!user) {
@@ -238,7 +238,6 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
       return;
     }
 
-    // If not rating-only, validate comment
     if (!isRatingOnly) {
       const comment = reviewComment.trim();
       if (!comment) {
@@ -247,6 +246,7 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
       }
     }
 
+    setIsSubmitting(true);
     try {
       const reviewData: any = {
         userId: user.id,
@@ -254,7 +254,6 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
         rating: reviewRating
       };
       
-      // Only add comment if not rating-only or if comment exists
       if (!isRatingOnly && reviewComment.trim()) {
         reviewData.comment = reviewComment.trim();
       }
@@ -266,6 +265,8 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
       toast({ title: "Thank you", description: "Your review has been submitted." });
     } catch (error) {
       toast({ title: "Error", description: `Failed to submit review: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -276,7 +277,6 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
         {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} star{n>1?"s":""}</option>)}
       </select>
 
-      {/* Rating Only Toggle */}
       <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
         <input 
           type="checkbox" 
@@ -290,7 +290,6 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
         </label>
       </div>
 
-      {/* Comment field - only show if not rating-only */}
       {!isRatingOnly && (
         <>
           <label className="text-sm font-medium">Comment</label>
@@ -304,16 +303,21 @@ function ReviewForm({ itemId, reviewRating, setReviewRating, addReviewForProduct
       )}
 
       <div className="flex justify-end">
-        <Button onClick={handleSubmit} className="mt-2">
-          {isRatingOnly ? "Submit Rating" : "Submit Review"}
+        <Button onClick={handleSubmit} disabled={isSubmitting} className="gap-2">
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            isRatingOnly ? "Submit Rating" : "Submit Review"
+          )}
         </Button>
       </div>
     </div>
   );
 }
-//
-//
-//
+
 export default function Menu() {
   const { menu, placeOrder, getReviewsForProduct, addReviewForProduct, removeReview, reviews } = useContext(DataContext)!;
   const { user, isAuthenticated, isAdmin, isStaff } = useHybridAuth();
@@ -327,7 +331,6 @@ export default function Menu() {
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [orderConfirmationOpen, setOrderConfirmationOpen] = useState(false);
   const [lastOrder, setLastOrder] = useState<any>(null);
-  // Deletion confirmation state for reviews
   const [confirmDeleteReviewId, setConfirmDeleteReviewId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -340,8 +343,8 @@ export default function Menu() {
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [checkoutPhone, setCheckoutPhone] = useState<string>('');
   const [showPhoneInput, setShowPhoneInput] = useState<boolean>(false);
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
 
-  // SEO structured data for the main category page
   const categoryStructuredData = useMemo(() => ({
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -369,7 +372,6 @@ export default function Menu() {
     }
   }), [menu]);
 
-  // Handle product ID from URL parameter
   useEffect(() => {
     const productId = searchParams.get('product');
     if (productId && menu.length > 0) {
@@ -377,7 +379,6 @@ export default function Menu() {
       if (product) {
         setSelectedProductForDetail(product);
         setProductDetailOpen(true);
-        // Clear the URL parameter after opening the modal
         setLocation('/menu');
       }
     }
@@ -399,10 +400,7 @@ export default function Menu() {
       return;
     }
 
-    // Navigate to chat with product context
     setLocation('/chat');
-    
-    // Store the product in sessionStorage to be picked up by chat component
     sessionStorage.setItem('chatProduct', JSON.stringify({
       id: product.id,
       name: product.name,
@@ -427,7 +425,6 @@ export default function Menu() {
         userId: user.id,
         user: user.name,
         rating
-        // No comment - rating only
       });
       toast({ 
         title: "Thank you!", 
@@ -442,10 +439,8 @@ export default function Menu() {
     }
   };
 
-  // Get unique categories from menu items
   const categories = ["All", ...Array.from(new Set(menu.map((item: MenuItem) => item.category)))];
 
-  // Use searched products if available, otherwise use category filtering
   const displayProducts = useMemo(() => {
     const baseItems = searchedProducts.length > 0 ? searchedProducts : menu;
     if (activeCategory === "All") return baseItems;
@@ -521,9 +516,8 @@ export default function Menu() {
     const newQ = normalizeToStep(line.quantity + delta, step);
     setCartItemQuantity(itemId, newQ);
   };
-        
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!isAuthenticated) {
       toast({ 
         title: "Please login", 
@@ -544,10 +538,8 @@ export default function Menu() {
       return;
     }
 
-    // Phone number validation
     let phoneToUse = user?.phone || checkoutPhone;
     
-    // For logged-in users without phone, require them to enter one
     if (!phoneToUse) {
       toast({ 
         title: "Phone Number Required", 
@@ -558,7 +550,6 @@ export default function Menu() {
       return;
     }
 
-    // Basic phone validation (should start with + and have at least 7 digits)
     const phoneRegex = /^\+\d{7,15}$/;
     if (!phoneRegex.test(phoneToUse)) {
       toast({ 
@@ -570,36 +561,42 @@ export default function Menu() {
       return;
     }
     
-    // Create the order
-    const newOrder = {
-      id: Date.now().toString(),
-      items: cart,
-      total: cart.reduce((sum, i) => sum + (i.item.price * i.quantity), 0),
-      status: "Pending",
-      user: user?.name || "CurrentUser",
-      userEmail: user?.email || undefined,
-      userPhone: phoneToUse,
-      date: new Date().toISOString(),
-      location: selectedLocation,
-    };
-    
-    // Place the order
-    placeOrder(cart, selectedLocation, {
-      name: user?.name || "CurrentUser",
-      email: user?.email,
-      phone: phoneToUse,
-      userId: user?.id
-    });
-    
-    // Set the last order for confirmation
-    setLastOrder(newOrder);
-    setOrderConfirmationOpen(true);
-    
-    // Clear cart and location
-    clearCart();
-    setSelectedLocation(null);
-    setCheckoutPhone('');
-    setShowPhoneInput(false);
+    setIsProcessingCheckout(true);
+    try {
+      const newOrder = {
+        id: Date.now().toString(),
+        items: cart,
+        total: cart.reduce((sum, i) => sum + (i.item.price * i.quantity), 0),
+        status: "Pending",
+        user: user?.name || "CurrentUser",
+        userEmail: user?.email || undefined,
+        userPhone: phoneToUse,
+        date: new Date().toISOString(),
+        location: selectedLocation,
+      };
+      
+      await placeOrder(cart, selectedLocation, {
+        name: user?.name || "CurrentUser",
+        email: user?.email,
+        phone: phoneToUse,
+        userId: user?.id
+      });
+      
+      setLastOrder(newOrder);
+      setOrderConfirmationOpen(true);
+      clearCart();
+      setSelectedLocation(null);
+      setCheckoutPhone('');
+      setShowPhoneInput(false);
+    } catch (error) {
+      toast({
+        title: "Checkout Failed",
+        description: "There was an error processing your order. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessingCheckout(false);
+    }
   };
 
   const cartTotal = cart.reduce((sum, i) => sum + (i.item.price * i.quantity), 0);
@@ -613,1186 +610,1209 @@ export default function Menu() {
   }, [menu, compare]);
 
   return (
-    <>
-      <SEOMetaTags 
-        title="Product Catalog - Premium Electronics in Kenya"
-        description="Browse our complete catalog of premium laptops, mobiles, and stationery in Kenya. HP, Dell, Lenovo, Asus, Apple and more with competitive prices."
-        keywords="product catalog Kenya, laptops catalog, mobile phones catalog, stationery catalog, electronics shopping Kenya, HP laptops Kenya, Dell laptops Kenya"
-        structuredData={categoryStructuredData}
-      />
-      <Breadcrumbs items={[{ name: 'Products', url: '/menu' }]} />
-      <div className="min-h-screen w-full particle-container gradient-mesh">
-       <div className="container mx-auto px-6 py-14">
-         <div className="mb-8">
-           <div className="flex items-start justify-between gap-4">
-             <div>
-               <h1 className="text-4xl font-heading font-bold text-primary mb-2">Our Products</h1>
-               <p className="text-muted-foreground">Explore our wide selection of Comfy Wears.</p>
-             </div>
+    <TooltipProvider>
+      <>
+        <SEOMetaTags 
+          title="Product Catalog - Premium Electronics in Kenya"
+          description="Browse our complete catalog of premium laptops, mobiles, and stationery in Kenya. HP, Dell, Lenovo, Asus, Apple and more with competitive prices."
+          keywords="product catalog Kenya, laptops catalog, mobile phones catalog, stationery catalog, electronics shopping Kenya, HP laptops Kenya, Dell laptops Kenya"
+          structuredData={categoryStructuredData}
+        />
+        <Breadcrumbs items={[{ name: 'Products', url: '/menu' }]} />
+        <div className="min-h-screen w-full particle-container gradient-mesh">
+          <div className="container mx-auto px-6 py-14">
+            <div className="mb-8">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-4xl font-heading font-bold bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-2">
+                    Our Products
+                  </h1>
+                  <p className="text-muted-foreground">Explore our wide selection of premium products.</p>
+                </div>
 
-             <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Favorites Sheet */}
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button type="button" variant="outline" size="icon" className="relative" aria-label="Favorites">
+                        <Heart className={`h-4 w-4 ${wishlist.size > 0 ? "text-red-600 fill-red-600" : ""}`} />
+                        {wishlist.size > 0 && (
+                          <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-[10px] border-2 border-background shadow-xl z-10">
+                            {wishlist.size > 9 ? "9+" : wishlist.size}
+                          </Badge>
+                        )}
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent className="w-full sm:max-w-md">
+                      <SheetHeader>
+                        <SheetTitle>Favorites</SheetTitle>
+                        <SheetDescription>Products you've saved.</SheetDescription>
+                      </SheetHeader>
 
-              {/* Favorites Sheet */}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button type="button" variant="outline" size="icon" className="relative" aria-label="Favorites">
-                    <Heart className={`h-4 w-4 ${wishlist.size > 0 ? "text-red-600" : ""}`} />
-                    {wishlist.size > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-[10px] border-2 border-white shadow-xl z-10">
-                        {wishlist.size > 9 ? "9+" : wishlist.size}
-                      </Badge>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent className="w-full sm:max-w-md">
-                  <SheetHeader>
-                    <SheetTitle>Favorites</SheetTitle>
-                    <SheetDescription>Products you've saved.</SheetDescription>
-                  </SheetHeader>
-
-                  <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[70vh]">
-                    {favoritesItems.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-8">No favorites yet.</div>
-                    ) : (
-                      favoritesItems.map((item: MenuItem) => (
-                        <div key={item.id} className="flex items-start gap-3 border-b pb-3">
-                          <ProductImage
-                            images={item.images || (item.image ? [item.image] : [])}
-                            productName={item.name}
-                            className="h-14 w-14 rounded-md object-cover cursor-pointer shrink-0"
-                            onImageClick={(e) => handleImageClick(item, e)}
-                            enableSlideshow={false}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-sm truncate">{item.name}</h4>
-                            <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
-                            <div className="mt-2 flex flex-col gap-1">
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={() => {
-                                  addToCart(item);
-                                }}
-                                disabled={!item.available}
-                                className="w-full"
-                              >
-                                Add to Cart
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  toggleWishlist(item.id);
-                                  toast({ title: "Removed", description: `${item.name} removed from favorites.` });
-                                }}
-                                className="w-full"
-                              >
-                                Remove
-                              </Button>
-                            </div>
+                      <div className="mt-8 space-y-4 flex-1 overflow-y-auto max-h-[70vh]">
+                        {favoritesItems.length === 0 ? (
+                          <div className="text-center text-muted-foreground py-12">
+                            <Heart className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                            <p>No favorites yet.</p>
+                            <p className="text-sm mt-2">Save items you love for later!</p>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0"
-                            onClick={() => setLocation(`/menu?product=${item.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </SheetContent>
-              </Sheet>
-
-              {/* Compare Sheet */}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button type="button" variant="outline" size="icon" className="relative" aria-label="Compare">
-                    <GitCompare className={`h-4 w-4 ${compare.size > 0 ? "text-primary" : ""}`} />
-                    {compare.size > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-6 w-6 p-0 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-[10px] border-2 border-white shadow-xl z-10">
-                        {compare.size > 9 ? "9+" : compare.size}
-                      </Badge>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent className="w-full sm:max-w-6xl">
-                  <SheetHeader>
-                    <SheetTitle>Compare</SheetTitle>
-                    <SheetDescription>Products in your compare list.</SheetDescription>
-                  </SheetHeader>
-
-                  <div className="mt-4 flex items-center justify-end gap-2">
-                    <Button type="button" variant="outline" disabled={compareItems.length === 0} onClick={() => clearCompare()}>
-                      Clear
-                    </Button>
-                  </div>
-
-                  {compareItems.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-10">No products to compare yet.</div>
-                  ) : (
-                    <div className="mt-4 overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-32 sm:w-44">Feature</TableHead>
-                            {compareItems.map((item) => (
-                              <TableHead key={item.id} className="min-w-48 sm:min-w-60 align-top">
-                                <div className="space-y-3">
-                                  <div className="h-16 sm:h-20 w-full bg-muted overflow-hidden rounded-md">
-                                    <img
-                                      src={item.image || item.images?.[0] || ""}
-                                      alt={item.name}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                  <div>
-                                    <div className="font-semibold leading-snug text-sm">{item.name}</div>
-                                    <div className="text-xs text-muted-foreground line-clamp-2 hidden sm:block">{item.description}</div>
-                                  </div>
-                                </div>
-                              </TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-
-                        <TableBody>
-                          <TableRow>
-                            <TableCell className="font-medium">Price</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id} className="font-bold text-primary tabular-nums">
-                                {formatPriceKSHS(item.price)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Availability</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{item.available ? "In stock" : "Out of stock"}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Stock</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{(item as any).stock === undefined ? "—" : renderText((item as any).stock)}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Category</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{renderText(item.category)}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Brand</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{renderText((item as any).brand)}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Condition</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{renderText((item as any).condition)}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Year</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{renderText((item as any).year)}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Size</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{renderText((item as any).size)}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Color</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{renderText((item as any).color)}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Material</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{renderText((item as any).material)}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Location</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{renderText((item as any).location)}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Weight</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>
-                                {(item as any).weight === undefined ? "—" : `${renderText((item as any).weight)} kg`}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Dimensions</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{renderDimensions((item as any).dimensions)}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Tags</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id} className="text-xs text-muted-foreground">
-                                {renderTags((item as any).tags)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Key Specs</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>{renderKeySpecs((item as any).specifications)}</TableCell>
-                            ))}
-                          </TableRow>
-
-                          <TableRow>
-                            <TableCell className="font-medium">Actions</TableCell>
-                            {compareItems.map((item) => (
-                              <TableCell key={item.id}>
-                                <div className="flex flex-col gap-2">
+                        ) : (
+                          favoritesItems.map((item: MenuItem) => (
+                            <div key={item.id} className="flex items-start gap-3 border-b pb-3">
+                              <ProductImage
+                                images={item.images || (item.image ? [item.image] : [])}
+                                productName={item.name}
+                                className="h-14 w-14 rounded-md object-cover cursor-pointer shrink-0"
+                                onImageClick={(e) => handleImageClick(item, e)}
+                                enableSlideshow={false}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-bold text-sm truncate">{item.name}</h4>
+                                <p className="text-xs text-muted-foreground">{formatPriceKSHS(item.price)}</p>
+                                <div className="mt-2 flex flex-col gap-1">
                                   <Button
                                     type="button"
+                                    size="sm"
+                                    onClick={() => addToCart(item)}
                                     disabled={!item.available}
-                                    onClick={() => {
-                                      addToCart(item);
-                                      toast({ title: "Added to cart", description: `${item.name} added.` });
-                                    }}
                                     className="w-full"
                                   >
                                     Add to Cart
                                   </Button>
-                                  <div className="flex flex-col sm:flex-row gap-2">
-                                    <Button
-                                      type="button"
-                                      variant="secondary"
-                                      className="flex-1"
-                                      onClick={() => setLocation(`/menu?product=${item.id}`)}
-                                    >
-                                      View
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      className="flex-1"
-                                      onClick={() => {
-                                        toggleCompare(item.id);
-                                        toast({ title: "Removed", description: `${item.name} removed from compare.` });
-                                      }}
-                                      aria-label={`Remove ${item.name} from compare`}
-                                    >
-                                      Remove
-                                    </Button>
-                                  </div>
-                                </div>
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </SheetContent>
-              </Sheet>
-
-              {/* Cart Sheet */}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button className="relative">
-                     <ShoppingBag className="mr-2 h-4 w-4" />
-                     Cart
-                     {cart.length > 0 && (
-                       <Badge className="absolute -top-1 -right-1 h-7 w-7 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs border-2 border-white shadow-xl animate-pulse z-10">
-                         {cart.length}
-                       </Badge>
-                     )}
-                   </Button>
-                 </SheetTrigger>
-                 <SheetContent className="w-full sm:max-w-md p-0">
-                   <div className="flex flex-col h-full">
-                     <SheetHeader className="p-6 pb-2">
-                       <SheetTitle className="text-lg">Your Order</SheetTitle>
-                       <SheetDescription className="text-sm">Review your items before checkout.</SheetDescription>
-                     </SheetHeader>
-                     
-                    <div className="flex-1 overflow-y-auto px-6 pb-4">
-                      <div className="space-y-3">
-                        {cart.length === 0 ? (
-                          <div className="text-center text-muted-foreground py-12">
-                            <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p className="text-base">Your cart is empty.</p>
-                            <p className="text-sm mt-2">Add some products to get started!</p>
-                          </div>
-                        ) : (
-                          cart.map(({ item, quantity }) => (
-                            <div key={item.id} className="bg-card border rounded-lg p-3 shadow-sm">
-                              <div className="flex gap-3">
-                                <ProductImage
-                                  images={item.images || (item.image ? [item.image] : [])}
-                                  productName={item.name}
-                                  className="h-16 w-16 rounded-lg object-cover cursor-pointer shrink-0"
-                                  onImageClick={(e) => handleImageClick(item, e)}
-                                  enableSlideshow={false}
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-semibold text-sm leading-tight mb-1 line-clamp-2">{item.name}</h4>
-                                  <p className="text-sm font-medium text-primary mb-2">{formatPriceKSHS(item.price)}</p>
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1 bg-muted rounded-md p-1">
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-7 w-7 p-0 hover:bg-background" 
-                                        onClick={() => updateQuantity(item.id, -(item.quantityStep || 1))}
-                                      >
-                                        <Minus className="h-3 w-3" />
-                                      </Button>
-                                      <span className="text-sm font-medium w-8 text-center">{quantity}</span>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-7 w-7 p-0 hover:bg-background" 
-                                        onClick={() => updateQuantity(item.id, item.quantityStep || 1)}
-                                      >
-                                        <Plus className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" 
-                                      onClick={() => removeFromCart(item.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      toggleWishlist(item.id);
+                                      toast({ title: "Removed", description: `${item.name} removed from favorites.` });
+                                    }}
+                                    className="w-full"
+                                  >
+                                    Remove
+                                  </Button>
                                 </div>
                               </div>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 shrink-0"
+                                    onClick={() => setLocation(`/menu?product=${item.id}`)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View details</TooltipContent>
+                              </Tooltip>
                             </div>
                           ))
                         )}
                       </div>
-                    </div>
+                    </SheetContent>
+                  </Sheet>
 
-                   <SheetFooter className="border-t bg-background p-6 mt-auto">
-                     <div className="w-full space-y-4">
-                       {/* Location Display */}
-                       <div className="space-y-2">
-                         <div className="flex justify-between items-center">
-                           <span className="text-sm font-medium flex items-center gap-2">
-                             <MapPin className="h-4 w-4" />
-                             Delivery Location
-                           </span>
-                           <Button 
-                             size="sm" 
-                             variant="outline" 
-                             onClick={() => setLocationDialogOpen(true)}
-                           >
-                             {selectedLocation ? 'Change' : 'Select'}
-                           </Button>
-                         </div>
-                         {selectedLocation ? (
-                           <div className="bg-muted/50 p-3 rounded-lg text-sm">
-                             <div className="flex items-start gap-2">
-                               <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                               <span className="flex-1">{selectedLocation.address}</span>
-                             </div>
-                             {selectedLocation.instructions && (
-                               <p className="text-xs text-muted-foreground mt-2 ml-6">
-                                 {selectedLocation.instructions}
-                               </p>
-                             )}
-                           </div>
-                         ) : (
-                           <div className="bg-muted/30 p-3 rounded-lg text-sm text-muted-foreground text-center border border-dashed">
-                             No delivery location selected
-                           </div>
-                         )}
-                       </div>
-
-                       {/* Phone Number Display/Input */}
-                       <div className="space-y-2">
-                         <div className="flex justify-between items-center">
-                           <span className="text-sm font-medium flex items-center gap-2">
-                             <Phone className="h-4 w-4" />
-                             Contact Phone
-                           </span>
-                           {!user?.phone && !showPhoneInput && (
-                             <Button 
-                               size="sm" 
-                               variant="outline" 
-                               onClick={() => setShowPhoneInput(true)}
-                             >
-                               Add Phone
-                             </Button>
-                           )}
-                         </div>
-                         {user?.phone ? (
-                           <div className="bg-muted/50 p-3 rounded-lg text-sm">
-                             <div className="flex items-center justify-between">
-                               <div className="flex items-center gap-2">
-                                 <Phone className="h-4 w-4 text-primary" />
-                                 <span>{user.phone}</span>
-                               </div>
-                               <Button 
-                                 size="sm" 
-                                 variant="ghost" 
-                                 className="h-7 px-2 text-xs hover:bg-background"
-                                 onClick={() => {
-                                   setCheckoutPhone(user.phone || '');
-                                   setShowPhoneInput(true);
-                                 }}
-                               >
-                                 Edit
-                               </Button>
-                             </div>
-                           </div>
-                         ) : showPhoneInput ? (
-                           <div className="space-y-2">
-                             <Input
-                               type="tel"
-                               placeholder="+254700000000"
-                               value={checkoutPhone}
-                               onChange={(e) => setCheckoutPhone(e.target.value)}
-                               className="text-sm"
-                             />
-                             <div className="flex gap-2">
-                               <Button 
-                                 size="sm" 
-                                 variant="outline" 
-                                 onClick={() => {
-                                   setShowPhoneInput(false);
-                                   setCheckoutPhone('');
-                                 }}
-                               >
-                                 Cancel
-                               </Button>
-                               <Button 
-                                 size="sm" 
-                                 onClick={() => {
-                                   setShowPhoneInput(false);
-                                 }}
-                               >
-                                 Save
-                               </Button>
-                             </div>
-                           </div>
-                         ) : (
-                           <div className="bg-muted/30 p-3 rounded-lg text-sm text-muted-foreground text-center border border-dashed">
-                             No phone number provided
-                           </div>
-                         )}
-                       </div>
-
-                       {/* Total and Checkout */}
-                       <div className="space-y-3 pt-2">
-                         <div className="flex items-center justify-between text-base font-medium">
-                           <span>Total</span>
-                           <span className="text-lg font-bold text-primary">{formatPriceKSHS(cartTotal)}</span>
-                         </div>
-                         <Button 
-                           className="w-full h-11 text-base font-medium" 
-                           disabled={cart.length === 0 || !selectedLocation || (!user?.phone && !checkoutPhone.trim())} 
-                           onClick={handleCheckout}
-                         >
-                           {cart.length === 0 ? 'Add Items to Cart' : 
-                            !selectedLocation ? 'Select Location' :
-                            (!user?.phone && !checkoutPhone.trim()) ? 'Add Phone Number' :
-                            'Proceed to Checkout'}
-                         </Button>
-                       </div>
-                     </div>
-                   </SheetFooter>
-                   </div>
-                 </SheetContent>
-               </Sheet>
-             </div>
-           </div>
-
-          {/* Search Component */}
-          <div className="mt-6 max-w-5xl mx-auto">
-            <ProductSearch 
-              products={menu}
-              onFilteredProducts={setSearchedProducts}
-            />
-          </div>
-
-          <div className="flex flex-col md:flex-row justify-between items-end gap-4 mt-6 relative">
-           <div className="flex items-center gap-2">
-             <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
-               <TabsList className="bg-muted flex-nowrap p-1">
-                 {categories.slice(0, 2).map(cat => (
-                   <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm px-3 py-2 min-w-20 sm:min-w-[100px]">
-                     {cat}
-                   </TabsTrigger>
-                 ))}
-               </TabsList>
-             </Tabs>
-             {categories.length > 2 && (
-               <DropdownMenu>
-                 <DropdownMenuTrigger asChild>
-                   <Button variant="outline" size="sm" className={activeCategory !== 'All' && !categories.slice(0, 2).includes(activeCategory) ? 'bg-accent font-medium' : ''}>
-                     More ▾
-                   </Button>
-                 </DropdownMenuTrigger>
-                 <DropdownMenuContent align="start">
-                   {categories.slice(2).map(cat => (
-                     <DropdownMenuItem
-                       key={cat}
-                       onClick={() => setActiveCategory(cat)}
-                       className={activeCategory === cat ? 'bg-accent font-medium' : ''}
-                     >
-                       {cat}
-                     </DropdownMenuItem>
-                   ))}
-                 </DropdownMenuContent>
-               </DropdownMenu>
-             )}
-           </div>
-         </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <AnimatePresence mode="popLayout">
-          {displayProducts.map((item: MenuItem) => (
-            <motion.div
-              key={item.id}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Card className="h-full flex flex-col overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer group"
-                  onClick={() => handleProductClick(item)}>
-                {/* Colored header accent */}
-                <div className="h-1 bg-linear-to-r from-primary to-primary/60"></div>
-                
-                <div className="h-48 overflow-hidden relative bg-linear-to-br from-muted/40 to-muted/10">
-                  <ProductImage
-                    images={item.images || (item.image ? [item.image] : [])}
-                    productName={item.name}
-                    className="w-full h-full"
-                    onImageClick={(e) => handleImageClick(item, e)}
-                    enableSlideshow={true}
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-                  {/* Quick actions */}
-                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between opacity-100 sm:opacity-0 sm:translate-y-1 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 transition-all duration-300">
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="secondary"
-                      className="h-9 w-9 rounded-full bg-background/90 text-foreground hover:bg-background shadow-lg focus-ring"
-                      aria-label={`Quick view ${item.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleProductClick(item);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="secondary"
-                        className={`h-9 w-9 rounded-full bg-background/90 hover:bg-background shadow-lg focus-ring ${wishlist.has(item.id) ? "text-red-600" : "text-foreground"}`}
-                        aria-label={wishlist.has(item.id) ? `Remove ${item.name} from wishlist` : `Add ${item.name} to wishlist`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleWishlist(item.id);
-                        }}
-                      >
-                        <Heart className={`h-4 w-4 ${wishlist.has(item.id) ? "fill-current" : ""}`} />
-                      </Button>
-
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="secondary"
-                        className={`h-9 w-9 rounded-full bg-background/90 hover:bg-background shadow-lg focus-ring ${compare.has(item.id) ? "text-primary" : "text-foreground"}`}
-                        aria-label={compare.has(item.id) ? `Remove ${item.name} from compare` : `Add ${item.name} to compare`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleCompare(item.id);
-                        }}
-                      >
-                        <GitCompare className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {!item.available && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-bold text-xl backdrop-blur-sm">
-                      SOLD OUT
-                    </div>
-                  )}
-                </div>
-                <CardContent className="p-6 flex-1 bg-card">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg font-bold font-heading group-hover:text-primary transition-colors">{item.name}</h3>
-                    <span className="font-bold text-primary whitespace-nowrap text-lg tabular-nums">{formatPriceKSHS(item.price)}</span>
-                  </div>
-                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{item.description}</p>
-                  
-                  {/* Dynamically render added fields that have values */}
-                  <div className="space-y-2 mb-3">
-                    {ADDED_FIELDS_CONFIG.map(field => renderAddedField(field, item)).filter(Boolean)}
-                  </div>
-                  
-                  {/* Stock status for all items */}
-                  {item.stock !== undefined && (
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Stock: {item.stock} {item.unit || 'units'}</span>
-                      {item.stock <= 5 && (
-                        <span className="text-orange-600 font-medium">Low stock!</span>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-                <CardFooter className="p-6 pt-0 flex gap-3 items-center bg-muted/10 border-t border-border/50">
-                  <div className="flex-1 relative group">
-                    <Button 
-                      className="w-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" 
-                      disabled={!item.available}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addToCart(item);
-                      }}
-                    >
-                      Add to Cart
-                      <ShoppingBag className="ml-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
-                    </Button>
-                  </div>
-
-                  <div className="w-44 text-right">
-                    <div className="text-xs text-muted-foreground mb-1 flex items-center justify-end gap-1">
-                      {getReviewsForProduct(item.id).length > 0 && (
-                        <>
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <svg
-                                key={i}
-                                className={`w-3 h-3 ${i < Math.round(getReviewsForProduct(item.id).reduce((acc, r) => acc + r.rating, 0) / getReviewsForProduct(item.id).length) ? 'text-yellow-400' : 'text-muted-foreground/40'}`}
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                            ))}
-                          </div>
-                          <span>({getReviewsForProduct(item.id).length})</span>
-                        </>
-                      )}
-                      {getReviewsForProduct(item.id).length === 0 && (
-                        <span>No reviews yet</span>
-                      )}
-                    </div>
-                    <div className="flex gap-1 relative group">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="text-xs opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300"
-                        onClick={() => {
-                          setSelectedProductForDetail(item);
-                          setProductDetailOpen(true);
-                        }}
-                      >
-                        View Details
-                      </Button>
-                      
-                      {/* Quick 5★ button - placed here to avoid ruining layout */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleQuickRating(item.id, 5);
-                        }}
-                        className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors opacity-100"
-                        title="Quick 5-star rating"
-                      >
-                        5⭐
-                      </Button>
-                    </div>
-                  </div>
-                </CardFooter>
-              </Card>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* Confirm delete dialog for admin/staff */}
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Review</DialogTitle>
-            <DialogDescription>This action will permanently remove the review. Are you sure?</DialogDescription>
-          </DialogHeader>
-
-          <div className="mt-4">
-            {confirmDeleteReviewId ? (
-              (() => {
-                const r = reviews.find((rr: Review) => rr.id === confirmDeleteReviewId);
-                return (
-                  <div className="space-y-2">
-                    {r ? (
-                      <>
-                        <div className="text-sm font-medium">By: {r.user}</div>
-                        <div className="text-sm text-muted-foreground">{new Date(r.date).toLocaleString()}</div>
-                        {r.comment && (
-                          <div className="mt-2 p-3 rounded border bg-muted/30">{r.comment}</div>
+                  {/* Compare Sheet */}
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button type="button" variant="outline" size="icon" className="relative" aria-label="Compare">
+                        <GitCompare className={`h-4 w-4 ${compare.size > 0 ? "text-primary" : ""}`} />
+                        {compare.size > 0 && (
+                          <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-[10px] border-2 border-background shadow-xl z-10">
+                            {compare.size > 9 ? "9+" : compare.size}
+                          </Badge>
                         )}
-                        {!r.comment && (
-                          <div className="mt-2 p-3 rounded border bg-muted/30 italic text-muted-foreground">Rating only - no comment provided</div>
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent className="w-full sm:max-w-6xl">
+                      <SheetHeader>
+                        <SheetTitle>Compare</SheetTitle>
+                        <SheetDescription>Products in your compare list.</SheetDescription>
+                      </SheetHeader>
+
+                      <div className="mt-4 flex items-center justify-end gap-2">
+                        <Button type="button" variant="outline" disabled={compareItems.length === 0} onClick={() => clearCompare()}>
+                          Clear All
+                        </Button>
+                      </div>
+
+                      {compareItems.length === 0 ? (
+                        <div className="text-center text-muted-foreground py-12">
+                          <GitCompare className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                          <p>No products to compare yet.</p>
+                          <p className="text-sm mt-2">Add items to compare features side by side.</p>
+                        </div>
+                      ) : (
+                        <div className="mt-4 overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-32 sm:w-44">Feature</TableHead>
+                                {compareItems.map((item) => (
+                                  <TableHead key={item.id} className="min-w-48 sm:min-w-60 align-top">
+                                    <div className="space-y-3">
+                                      <div className="h-16 sm:h-20 w-full bg-muted overflow-hidden rounded-md">
+                                        <img
+                                          src={item.image || item.images?.[0] || ""}
+                                          alt={item.name}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                      <div>
+                                        <div className="font-semibold leading-snug text-sm">{item.name}</div>
+                                        <div className="text-xs text-muted-foreground line-clamp-2 hidden sm:block">{item.description}</div>
+                                      </div>
+                                    </div>
+                                  </TableHead>
+                                ))}
+                              </TableRow>
+                            </TableHeader>
+
+                            <TableBody>
+                              <TableRow>
+                                <TableCell className="font-medium">Price</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id} className="font-bold text-primary tabular-nums">
+                                    {formatPriceKSHS(item.price)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Availability</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{item.available ? "In stock" : "Out of stock"}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Stock</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{(item as any).stock === undefined ? "—" : renderText((item as any).stock)}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Category</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{renderText(item.category)}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Brand</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{renderText((item as any).brand)}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Condition</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{renderText((item as any).condition)}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Year</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{renderText((item as any).year)}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Size</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{renderText((item as any).size)}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Color</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{renderText((item as any).color)}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Material</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{renderText((item as any).material)}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Location</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{renderText((item as any).location)}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Weight</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>
+                                    {(item as any).weight === undefined ? "—" : `${renderText((item as any).weight)} kg`}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Dimensions</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{renderDimensions((item as any).dimensions)}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Tags</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id} className="text-xs text-muted-foreground">
+                                    {renderTags((item as any).tags)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Key Specs</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>{renderKeySpecs((item as any).specifications)}</TableCell>
+                                ))}
+                              </TableRow>
+
+                              <TableRow>
+                                <TableCell className="font-medium">Actions</TableCell>
+                                {compareItems.map((item) => (
+                                  <TableCell key={item.id}>
+                                    <div className="flex flex-col gap-2">
+                                      <Button
+                                        type="button"
+                                        disabled={!item.available}
+                                        onClick={() => {
+                                          addToCart(item);
+                                          toast({ title: "Added to cart", description: `${item.name} added.` });
+                                        }}
+                                        className="w-full"
+                                      >
+                                        Add to Cart
+                                      </Button>
+                                      <div className="flex flex-col sm:flex-row gap-2">
+                                        <Button
+                                          type="button"
+                                          variant="secondary"
+                                          className="flex-1"
+                                          onClick={() => setLocation(`/menu?product=${item.id}`)}
+                                        >
+                                          View
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          className="flex-1"
+                                          onClick={() => {
+                                            toggleCompare(item.id);
+                                            toast({ title: "Removed", description: `${item.name} removed from compare.` });
+                                          }}
+                                          aria-label={`Remove ${item.name} from compare`}
+                                        >
+                                          Remove
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                    </SheetContent>
+                  </Sheet>
+
+                  {/* Cart Sheet */}
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button className="relative gap-2">
+                        <ShoppingBag className="h-4 w-4" />
+                        Cart
+                        {cart.length > 0 && (
+                          <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs border-2 border-background shadow-xl z-10">
+                            {cart.length}
+                          </Badge>
                         )}
-                        <div className="mt-2">
-                          <label className="text-sm font-medium block mb-1">Reason</label>
-                          <select value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)} className="w-full rounded-md border px-3 py-2">
-                            <option value="spam">Spam/Advertising</option>
-                            <option value="abusive">Abusive or Harassing</option>
-                            <option value="irrelevant">Irrelevant to product</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </div>
-                        <div className="mt-2">
-                          <label className="text-sm font-medium block mb-1">Notes (optional)</label>
-                          <Textarea value={deleteNote} onChange={(e) => setDeleteNote(e.target.value)} placeholder="Optional notes for moderation audit" />
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">Review will be removed.</div>
-                    )}
-                  </div>
-                );
-              })()
-            ) : (
-              <div className="text-sm text-muted-foreground">No review selected.</div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <div className="flex justify-end gap-2 w-full">
-              <Button variant="outline" onClick={() => { setDeleteOpen(false); setConfirmDeleteReviewId(null); setDeleteReason('spam'); setDeleteNote(''); }}>Cancel</Button>
-              <Button variant="destructive" onClick={async () => {
-                if (!confirmDeleteReviewId) return;
-                setIsDeleting(true);
-                const ok = await removeReview(confirmDeleteReviewId, deleteReason, deleteNote);
-                setIsDeleting(false);
-                setDeleteOpen(false);
-                setConfirmDeleteReviewId(null);
-                setDeleteReason('spam');
-                setDeleteNote('');
-                if (ok) toast({ title: "Deleted", description: "Review was removed." });
-              }} disabled={isDeleting}>{isDeleting ? 'Deleting…' : 'Delete Review'}</Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Order Confirmation Dialog */}
-      <Dialog open={orderConfirmationOpen} onOpenChange={setOrderConfirmationOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Order Confirmation</DialogTitle>
-            <DialogDescription>
-              Your order has been successfully placed and is being prepared.
-            </DialogDescription>
-          </DialogHeader>
-          {lastOrder && (
-            <OrderConfirmation
-              order={lastOrder}
-              onClose={() => setOrderConfirmationOpen(false)}
-              onTrackOrder={() => {
-                toast({
-                  title: "Order Tracking",
-                  description: "Order tracking feature coming soon!",
-                });
-              }}
-              onContactSupport={() => {
-                toast({
-                  title: "Contact Support",
-                  description: "Support contact options coming soon!",
-                });
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Product Image Viewer */}
-      {selectedProduct && (
-        <ProductImageViewer
-          images={selectedProduct.images}
-          productName={selectedProduct.name}
-          isOpen={isViewerOpen}
-          onClose={() => {
-            setIsViewerOpen(false);
-            setSelectedProduct(null);
-          }}
-        />
-      )}
-
-      {/* Location Selection Dialog */}
-      <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Select Delivery Location</DialogTitle>
-            <DialogDescription>
-              Choose where you want your order delivered. You can search for an address, use your current location, or click on the map.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <LocationPicker
-            onLocationSelect={(location) => {
-              setSelectedLocation(location);
-              setLocationDialogOpen(false);
-            }}
-            initialLocation={selectedLocation}
-            placeholder="Search for delivery address..."
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Product Detail Sheet */}
-      <Sheet open={productDetailOpen} onOpenChange={setProductDetailOpen}>
-        <SheetContent className="w-[95vw] sm:w-[92vw] md:w-[85vw] lg:w-280 xl:w-7xl sm:max-w-none max-h-[90vh] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="text-2xl font-bold">
-              {selectedProductForDetail?.name}
-            </SheetTitle>
-            <SheetDescription>
-              {selectedProductForDetail?.description}
-            </SheetDescription>
-          </SheetHeader>
-          
-          {/* Rating and Action Buttons */}
-          {selectedProductForDetail && (
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
-              {/* Average Star Rating */}
-              <div className="flex items-center gap-3">
-                {(() => {
-                  const reviews = getReviewsForProduct(selectedProductForDetail.id);
-                  const averageRating = reviews.length > 0 
-                    ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length 
-                    : 0;
-                  return (
-                    <>
-                      <div className="flex items-center gap-1">
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <svg
-                              key={i}
-                              className={`w-5 h-5 ${i < Math.round(averageRating) ? 'text-yellow-400' : 'text-muted-foreground/40'}`}
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                          ))}
-                        </div>
-                        <span className="font-medium text-lg">
-                          {averageRating.toFixed(1)}
-                        </span>
-                        <span className="text-muted-foreground">
-                          ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
-                        </span>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-
-              {/* Ask About Price Button */}
-              <Button
-                onClick={() => {
-                  handleChatAboutProduct(selectedProductForDetail);
-                  setProductDetailOpen(false);
-                }}
-                className="bg-blue-600! hover:bg-blue-700! text-white! border-0 shadow-lg hover:shadow-xl"
-              >
-                💬 Ask About Price
-              </Button>
-            </div>
-          )}
-          
-          {selectedProductForDetail && (
-            <div className="space-y-6">
-              {/* Split Screen Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Left Side - Image Gallery */}
-                <div className="space-y-4">
-                  {/* Main Image */}
-                  <div className="relative overflow-hidden rounded-xl border border-border bg-muted/30">
-                    {selectedProductForDetail.images && selectedProductForDetail.images.length > 0 ? (
-                      <img
-                        src={selectedProductForDetail.images[0]}
-                        alt={selectedProductForDetail.name}
-                        className="w-full h-96 object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
-                        onClick={() => {
-                          setSelectedProduct({
-                            images: selectedProductForDetail.images || [],
-                            name: selectedProductForDetail.name
-                          });
-                          setIsViewerOpen(true);
-                        }}
-                      />
-                    ) : selectedProductForDetail.image ? (
-                      <img
-                        src={selectedProductForDetail.image}
-                        alt={selectedProductForDetail.name}
-                        className="w-full h-96 object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
-                        onClick={() => {
-                          setSelectedProduct({
-                            images: selectedProductForDetail.image ? [selectedProductForDetail.image] : [],
-                            name: selectedProductForDetail.name
-                          });
-                          setIsViewerOpen(true);
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-96 bg-muted flex items-center justify-center">
-                        <span className="text-muted-foreground">No image available</span>
-                      </div>
-                    )}
-                    {!selectedProductForDetail.available && (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <span className="text-white font-bold text-xl">SOLD OUT</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Thumbnail Gallery */}
-                  {selectedProductForDetail.images && selectedProductForDetail.images.length > 1 && (
-                    <div className="flex gap-2 overflow-x-auto pb-2">
-                      {selectedProductForDetail.images.slice(1, 4).map((image, index) => (
-                        <div
-                          key={index}
-                          className="shrink-0 w-20 h-20 rounded-lg border overflow-hidden cursor-pointer hover:border-primary transition-colors"
-                          onClick={() => {
-                            setSelectedProduct({
-                              images: selectedProductForDetail.images || [],
-                              name: selectedProductForDetail.name
-                            });
-                            setIsViewerOpen(true);
-                          }}
-                        >
-                          <img
-                            src={image}
-                            alt={`${selectedProductForDetail.name} ${index + 2}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Right Side - Product Info */}
-                <div className="space-y-6">
-                  {/* Product Header */}
-                  <div>
-                    <h1 className="text-3xl font-bold text-foreground mb-2">
-                      {selectedProductForDetail.name}
-                    </h1>
-                    <p className="text-foreground/90 text-lg leading-relaxed">
-                      {selectedProductForDetail.description}
-                    </p>
-                  </div>
-
-                  {/* Rating Display */}
-                  <div className="flex items-center gap-3">
-                    {(() => {
-                      const reviews = getReviewsForProduct(selectedProductForDetail.id);
-                      const averageRating = reviews.length > 0 
-                        ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length 
-                        : 0;
-                      return (
-                        <div className="flex items-center gap-2">
-                          <div className="flex">
-                            {[...Array(5)].map((_, i) => (
-                              <svg
-                                key={i}
-                                className={`w-5 h-5 ${i < Math.round(averageRating) ? 'text-yellow-400' : 'text-muted-foreground/40'}`}
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                            ))}
-                          </div>
-                          <span className="font-semibold text-lg">
-                            {averageRating.toFixed(1)}
-                          </span>
-                          <span className="text-muted-foreground">
-                            ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
-                          </span>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Key Product Info Card */}
-                  <div className="bg-muted/30 rounded-xl p-6 space-y-4 border border-border">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-muted-foreground">Price</span>
-                      <span className="text-2xl font-bold text-primary">
-                        {formatPrice(selectedProductForDetail.price)}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-muted-foreground">Stock</span>
-                      <span className={`font-medium ${
-                        selectedProductForDetail.stock !== undefined 
-                          ? (selectedProductForDetail.stock <= 5 ? 'text-orange-600' : 'text-green-600')
-                          : (selectedProductForDetail.available ? 'text-green-600' : 'text-red-600')
-                      }`}>
-                        {selectedProductForDetail.stock !== undefined 
-                          ? `${selectedProductForDetail.stock} ${selectedProductForDetail.unit || 'units'}${selectedProductForDetail.stock <= 5 ? ' (Low)' : ''}`
-                          : (selectedProductForDetail.available ? 'In Stock' : 'Out of Stock')
-                        }
-                      </span>
-                    </div>
-
-                    {/* Dynamically render added fields that have values */}
-                    {ADDED_FIELDS_CONFIG.map(field => renderAddedFieldForDetails(field, selectedProductForDetail)).filter(Boolean)}
-                  </div>
-
-                  {/* Ask About Price Button */}
-                  <Button
-                    onClick={() => {
-                      handleChatAboutProduct(selectedProductForDetail);
-                      setProductDetailOpen(false);
-                    }}
-                    className="w-full bg-blue-600! hover:bg-blue-700! text-white! py-3 text-lg border-0 shadow-lg hover:shadow-xl"
-                  >
-                    💬 Ask About Price
-                  </Button>
-                </div>
-              </div>
-
-              {/* Tags */}
-              {selectedProductForDetail.tags && selectedProductForDetail.tags.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Tags</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProductForDetail.tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary">{tag}</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Reviews Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Customer Reviews</h3>
-                <div className="space-y-4">
-                  {getReviewsForProduct(selectedProductForDetail.id).length === 0 ? (
-                    <div className="text-center text-muted-foreground py-8">No reviews yet — be the first!</div>
-                  ) : (
-                    getReviewsForProduct(selectedProductForDetail.id).map((r: Review) => (
-                      <div key={r.id} className="border-b pb-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="font-medium">{r.user}</div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-2">
-                            <span>{new Date(r.date).toLocaleDateString()}</span>
-                            {(isAdmin || isStaff) && (
-                              <button
-                                className="text-destructive hover:text-destructive/90 ml-2 text-xs"
-                                onClick={() => {
-                                  setConfirmDeleteReviewId(r.id);
-                                  setDeleteOpen(true);
-                                }}
-                                title="Delete review"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </button>
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent className="w-full sm:max-w-md p-0">
+                      <div className="flex flex-col h-full">
+                        <SheetHeader className="p-6 pb-2">
+                          <SheetTitle className="text-lg">Your Order</SheetTitle>
+                          <SheetDescription className="text-sm">Review your items before checkout.</SheetDescription>
+                        </SheetHeader>
+                        
+                        <div className="flex-1 overflow-y-auto px-6 pb-4">
+                          <div className="space-y-3">
+                            {cart.length === 0 ? (
+                              <div className="text-center text-muted-foreground py-12">
+                                <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                                <p className="text-base">Your cart is empty.</p>
+                                <p className="text-sm mt-2">Add some products to get started!</p>
+                              </div>
+                            ) : (
+                              cart.map(({ item, quantity }) => (
+                                <div key={item.id} className="bg-card border rounded-lg p-3 shadow-sm">
+                                  <div className="flex gap-3">
+                                    <ProductImage
+                                      images={item.images || (item.image ? [item.image] : [])}
+                                      productName={item.name}
+                                      className="h-16 w-16 rounded-lg object-cover cursor-pointer shrink-0"
+                                      onImageClick={(e) => handleImageClick(item, e)}
+                                      enableSlideshow={false}
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-semibold text-sm leading-tight mb-1 line-clamp-2">{item.name}</h4>
+                                      <p className="text-sm font-medium text-primary mb-2">{formatPriceKSHS(item.price)}</p>
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 bg-muted rounded-md p-1">
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-7 w-7 p-0 hover:bg-background" 
+                                                onClick={() => updateQuantity(item.id, -(item.quantityStep || 1))}
+                                              >
+                                                <Minus className="h-3 w-3" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Decrease</TooltipContent>
+                                          </Tooltip>
+                                          <span className="text-sm font-medium w-8 text-center">{quantity}</span>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-7 w-7 p-0 hover:bg-background" 
+                                                onClick={() => updateQuantity(item.id, item.quantityStep || 1)}
+                                              >
+                                                <Plus className="h-3 w-3" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Increase</TooltipContent>
+                                          </Tooltip>
+                                        </div>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="sm" 
+                                              className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" 
+                                              onClick={() => removeFromCart(item.id)}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Remove</TooltipContent>
+                                        </Tooltip>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
                             )}
                           </div>
                         </div>
-                        <div className="text-sm text-yellow-400 mt-1">{Array(r.rating).fill("★").join("")}</div>
-                        {r.comment ? (
-                          <div className="text-sm text-muted-foreground mt-2">{r.comment}</div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground mt-2 italic">Rating only - no comment provided</div>
+
+                        <SheetFooter className="border-t bg-background p-6 mt-auto">
+                          <div className="w-full space-y-4">
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium flex items-center gap-2">
+                                  <MapPin className="h-4 w-4" />
+                                  Delivery Location
+                                </span>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => setLocationDialogOpen(true)}
+                                >
+                                  {selectedLocation ? 'Change' : 'Select'}
+                                </Button>
+                              </div>
+                              {selectedLocation ? (
+                                <div className="bg-muted/50 p-3 rounded-lg text-sm">
+                                  <div className="flex items-start gap-2">
+                                    <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                                    <span className="flex-1">{selectedLocation.address}</span>
+                                  </div>
+                                  {selectedLocation.instructions && (
+                                    <p className="text-xs text-muted-foreground mt-2 ml-6">
+                                      {selectedLocation.instructions}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="bg-muted/30 p-3 rounded-lg text-sm text-muted-foreground text-center border border-dashed">
+                                  No delivery location selected
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium flex items-center gap-2">
+                                  <Phone className="h-4 w-4" />
+                                  Contact Phone
+                                </span>
+                                {!user?.phone && !showPhoneInput && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => setShowPhoneInput(true)}
+                                  >
+                                    Add Phone
+                                  </Button>
+                                )}
+                              </div>
+                              {user?.phone ? (
+                                <div className="bg-muted/50 p-3 rounded-lg text-sm">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <Phone className="h-4 w-4 text-primary" />
+                                      <span>{user.phone}</span>
+                                    </div>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      className="h-7 px-2 text-xs hover:bg-background"
+                                      onClick={() => {
+                                        setCheckoutPhone(user.phone || '');
+                                        setShowPhoneInput(true);
+                                      }}
+                                    >
+                                      Edit
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : showPhoneInput ? (
+                                <div className="space-y-2">
+                                  <Input
+                                    type="tel"
+                                    placeholder="+254700000000"
+                                    value={checkoutPhone}
+                                    onChange={(e) => setCheckoutPhone(e.target.value)}
+                                    className="text-sm"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      onClick={() => {
+                                        setShowPhoneInput(false);
+                                        setCheckoutPhone('');
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      onClick={() => setShowPhoneInput(false)}
+                                    >
+                                      Save
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="bg-muted/30 p-3 rounded-lg text-sm text-muted-foreground text-center border border-dashed">
+                                  No phone number provided
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="space-y-3 pt-2">
+                              <div className="flex items-center justify-between text-base font-medium">
+                                <span>Total</span>
+                                <span className="text-lg font-bold text-primary">{formatPriceKSHS(cartTotal)}</span>
+                              </div>
+                              <Button 
+                                className="w-full h-11 text-base font-medium gap-2" 
+                                disabled={cart.length === 0 || !selectedLocation || (!user?.phone && !checkoutPhone.trim()) || isProcessingCheckout} 
+                                onClick={handleCheckout}
+                              >
+                                {isProcessingCheckout ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Processing...
+                                  </>
+                                ) : (
+                                  cart.length === 0 ? 'Add Items to Cart' : 
+                                  !selectedLocation ? 'Select Location' :
+                                  (!user?.phone && !checkoutPhone.trim()) ? 'Add Phone Number' :
+                                  'Proceed to Checkout'
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </SheetFooter>
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              </div>
+
+              <div className="mt-6 max-w-5xl mx-auto">
+                <ProductSearch 
+                  products={menu}
+                  onFilteredProducts={setSearchedProducts}
+                />
+              </div>
+
+              <div className="flex flex-col md:flex-row justify-between items-end gap-4 mt-6 relative">
+                <div className="flex items-center gap-2">
+                  <Tabs defaultValue="All" className="w-full md:w-auto" onValueChange={setActiveCategory}>
+                    <TabsList className="bg-muted flex-nowrap p-1">
+                      {categories.slice(0, 2).map(cat => (
+                        <TabsTrigger key={cat} value={cat} className="data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap shrink-0 text-xs sm:text-sm px-3 py-2 min-w-20 sm:min-w-[100px]">
+                          {cat}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                  {categories.length > 2 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className={activeCategory !== 'All' && !categories.slice(0, 2).includes(activeCategory) ? 'bg-accent font-medium' : ''}>
+                          More ▾
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {categories.slice(2).map(cat => (
+                          <DropdownMenuItem
+                            key={cat}
+                            onClick={() => setActiveCategory(cat)}
+                            className={activeCategory === cat ? 'bg-accent font-medium' : ''}
+                          >
+                            {cat}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <AnimatePresence mode="popLayout">
+                {displayProducts.map((item: MenuItem) => (
+                  <motion.div
+                    key={item.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Card className="h-full flex flex-col overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer group"
+                        onClick={() => handleProductClick(item)}>
+                      <div className="h-1 bg-linear-to-r from-primary to-primary/60"></div>
+                      
+                      <div className="h-48 overflow-hidden relative bg-linear-to-br from-muted/40 to-muted/10">
+                        <ProductImage
+                          images={item.images || (item.image ? [item.image] : [])}
+                          productName={item.name}
+                          className="w-full h-full"
+                          onImageClick={(e) => handleImageClick(item, e)}
+                          enableSlideshow={true}
+                        />
+                        <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                        <div className="absolute top-3 left-3 right-3 flex items-center justify-between opacity-100 sm:opacity-0 sm:translate-y-1 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 transition-all duration-300">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="secondary"
+                                className="h-9 w-9 rounded-full bg-background/90 text-foreground hover:bg-background shadow-lg"
+                                aria-label={`Quick view ${item.name}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleProductClick(item);
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Quick view</TooltipContent>
+                          </Tooltip>
+
+                          <div className="flex items-center gap-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="secondary"
+                                  className={`h-9 w-9 rounded-full bg-background/90 hover:bg-background shadow-lg ${wishlist.has(item.id) ? "text-red-600" : "text-foreground"}`}
+                                  aria-label={wishlist.has(item.id) ? `Remove ${item.name} from wishlist` : `Add ${item.name} to wishlist`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleWishlist(item.id);
+                                  }}
+                                >
+                                  <Heart className={`h-4 w-4 ${wishlist.has(item.id) ? "fill-current" : ""}`} />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{wishlist.has(item.id) ? 'Remove from favorites' : 'Add to favorites'}</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="secondary"
+                                  className={`h-9 w-9 rounded-full bg-background/90 hover:bg-background shadow-lg ${compare.has(item.id) ? "text-primary" : "text-foreground"}`}
+                                  aria-label={compare.has(item.id) ? `Remove ${item.name} from compare` : `Add ${item.name} to compare`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleCompare(item.id);
+                                  }}
+                                >
+                                  <GitCompare className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{compare.has(item.id) ? 'Remove from compare' : 'Add to compare'}</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </div>
+
+                        {!item.available && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-bold text-xl backdrop-blur-sm">
+                            SOLD OUT
+                          </div>
                         )}
                       </div>
-                    ))
+                      <CardContent className="p-6 flex-1 bg-card">
+                        <div className="flex justify-between items-start mb-3">
+                          <h3 className="text-lg font-bold font-heading group-hover:text-primary transition-colors">{item.name}</h3>
+                          <span className="font-bold text-primary whitespace-nowrap text-lg tabular-nums">{formatPriceKSHS(item.price)}</span>
+                        </div>
+                        <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{item.description}</p>
+                        
+                        <div className="space-y-2 mb-3">
+                          {ADDED_FIELDS_CONFIG.map(field => renderAddedField(field, item)).filter(Boolean)}
+                        </div>
+                        
+                        {item.stock !== undefined && (
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Stock: {item.stock} {item.unit || 'units'}</span>
+                            {item.stock <= 5 && (
+                              <span className="text-orange-600 font-medium">Low stock!</span>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                      <CardFooter className="p-6 pt-0 flex gap-3 items-center bg-muted/10 border-t border-border/50">
+                        <div className="flex-1 relative group">
+                          <Button 
+                            className="w-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 gap-2" 
+                            disabled={!item.available}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(item);
+                            }}
+                          >
+                            Add to Cart
+                            <ShoppingBag className="h-4 w-4 transition-transform group-hover:-translate-y-1" />
+                          </Button>
+                        </div>
+
+                        <div className="w-44 text-right">
+                          <div className="text-xs text-muted-foreground mb-1 flex items-center justify-end gap-1">
+                            {getReviewsForProduct(item.id).length > 0 && (
+                              <>
+                                <div className="flex items-center">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`w-3 h-3 ${i < Math.round(getReviewsForProduct(item.id).reduce((acc, r) => acc + r.rating, 0) / getReviewsForProduct(item.id).length) ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground/40'}`}
+                                    />
+                                  ))}
+                                </div>
+                                <span>({getReviewsForProduct(item.id).length})</span>
+                              </>
+                            )}
+                            {getReviewsForProduct(item.id).length === 0 && (
+                              <span>No reviews yet</span>
+                            )}
+                          </div>
+                          <div className="flex gap-1 relative group">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-xs opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProductForDetail(item);
+                                setProductDetailOpen(true);
+                              }}
+                            >
+                              View Details
+                            </Button>
+                            
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleQuickRating(item.id, 5);
+                                  }}
+                                  className="text-xs whitespace-nowrap hover:bg-yellow-50 hover:border-yellow-200 transition-colors"
+                                >
+                                  5⭐
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Quick 5-star rating</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </div>
+                      </CardFooter>
+                    </Card>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete Review</DialogTitle>
+                  <DialogDescription>This action will permanently remove the review. Are you sure?</DialogDescription>
+                </DialogHeader>
+
+                <div className="mt-4">
+                  {confirmDeleteReviewId ? (
+                    (() => {
+                      const r = reviews.find((rr: Review) => rr.id === confirmDeleteReviewId);
+                      return (
+                        <div className="space-y-2">
+                          {r ? (
+                            <>
+                              <div className="text-sm font-medium">By: {r.user}</div>
+                              <div className="text-sm text-muted-foreground">{new Date(r.date).toLocaleString()}</div>
+                              {r.comment && (
+                                <div className="mt-2 p-3 rounded border bg-muted/30">{r.comment}</div>
+                              )}
+                              {!r.comment && (
+                                <div className="mt-2 p-3 rounded border bg-muted/30 italic text-muted-foreground">Rating only - no comment provided</div>
+                              )}
+                              <div className="mt-2">
+                                <label className="text-sm font-medium block mb-1">Reason</label>
+                                <select value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)} className="w-full rounded-md border px-3 py-2">
+                                  <option value="spam">Spam/Advertising</option>
+                                  <option value="abusive">Abusive or Harassing</option>
+                                  <option value="irrelevant">Irrelevant to product</option>
+                                  <option value="other">Other</option>
+                                </select>
+                              </div>
+                              <div className="mt-2">
+                                <label className="text-sm font-medium block mb-1">Notes (optional)</label>
+                                <Textarea value={deleteNote} onChange={(e) => setDeleteNote(e.target.value)} placeholder="Optional notes for moderation audit" />
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">Review will be removed.</div>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="text-sm text-muted-foreground">No review selected.</div>
                   )}
                 </div>
 
-                {/* Add Review Form */}
-                {isAuthenticated && selectedProductForDetail && (
-                  <div className="mt-6">
-                    <ReviewForm 
-                      itemId={selectedProductForDetail.id} 
-                      reviewRating={reviewRating}
-                      setReviewRating={setReviewRating}
-                      addReviewForProduct={addReviewForProduct}
-                    />
+                <DialogFooter>
+                  <div className="flex justify-end gap-2 w-full">
+                    <Button variant="outline" onClick={() => { setDeleteOpen(false); setConfirmDeleteReviewId(null); setDeleteReason('spam'); setDeleteNote(''); }}>Cancel</Button>
+                    <Button variant="destructive" onClick={async () => {
+                      if (!confirmDeleteReviewId) return;
+                      setIsDeleting(true);
+                      const ok = await removeReview(confirmDeleteReviewId, deleteReason, deleteNote);
+                      setIsDeleting(false);
+                      setDeleteOpen(false);
+                      setConfirmDeleteReviewId(null);
+                      setDeleteReason('spam');
+                      setDeleteNote('');
+                      if (ok) toast({ title: "Deleted", description: "Review was removed." });
+                    }} disabled={isDeleting}>
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : 'Delete Review'}
+                    </Button>
+                  </div>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            <Dialog open={orderConfirmationOpen} onOpenChange={setOrderConfirmationOpen}>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Order Confirmation</DialogTitle>
+                  <DialogDescription>
+                    Your order has been successfully placed and is being prepared.
+                  </DialogDescription>
+                </DialogHeader>
+                {lastOrder && (
+                  <OrderConfirmation
+                    order={lastOrder}
+                    onClose={() => setOrderConfirmationOpen(false)}
+                    onTrackOrder={() => {
+                      toast({
+                        title: "Order Tracking",
+                        description: "Order tracking feature coming soon!",
+                      });
+                    }}
+                    onContactSupport={() => {
+                      toast({
+                        title: "Contact Support",
+                        description: "Support contact options coming soon!",
+                      });
+                    }}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {selectedProduct && (
+              <ProductImageViewer
+                images={selectedProduct.images}
+                productName={selectedProduct.name}
+                isOpen={isViewerOpen}
+                onClose={() => {
+                  setIsViewerOpen(false);
+                  setSelectedProduct(null);
+                }}
+              />
+            )}
+
+            <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Select Delivery Location</DialogTitle>
+                  <DialogDescription>
+                    Choose where you want your order delivered. You can search for an address, use your current location, or click on the map.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <LocationPicker
+                  onLocationSelect={(location) => {
+                    setSelectedLocation(location);
+                    setLocationDialogOpen(false);
+                  }}
+                  initialLocation={selectedLocation}
+                  placeholder="Search for delivery address..."
+                />
+              </DialogContent>
+            </Dialog>
+
+            <Sheet open={productDetailOpen} onOpenChange={setProductDetailOpen}>
+              <SheetContent className="w-[95vw] sm:w-[92vw] md:w-[85vw] lg:w-280 xl:w-7xl sm:max-w-none max-h-[90vh] overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle className="text-2xl font-bold">
+                    {selectedProductForDetail?.name}
+                  </SheetTitle>
+                  <SheetDescription>
+                    {selectedProductForDetail?.description}
+                  </SheetDescription>
+                </SheetHeader>
+                
+                {selectedProductForDetail && (
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const reviews = getReviewsForProduct(selectedProductForDetail.id);
+                        const averageRating = reviews.length > 0 
+                          ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length 
+                          : 0;
+                        return (
+                          <>
+                            <div className="flex items-center gap-1">
+                              <div className="flex">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`w-5 h-5 ${i < Math.round(averageRating) ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground/40'}`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="font-medium text-lg">
+                                {averageRating.toFixed(1)}
+                              </span>
+                              <span className="text-muted-foreground">
+                                ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    <Button
+                      onClick={() => {
+                        handleChatAboutProduct(selectedProductForDetail);
+                        setProductDetailOpen(false);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      Ask About Price
+                    </Button>
                   </div>
                 )}
+                
+                {selectedProductForDetail && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <div className="relative overflow-hidden rounded-xl border border-border bg-muted/30">
+                          {selectedProductForDetail.images && selectedProductForDetail.images.length > 0 ? (
+                            <img
+                              src={selectedProductForDetail.images[0]}
+                              alt={selectedProductForDetail.name}
+                              className="w-full h-96 object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                              onClick={() => {
+                                setSelectedProduct({
+                                  images: selectedProductForDetail.images || [],
+                                  name: selectedProductForDetail.name
+                                });
+                                setIsViewerOpen(true);
+                              }}
+                            />
+                          ) : selectedProductForDetail.image ? (
+                            <img
+                              src={selectedProductForDetail.image}
+                              alt={selectedProductForDetail.name}
+                              className="w-full h-96 object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                              onClick={() => {
+                                setSelectedProduct({
+                                  images: selectedProductForDetail.image ? [selectedProductForDetail.image] : [],
+                                  name: selectedProductForDetail.name
+                                });
+                                setIsViewerOpen(true);
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-96 bg-muted flex items-center justify-center">
+                              <span className="text-muted-foreground">No image available</span>
+                            </div>
+                          )}
+                          {!selectedProductForDetail.available && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                              <span className="text-white font-bold text-xl">SOLD OUT</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {selectedProductForDetail.images && selectedProductForDetail.images.length > 1 && (
+                          <div className="flex gap-2 overflow-x-auto pb-2">
+                            {selectedProductForDetail.images.slice(1, 4).map((image, index) => (
+                              <div
+                                key={index}
+                                className="shrink-0 w-20 h-20 rounded-lg border overflow-hidden cursor-pointer hover:border-primary transition-colors"
+                                onClick={() => {
+                                  setSelectedProduct({
+                                    images: selectedProductForDetail.images || [],
+                                    name: selectedProductForDetail.name
+                                  });
+                                  setIsViewerOpen(true);
+                                }}
+                              >
+                                <img
+                                  src={image}
+                                  alt={`${selectedProductForDetail.name} ${index + 2}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
 
-                <div className="mt-4 text-right">
-                  <div className="text-xs text-muted-foreground">Reviews are moderated</div>
-                </div>
-              </div>
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="text-3xl font-bold text-foreground mb-2">
+                            {selectedProductForDetail.name}
+                          </h1>
+                          <p className="text-foreground/90 text-lg leading-relaxed">
+                            {selectedProductForDetail.description}
+                          </p>
+                        </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-4 pt-4 border-t">
-                <div className="flex-1 relative group">
-                  <Button
-                    onClick={() => {
-                      addToCart(selectedProductForDetail);
-                    }}
-                    disabled={!selectedProductForDetail.available}
-                    className="w-full"
-                  >
-                    <ShoppingBag className="mr-2 h-4 w-4" />
-                    Add to Cart
-                  </Button>
-                </div>
-                <Button variant="outline" onClick={() => setProductDetailOpen(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
-      </div>
-    </div>
-    </>
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const reviews = getReviewsForProduct(selectedProductForDetail.id);
+                            const averageRating = reviews.length > 0 
+                              ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length 
+                              : 0;
+                            return (
+                              <div className="flex items-center gap-2">
+                                <div className="flex">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`w-5 h-5 ${i < Math.round(averageRating) ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground/40'}`}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="font-semibold text-lg">
+                                  {averageRating.toFixed(1)}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        <div className="bg-muted/30 rounded-xl p-6 space-y-4 border border-border">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-muted-foreground">Price</span>
+                            <span className="text-2xl font-bold text-primary">
+                              {formatPrice(selectedProductForDetail.price)}
+                            </span>
+                          </div>
+                          
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-muted-foreground">Stock</span>
+                            <span className={`font-medium ${
+                              selectedProductForDetail.stock !== undefined 
+                                ? (selectedProductForDetail.stock <= 5 ? 'text-orange-600' : 'text-green-600')
+                                : (selectedProductForDetail.available ? 'text-green-600' : 'text-red-600')
+                            }`}>
+                              {selectedProductForDetail.stock !== undefined 
+                                ? `${selectedProductForDetail.stock} ${selectedProductForDetail.unit || 'units'}${selectedProductForDetail.stock <= 5 ? ' (Low)' : ''}`
+                                : (selectedProductForDetail.available ? 'In Stock' : 'Out of Stock')
+                              }
+                            </span>
+                          </div>
+
+                          {ADDED_FIELDS_CONFIG.map(field => renderAddedFieldForDetails(field, selectedProductForDetail)).filter(Boolean)}
+                        </div>
+
+                        <Button
+                          onClick={() => {
+                            handleChatAboutProduct(selectedProductForDetail);
+                            setProductDetailOpen(false);
+                          }}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg gap-2"
+                        >
+                          <Send className="h-5 w-5" />
+                          Ask About Price
+                        </Button>
+                      </div>
+                    </div>
+
+                    {selectedProductForDetail.tags && selectedProductForDetail.tags.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Tags</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedProductForDetail.tags.map((tag, index) => (
+                            <Badge key={index} variant="secondary">{tag}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Customer Reviews</h3>
+                      <div className="space-y-4">
+                        {getReviewsForProduct(selectedProductForDetail.id).length === 0 ? (
+                          <div className="text-center text-muted-foreground py-8">No reviews yet — be the first!</div>
+                        ) : (
+                          getReviewsForProduct(selectedProductForDetail.id).map((r: Review) => (
+                            <div key={r.id} className="border-b pb-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="font-medium">{r.user}</div>
+                                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                                  <span>{new Date(r.date).toLocaleDateString()}</span>
+                                  {(isAdmin || isStaff) && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          className="text-destructive hover:text-destructive/90 ml-2 text-xs"
+                                          onClick={() => {
+                                            setConfirmDeleteReviewId(r.id);
+                                            setDeleteOpen(true);
+                                          }}
+                                          title="Delete review"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Delete review</TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-sm text-yellow-400 mt-1">{Array(r.rating).fill("★").join("")}</div>
+                              {r.comment ? (
+                                <div className="text-sm text-muted-foreground mt-2">{r.comment}</div>
+                              ) : (
+                                <div className="text-sm text-muted-foreground mt-2 italic">Rating only - no comment provided</div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {isAuthenticated && selectedProductForDetail && (
+                        <div className="mt-6">
+                          <ReviewForm 
+                            itemId={selectedProductForDetail.id} 
+                            reviewRating={reviewRating}
+                            setReviewRating={setReviewRating}
+                            addReviewForProduct={addReviewForProduct}
+                          />
+                        </div>
+                      )}
+
+                      <div className="mt-4 text-right">
+                        <div className="text-xs text-muted-foreground">Reviews are moderated</div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 pt-4 border-t">
+                      <div className="flex-1 relative group">
+                        <Button
+                          onClick={() => addToCart(selectedProductForDetail)}
+                          disabled={!selectedProductForDetail.available}
+                          className="w-full gap-2"
+                        >
+                          <ShoppingBag className="h-4 w-4" />
+                          Add to Cart
+                        </Button>
+                      </div>
+                      <Button variant="outline" onClick={() => setProductDetailOpen(false)}>
+                        Close
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </>
+    </TooltipProvider>
   );
 }
