@@ -1291,9 +1291,9 @@ export default function POSSystem() {
           </div>
 
           {paymentAmount && parseFloat(paymentAmount) >= getTotal() && (
-            <div className="flex justify-between font-medium">
-              <span>Change:</span>
-              <span>{formatPriceKSHS(parseFloat(paymentAmount) - getTotal())}</span>
+            <div className="flex flex-col items-center justify-center py-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+              <span className="text-sm font-medium text-green-600 dark:text-green-400">Change</span>
+              <span className="text-3xl font-bold tracking-tight text-green-600 dark:text-green-400">{formatPriceKSHS(parseFloat(paymentAmount) - getTotal())}</span>
             </div>
           )}
           <Button
