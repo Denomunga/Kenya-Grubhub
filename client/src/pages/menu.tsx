@@ -618,7 +618,7 @@ export default function Menu() {
           keywords="product catalog Kenya, laptops catalog, mobile phones catalog, stationery catalog, electronics shopping Kenya, HP laptops Kenya, Dell laptops Kenya"
           structuredData={categoryStructuredData}
         />
-        <Breadcrumbs items={[{ name: 'Products', url: '/menu' }]} />
+        <Breadcrumbs items={[{ name: 'Home', url: '/' }]} />
         <div className="min-h-screen w-full particle-container gradient-mesh">
           <div className="container mx-auto px-6 py-14">
             <div className="mb-8">
