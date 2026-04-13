@@ -278,7 +278,7 @@ export default function Login() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-password">Password</Label>
-                      <Input id="signup-password" type={showPassword ? "text" : "password"} placeholder="Min 8 chars, Aa1!" value={signupForm.password} onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })} disabled={authState === 'loading'} maxLength={128} required />
+                      <Input id="signup-password" type={showPassword ? "text" : "password"} placeholder="Enter Password (Min 8 chars)" value={signupForm.password} onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })} disabled={authState === 'loading'} maxLength={128} required />
                       {signupForm.password && (
                         <div className="space-y-1">
                           <div className="flex gap-1">
