@@ -2,11 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, Link } from "wouter";
 import { useData } from "@/lib/data";
 import { apiFetch } from "@/lib/api";
-import HeroSection from "@/components/home/HeroSectionNew";
-import FeatureTabs from "@/components/home/FeatureTabs";
-import HowItWorks from "@/components/home/HowItWorks";
-import Solutions from "@/components/home/Solutions";
-import Support from "@/components/home/Support";
+import HeroSection from "@/components/home/HeroSection";
 import CategoryFilter from "@/components/home/CategoryFilter";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
 import ProductSearch from "@/components/search/ProductSearch";
@@ -280,12 +276,6 @@ export default function Home() {
       <div className="relative">
         <HeroSection />
       </div>
-
-      {/* New Design Sections */}
-      <FeatureTabs />
-      <HowItWorks />
-      <Solutions />
-      <Support />
       
       <main className="relative z-10">
         <div className="container mx-auto px-6 py-12 sm:py-16 lg:py-20">

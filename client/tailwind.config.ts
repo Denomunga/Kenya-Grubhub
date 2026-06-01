@@ -20,13 +20,8 @@ const config = {
       fontFamily: {
         sans: ['var(--font-sans)'],
         serif: ['var(--font-serif)'],
-        heading: ['Josefin Sans', 'sans-serif'],
-        body: ['Open Sans', 'sans-serif'],
       },
       colors: {
-        magenta: '#EB1B88',
-        'dark-space': '#0b0b2a',
-        'space-navy': '#1a1a4e',
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -75,26 +70,10 @@ const config = {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
-        pulseMagenta: {
-          '0%': { boxShadow: '0 0 0 0 rgba(235,27,136,0.7)' },
-          '70%': { boxShadow: '0 0 0 20px rgba(235,27,136,0)' },
-          '100%': { boxShadow: '0 0 0 0 rgba(235,27,136,0)' },
-        },
-        flyUpDown: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-20px)' },
-        },
-        slideInLeft: {
-          from: { transform: 'translateX(-120%)', opacity: '0' },
-          to: { transform: 'translateX(0)', opacity: '1' },
-        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'pulse-magenta': 'pulseMagenta 2s infinite',
-        'fly-rocket': 'flyUpDown 3s ease-in-out infinite',
-        'slide-in-left': 'slideInLeft 0.6s ease-out both',
       },
     },
   },
