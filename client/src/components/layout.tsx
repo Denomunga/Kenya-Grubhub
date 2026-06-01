@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import FloatingActionButton from "@/components/ui/FloatingActionButton";
 import { ScrollProgressIndicator } from "@/hooks/useSmoothScroll";
 import { MagneticButton } from "@/components/ui/ProfessionalEffects";
+import { FloatingOrderButton } from "@/components/FloatingOrderButton";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout, isAuthenticated, isAdmin, isStaff } = useHybridAuth();
@@ -775,6 +776,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Floating Action Button */}
       <FloatingActionButton />
+      
+      {/* Floating Order Button */}
+      <FloatingOrderButton />
     </div>
   );
 }

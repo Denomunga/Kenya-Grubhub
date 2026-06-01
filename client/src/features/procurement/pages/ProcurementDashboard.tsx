@@ -28,7 +28,11 @@ import {
   Eye,
   Ban,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  ClipboardCheck,
+  PackageOpen,
+  AlertTriangle
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -41,7 +45,9 @@ import {
   useCreatePurchaseRequest, 
   useCreatePurchaseOrder, 
   useSuppliers, 
-  useLowStockItems 
+  useLowStockItems,
+  useInspectGoods,
+  useReceiveGoods 
 } from '../hooks/useProcurementData';
 import { formatPriceKSHS } from '@/lib/format';
 import { apiFetch } from '@/lib/api';
@@ -133,6 +139,37 @@ export const ProcurementDashboard: React.FC = () => {
 
   const [selectedSupplierId, setSelectedSupplierId] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState('kanban');
+
+  // Receive & Inspect combined modal state
+  const [receiveDialogOpen, setReceiveDialogOpen] = React.useState(false);
+  const [receiveOrder, setReceiveOrder] = React.useState<any>(null);
+  const [receiveItems, setReceiveItems] = React.useState<Array<{ purchaseOrderItemIndex: number; quantity: number; qualityStatus: string; rejectedQuantity: number; rejectionReason: string; productName: string; sku: string; orderedQty: number }>>([]);
+  const [receiveWarehouse, setReceiveWarehouse] = React.useState('');
+  const [receiveNotes, setReceiveNotes] = React.useState('');
+  const [receiveInspectStatus, setReceiveInspectStatus] = React.useState<'inspected' | 'hold'>('inspected');
+  const [receiveReceiptFile, setReceiveReceiptFile] = React.useState<File | null>(null);
+  const [receiveStep, setReceiveStep] = React.useState<'receive' | 'inspect'>('receive');
+  const [receiveGrnId, setReceiveGrnId] = React.useState<string | null>(null);
+  const [receiptValidationError, setReceiptValidationError] = React.useState<string | null>(null);
+  const [extractedReceiptData, setExtractedReceiptData] = React.useState<any>(null);
+  const [receiptMatchStatus, setReceiptMatchStatus] = React.useState<'idle' | 'matched' | 'mismatch'>('idle');
+  const receiveMutation = useReceiveGoods();
+  const inspectMutation = useInspectGoods();
+
+  // Validation warnings for receive items
+  const receiveWarnings = React.useMemo(() => {
+    const warnings: Array<{ index: number; message: string }> = [];
+    receiveItems.forEach((item, idx) => {
+      if (item.quantity < 0) warnings.push({ index: idx, message: 'Quantity cannot be negative' });
+      if (item.quantity > item.orderedQty) warnings.push({ index: idx, message: `Received (${item.quantity}) exceeds ordered (${item.orderedQty})` });
+      if (item.qualityStatus === 'partial_reject' && (!item.rejectedQuantity || item.rejectedQuantity <= 0)) warnings.push({ index: idx, message: 'Partial reject requires rejected quantity > 0' });
+      if (item.rejectedQuantity > item.quantity) warnings.push({ index: idx, message: 'Rejected quantity exceeds received quantity' });
+    });
+    if (receiveInspectStatus === 'inspected' && !receiveReceiptFile && !receiveGrnId) {
+      warnings.push({ index: -1, message: 'Receipt file is required to accept and inspect goods' });
+    }
+    return warnings;
+  }, [receiveItems, receiveInspectStatus, receiveReceiptFile, receiveGrnId]);
 
   // Combine data into Kanban items
   const kanbanItems: KanbanItem[] = React.useMemo(() => {
@@ -671,6 +708,44 @@ export const ProcurementDashboard: React.FC = () => {
                                   </Tooltip>
                                 )}
                                 
+                                {['confirmed', 'shipped', 'partially_received'].includes(order.status) && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                        onClick={() => {
+                                          setReceiveOrder(order);
+                                          setReceiveItems((order.items || []).map((it: any, idx: number) => ({
+                                            purchaseOrderItemIndex: idx,
+                                            quantity: it.quantity,
+                                            qualityStatus: 'accepted',
+                                            rejectedQuantity: 0,
+                                            rejectionReason: '',
+                                            productName: it.productName || it.sku,
+                                            sku: it.sku || '',
+                                            orderedQty: it.quantity,
+                                          })));
+                                          setReceiveWarehouse('');
+                                          setReceiveNotes('');
+                                          setReceiveInspectStatus('inspected');
+                                          setReceiveReceiptFile(null);
+                                          setReceiveStep('receive');
+                                          setReceiveGrnId(null);
+                                          setReceiptValidationError(null);
+                                          setExtractedReceiptData(null);
+                                          setReceiptMatchStatus('idle');
+                                          setReceiveDialogOpen(true);
+                                        }}
+                                      >
+                                        <PackageOpen className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Receive & Inspect</TooltipContent>
+                                  </Tooltip>
+                                )}
+                                
                                 {permissions.canConfirmPO && !['received', 'cancelled'].includes(order.status) && order.status !== 'draft' && (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -928,7 +1003,343 @@ export const ProcurementDashboard: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Supplier Drawer */}
+                {/* Receive & Inspect Combined Dialog */}
+        <Dialog open={receiveDialogOpen} onOpenChange={setReceiveDialogOpen}>
+          <DialogContent className="sm:max-w-[750px] max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <PackageOpen className="h-5 w-5" />
+                Receive & Inspect Goods
+              </DialogTitle>
+              <DialogDescription>
+                PO: <span className="font-medium">{receiveOrder?.poNumber || (receiveOrder?._id || "").slice(-8)}</span>
+                {receiveStep === "inspect" && " — Goods received. Now inspect and attach receipt."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-4">
+              {/* Step indicator */}
+              <div className="flex items-center gap-2 text-sm">
+                <Badge variant={receiveStep === "receive" ? "default" : "outline"}>1. Receive</Badge>
+                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                <Badge variant={receiveStep === "inspect" ? "default" : "outline"}>2. Inspect & Upload Receipt</Badge>
+              </div>
+
+              {/* PO Line Items Table */}
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[180px]">Product</TableHead>
+                      <TableHead className="text-center">Ordered</TableHead>
+                      <TableHead className="text-center w-[100px]">Received</TableHead>
+                      <TableHead className="text-center w-[130px]">Quality</TableHead>
+                      <TableHead className="text-center w-[90px]">Rejected</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {receiveItems.map((item, idx) => {
+                      const warning = receiveWarnings.find(w => w.index === idx);
+                      const isOverQty = item.quantity > item.orderedQty;
+                      const isDisabled = receiveStep === "inspect";
+                      return (
+                        <TableRow key={idx} className={warning ? "bg-yellow-50/50" : ""}>
+                          <TableCell>
+                            <div className="font-medium text-sm">{item.productName}</div>
+                            <div className="text-xs text-muted-foreground">{item.sku}</div>
+                          </TableCell>
+                          <TableCell className="text-center font-medium">{item.orderedQty}</TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const updated = [...receiveItems];
+                                updated[idx] = { ...updated[idx], quantity: parseInt(e.target.value) || 0 };
+                                setReceiveItems(updated);
+                              }}
+                              className={`h-8 text-center ${isOverQty ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                              disabled={isDisabled}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={item.qualityStatus}
+                              onValueChange={(v) => {
+                                const updated = [...receiveItems];
+                                updated[idx] = { ...updated[idx], qualityStatus: v };
+                                setReceiveItems(updated);
+                              }}
+                              disabled={isDisabled}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="accepted">Accepted</SelectItem>
+                                <SelectItem value="partial_reject">Partial</SelectItem>
+                                <SelectItem value="rejected">Rejected</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={item.rejectedQuantity || ""}
+                              onChange={(e) => {
+                                const updated = [...receiveItems];
+                                updated[idx] = { ...updated[idx], rejectedQuantity: parseInt(e.target.value) || 0 };
+                                setReceiveItems(updated);
+                              }}
+                              className="h-8 text-center"
+                              disabled={isDisabled || item.qualityStatus === "accepted"}
+                              placeholder="0"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Inline Validation Warnings */}
+              {receiveWarnings.length > 0 && (
+                <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3">
+                  <div className="flex items-center gap-2 font-medium text-yellow-800 text-sm mb-1">
+                    <AlertTriangle className="h-4 w-4" />
+                    Validation Warnings
+                  </div>
+                  <ul className="text-xs text-yellow-700 space-y-1">
+                    {receiveWarnings.filter(w => w.index >= 0).map((w, i) => (
+                      <li key={i}>
+                        <span className="font-medium">{receiveItems[w.index]?.productName}:</span> {w.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Receipt validation error from backend */}
+              {receiptValidationError && (
+                <div className="rounded-lg border border-red-300 bg-red-50 p-3">
+                  <div className="flex items-center gap-2 font-medium text-red-800 text-sm mb-1">
+                    <AlertTriangle className="h-4 w-4" />
+                    Receipt Validation Failed
+                  </div>
+                  <p className="text-xs text-red-700">{receiptValidationError}</p>
+                  <p className="text-xs text-red-600 mt-1">Goods remain at PENDING_INSPECTION. Fix the issue and re-inspect.</p>
+                </div>
+              )}
+
+              {/* Summary */}
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="rounded-lg bg-muted p-3 text-center">
+                  <div className="text-muted-foreground text-xs">Total Ordered</div>
+                  <div className="font-bold text-lg">{receiveItems.reduce((s, i) => s + i.orderedQty, 0)}</div>
+                </div>
+                <div className="rounded-lg bg-muted p-3 text-center">
+                  <div className="text-muted-foreground text-xs">Total Received</div>
+                  <div className="font-bold text-lg">{receiveItems.reduce((s, i) => s + i.quantity, 0)}</div>
+                </div>
+                <div className="rounded-lg bg-muted p-3 text-center">
+                  <div className="text-muted-foreground text-xs">Total Rejected</div>
+                  <div className="font-bold text-lg text-red-600">{receiveItems.reduce((s, i) => s + (i.rejectedQuantity || 0), 0)}</div>
+                </div>
+              </div>
+
+              {/* Warehouse Location */}
+              <div className="space-y-2">
+                <Label>Warehouse Location</Label>
+                <Input
+                  value={receiveWarehouse}
+                  onChange={(e) => setReceiveWarehouse(e.target.value)}
+                  placeholder="e.g. Warehouse A, Bay 3"
+                  disabled={receiveStep === "inspect"}
+                />
+              </div>
+
+              {/* Inspection & Receipt section */}
+              <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <ClipboardCheck className="h-4 w-4" /> Inspection & Receipt
+                </h4>
+                <div className="space-y-2">
+                  <Label>Inspection Decision *</Label>
+                  <Select value={receiveInspectStatus} onValueChange={(v: any) => { setReceiveInspectStatus(v); setReceiptValidationError(null); }}> 
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inspected">Passed - Accept & Update Inventory</SelectItem>
+                      <SelectItem value="hold">On Hold - Needs Review</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Inspection Notes</Label>
+                  <Textarea
+                    value={receiveNotes}
+                    onChange={(e) => setReceiveNotes(e.target.value)}
+                    placeholder="Enter inspection notes..."
+                    rows={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Upload className="h-4 w-4" />
+                    Receipt Attachment {receiveInspectStatus === "inspected" && <span className="text-red-500">*</span>}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {receiveInspectStatus === "inspected"
+                      ? "A receipt is required to accept goods. It will be validated against PO products."
+                      : "Optional: attach a receipt for reference."}
+                  </p>
+                  <Input
+                    type="file"
+                    accept="image/*,.pdf,.xlsx,.xls"
+                    onChange={(e) => setReceiveReceiptFile(e.target.files?.[0] || null)}
+                  />
+                  {receiveReceiptFile && (
+                    <p className="text-xs text-green-600">Selected: {receiveReceiptFile.name} ({(receiveReceiptFile.size / 1024).toFixed(1)} KB)</p>
+                  )}
+                  
+                  {/* OCR Match Status Indicator */}
+                  {receiptMatchStatus !== 'idle' && (
+                    <div className={`rounded-lg p-2 text-xs ${
+                      receiptMatchStatus === 'matched' 
+                        ? 'bg-green-100 text-green-800 border border-green-300' 
+                        : 'bg-red-100 text-red-800 border border-red-300'
+                    }`}>
+                      <div className="flex items-center gap-2 font-medium">
+                        {receiptMatchStatus === 'matched' ? (
+                          <><CheckCircle className="h-4 w-4" /> Receipt matches PO ✓</>
+                        ) : (
+                          <><AlertTriangle className="h-4 w-4" /> Receipt does not match PO</>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Extracted Receipt Data Preview */}
+                  {extractedReceiptData && (
+                    <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                      <h5 className="text-xs font-medium text-muted-foreground">Extracted from Receipt:</h5>
+                      {extractedReceiptData.vendor && (
+                        <p className="text-xs"><span className="font-medium">Vendor:</span> {extractedReceiptData.vendor}</p>
+                      )}
+                      {extractedReceiptData.date && (
+                        <p className="text-xs"><span className="font-medium">Date:</span> {extractedReceiptData.date}</p>
+                      )}
+                      {extractedReceiptData.items && extractedReceiptData.items.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium">Items Found:</p>
+                          <ul className="text-xs space-y-0.5">
+                            {extractedReceiptData.items.map((item: any, i: number) => (
+                              <li key={i} className="flex justify-between">
+                                <span>{item.name}</span>
+                                <span className="font-medium">Qty: {item.quantity}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {extractedReceiptData.total && (
+                        <p className="text-xs"><span className="font-medium">Total:</span> {extractedReceiptData.total}</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* OCR Processing Note */}
+                  {receiveReceiptFile && !extractedReceiptData && receiptMatchStatus === 'idle' && (
+                    <p className="text-xs text-blue-600">
+                      <RefreshCw className="h-3 w-3 inline mr-1" />
+                      PDF will be processed on submit to verify against PO
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReceiveDialogOpen(false)}>Cancel</Button>
+              {receiveStep === "receive" ? (
+                <Button
+                  disabled={receiveMutation.isPending || receiveWarnings.filter(w => w.index >= 0).length > 0 || receiveItems.length === 0}
+                  className="gap-2"
+                  onClick={() => {
+                    receiveMutation.mutate(
+                      {
+                        purchaseOrderId: String(receiveOrder?._id || receiveOrder?.id || ""),
+                        items: receiveItems.map(it => ({
+                          purchaseOrderItemIndex: it.purchaseOrderItemIndex,
+                          quantity: it.quantity,
+                          qualityStatus: it.qualityStatus,
+                          rejectedQuantity: it.rejectedQuantity || 0,
+                          rejectionReason: it.rejectionReason || undefined,
+                        })),
+                        warehouseLocation: receiveWarehouse
+                      },
+                      {
+                        onSuccess: (data: any) => {
+                          const grnId = data?.data?._id || data?._id || null;
+                          if (grnId) {
+                            setReceiveGrnId(grnId);
+                            setReceiveStep("inspect");
+                          }
+                        }
+                      }
+                    );
+                  }}
+                >
+                  {receiveMutation.isPending ? (
+                    <><RefreshCw className="h-4 w-4 animate-spin" /> Recording...</>
+                  ) : (
+                    <><PackageOpen className="h-4 w-4" /> Record Receipt & Continue</>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  disabled={inspectMutation.isPending || (receiveInspectStatus === "inspected" && !receiveReceiptFile)}
+                  className="gap-2"
+                  onClick={() => {
+                    setReceiptValidationError(null);
+                    inspectMutation.mutate(
+                      {
+                        id: String(receiveGrnId || ""),
+                        data: { inspectionNotes: receiveNotes, status: receiveInspectStatus },
+                        receiptFile: receiveReceiptFile || undefined
+                      },
+                      {
+                        onSuccess: () => {
+                          setReceiptMatchStatus('matched');
+                          setReceiveDialogOpen(false);
+                          setReceiveReceiptFile(null);
+                          setExtractedReceiptData(null);
+                        },
+                        onError: (error: Error) => {
+                          const msg = error?.message || "Inspection failed";
+                          if (msg.includes("Receipt validation") || msg.includes("match") || msg.includes("exceeds")) {
+                            setReceiptValidationError(msg);
+                            setReceiptMatchStatus('mismatch');
+                          }
+                        }
+                      }
+                    );
+                  }}
+                >
+                  {inspectMutation.isPending ? (
+                    <><RefreshCw className="h-4 w-4 animate-spin" /> Inspecting...</>
+                  ) : receiveInspectStatus === "inspected" ? (
+                    <><ClipboardCheck className="h-4 w-4" /> Accept & Update Inventory</>
+                  ) : (
+                    <><Ban className="h-4 w-4" /> Place on Hold</>
+                  )}
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>        {/* Supplier Drawer */}
         <SupplierDrawer
           supplierId={selectedSupplierId}
           open={!!selectedSupplierId}

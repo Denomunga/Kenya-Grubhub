@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import {
   Supplier,
   ISupplier,
@@ -8,6 +9,8 @@ import {
 import { InventoryService } from '../inventory/service';
 import { Product } from '../../models/Product';
 import { TransactionService } from '../accounting/service';
+import { extractReceiptData, compareReceiptWithPO, ReceiptMatchResult } from './receiptParser';
+import path from 'path';
 
 /**
  * Procurement Service
@@ -429,25 +432,56 @@ export class GoodsReceivedService {
       const purchaseOrder = await PurchaseOrder.findById(purchaseOrderId);
       if (!purchaseOrder) throw new Error('Purchase order not found');
 
+      // Validate PO status allows receiving
+      if (!['confirmed', 'shipped', 'partially_received'].includes(purchaseOrder.status)) {
+        throw new Error(`Cannot receive goods for PO with status: ${purchaseOrder.status}`);
+      }
+
+      // Validate each received item against PO items
+      const validationErrors: string[] = [];
+      const validatedItems = items.map((item: any, idx: number) => {
+        const poItem = purchaseOrder.items[item.purchaseOrderItemIndex ?? idx];
+        if (!poItem) {
+          validationErrors.push(`Item at index ${idx} not found in PO`);
+          return item;
+        }
+        if (item.quantity > poItem.quantity) {
+          validationErrors.push(`${poItem.productName || poItem.sku}: received ${item.quantity} exceeds ordered ${poItem.quantity}`);
+        }
+        if (item.quantity < 0) {
+          validationErrors.push(`${poItem.productName || poItem.sku}: received quantity cannot be negative`);
+        }
+        return {
+          ...item,
+          inventoryItemId: poItem.inventoryItemId,
+          unit: poItem.unit,
+        };
+      });
+
+      if (validationErrors.length > 0) {
+        throw new Error('Quantity validation failed: ' + validationErrors.join('; '));
+      }
+
       const supplier = await Supplier.findById(purchaseOrder.supplierId);
       if (!supplier) throw new Error('Supplier not found');
 
       // Calculate totals from items
-      const totalReceived = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
-      const totalRejected = items.reduce((sum: number, item: any) => sum + (item.rejectedQuantity || 0), 0);
+      const totalReceived = validatedItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+      const totalRejected = validatedItems.reduce((sum: number, item: any) => sum + (item.rejectedQuantity || 0), 0);
       const grNumber = `GR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       const goodsReceived = new GoodsReceived({
         grNumber,
         purchaseOrderId,
         supplierId: purchaseOrder.supplierId,
-        items,
+        items: validatedItems,
         receivedDate: new Date(),
         receivedBy,
         totalItemsReceived: totalReceived,
         totalItemsRejected: totalRejected,
         warehouseLocation,
-        status: 'pending_inspection'
+        status: 'pending_inspection',
+        inspectionStatus: 'PENDING_INSPECTION'
       });
 
       await goodsReceived.save();
@@ -464,29 +498,122 @@ export class GoodsReceivedService {
     }
   }
 
-  static async inspectGoods(id: string, inspectionNotes: string, inspectedBy: string, status: string) {
+  static async inspectGoods(id: string, inspectionNotes: string, inspectedBy: string, status: string, receiptFile?: any) {
     try {
-      const goodsReceived = await GoodsReceived.findByIdAndUpdate(
-        id,
-        {
-          status,
-          inspectionNotes,
-          inspectedBy,
-          inspectionDate: new Date()
-        },
-        { new: true }
-      );
-
+      const goodsReceived = await GoodsReceived.findById(id);
       if (!goodsReceived) throw new Error('Goods received record not found');
 
-      // If inspection passed, update inventory
+      // Require receipt before inspection can pass
+      if (status === 'inspected' && !goodsReceived.receiptUrl && !receiptFile) {
+        throw new Error('Receipt is required before goods can be inspected and accepted. Please upload a receipt first.');
+      }
+
+      const updateData: any = {
+        status,
+        inspectionNotes,
+        inspectedBy,
+        inspectionDate: new Date(),
+        inspectionStatus: status === 'inspected' ? 'PASSED' : 'FAILED'
+      };
+
+      // If receipt file provided with inspection, save it
+      if (receiptFile) {
+        updateData.receiptUrl = '/uploads/receipts/' + receiptFile.filename;
+        updateData.receiptPublicId = receiptFile.filename;
+        updateData.receiptVerified = true;
+        updateData.receiptVerifiedBy = inspectedBy;
+        updateData.receiptVerifiedAt = new Date();
+      }
+
+      await GoodsReceived.findByIdAndUpdate(id, updateData, { new: true });
+
+      // If inspection passed, validate receipt then update inventory
       if (status === 'inspected') {
+        // Pass receipt file path for OCR validation if receipt was just uploaded
+        const receiptPath = receiptFile ? '/uploads/receipts/' + receiptFile.filename : undefined;
+        await this.validateReceiptAgainstPO(id, receiptPath);
         await this.updateInventoryFromGoodsReceived(id);
       }
 
-      return goodsReceived;
+      const updated = await GoodsReceived.findById(id);
+      return updated;
     } catch (error: any) {
       throw new Error(`Failed to inspect goods: ${error?.message || String(error)}`);
+    }
+  }
+
+  static async uploadReceipt(id: string, receiptFile: any, verifiedBy: string) {
+    try {
+      const goodsReceived = await GoodsReceived.findById(id);
+      if (!goodsReceived) throw new Error('Goods received record not found');
+
+      goodsReceived.receiptUrl = '/uploads/receipts/' + receiptFile.filename;
+      goodsReceived.receiptPublicId = receiptFile.filename;
+      goodsReceived.receiptVerified = true;
+      goodsReceived.receiptVerifiedBy = new mongoose.Types.ObjectId(verifiedBy);
+      goodsReceived.receiptVerifiedAt = new Date();
+      await goodsReceived.save();
+
+      return goodsReceived;
+    } catch (error: any) {
+      throw new Error('Failed to upload receipt: ' + (error?.message || String(error)));
+    }
+  }
+
+  static async validateReceiptAgainstPO(goodsReceivedId: string, receiptFilePath?: string): Promise<ReceiptMatchResult | boolean> {
+    try {
+      const goodsReceived = await GoodsReceived.findById(goodsReceivedId);
+      if (!goodsReceived) throw new Error('Goods received record not found');
+
+      const purchaseOrder = await PurchaseOrder.findById(goodsReceived.purchaseOrderId);
+      if (!purchaseOrder) throw new Error('Associated purchase order not found');
+
+      // Validate that all received items reference valid PO items
+      for (const receivedItem of goodsReceived.items) {
+        const itemIndex = receivedItem.purchaseOrderItemIndex;
+        if (itemIndex < 0 || itemIndex >= purchaseOrder.items.length) {
+          throw new Error('Receipt item references invalid PO item index: ' + itemIndex);
+        }
+      }
+
+      // Validate received quantities don't exceed ordered quantities
+      for (const receivedItem of goodsReceived.items) {
+        const poItem = purchaseOrder.items[receivedItem.purchaseOrderItemIndex];
+        if (poItem && receivedItem.quantity > poItem.quantity) {
+          throw new Error('Received quantity for PO item at index ' + receivedItem.purchaseOrderItemIndex + ' exceeds ordered quantity');
+        }
+      }
+
+      // OCR Validation: If receipt PDF provided, extract and compare with PO
+      if (receiptFilePath && receiptFilePath.endsWith('.pdf')) {
+        const fullPath = path.join(process.cwd(), receiptFilePath.replace(/^\//, ''));
+        
+        try {
+          const receiptData = await extractReceiptData(fullPath);
+          const matchResult = compareReceiptWithPO(receiptData, purchaseOrder.items);
+
+          if (!matchResult.matched) {
+            const errorDetails = matchResult.mismatches.map(m => {
+              if (m.type === 'missing_in_po') return `Item "${m.item?.name}" not in PO`;
+              if (m.type === 'qty_mismatch') return `"${m.poItem?.productName}": receipt shows ${m.actual}, PO has ${m.expected}`;
+              if (m.type === 'not_in_receipt') return `"${m.poItem?.productName}" missing from receipt`;
+              return 'Unknown mismatch';
+            }).join('; ');
+            
+            throw new Error(`Receipt validation failed: ${errorDetails}`);
+          }
+
+          // Return detailed match result for frontend display
+          return matchResult;
+        } catch (ocrError: any) {
+          // If OCR fails, log but don't block - fall back to basic validation
+          console.warn('OCR receipt parsing failed:', ocrError.message);
+        }
+      }
+
+      return true;
+    } catch (error: any) {
+      throw new Error('Receipt validation failed: ' + (error?.message || String(error)));
     }
   }
 
@@ -517,6 +644,8 @@ export class GoodsReceivedService {
               userId: goodsReceived.receivedBy.toString()
             }
           );
+
+          
         }
       }
 

@@ -384,18 +384,46 @@ export class GoodsReceivedController {
       const { id } = req.params;
       const { inspectionNotes, status } = req.body;
       const inspectedBy = (req as any).user?.id;
+      const receiptFile = (req as any).file;
 
       const goodsReceived = await GoodsReceivedService.inspectGoods(
         id,
         inspectionNotes,
         inspectedBy,
-        status
+        status,
+        receiptFile
       );
 
       res.json({
         success: true,
         data: goodsReceived,
         message: status === 'inspected' ? 'Goods inspected and inventory updated' : 'Goods on hold'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async uploadReceipt(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const receiptFile = (req as any).file;
+      const verifiedBy = (req as any).user?.id;
+
+      if (!receiptFile) {
+        return res.status(400).json({ success: false, message: 'Receipt file is required' });
+      }
+
+      const goodsReceived = await GoodsReceivedService.uploadReceipt(
+        id,
+        receiptFile,
+        verifiedBy
+      );
+
+      res.json({
+        success: true,
+        data: goodsReceived,
+        message: 'Receipt uploaded successfully'
       });
     } catch (error) {
       next(error);

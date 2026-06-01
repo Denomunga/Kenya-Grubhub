@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import {
   SupplierController,
   PurchaseRequestController,
@@ -19,6 +22,24 @@ import { requireAuth } from '@shared/middleware/auth';
 import { requireRole } from '@shared/middleware/roles';
 
 const router = Router();
+
+const receiptsDir = path.join(process.cwd(), 'uploads', 'receipts');
+if (!fs.existsSync(receiptsDir)) { fs.mkdirSync(receiptsDir, { recursive: true }); }
+
+const receiptStorage = multer.diskStorage({
+  destination: receiptsDir,
+  filename: (_req, file, cb) => { cb(null, Date.now() + '-' + file.originalname.replace(/[^a-zA-Z0-9.-]/g, '-')); },
+});
+
+const receiptUpload = multer({
+  storage: receiptStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok = ['image/jpeg','image/png','image/gif','image/webp','application/pdf',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-excel'];
+    cb(null, ok.includes(file.mimetype));
+  },
+});
 
 // Apply authentication to all routes
 router.use(requireAuth);
@@ -165,10 +186,19 @@ router.post('/goods-received',
   GoodsReceivedController.receiveGoods
 );
 
+// Upload receipt for goods received
+router.post('/goods-received/:id/receipt',
+  authLimiter,
+  requireRole(['admin', 'procurement_manager', 'warehouse_manager', 'quality_manager']),
+  receiptUpload.single('receipt'),
+  GoodsReceivedController.uploadReceipt
+);
+
 // Inspect goods (inspect and update inventory)
 router.post('/goods-received/:id/inspect',
   authLimiter,
   requireRole(['admin', 'procurement_manager', 'quality_manager']),
+  receiptUpload.single('receipt'),
   validateGoodsInspection,
   GoodsReceivedController.inspectGoods
 );

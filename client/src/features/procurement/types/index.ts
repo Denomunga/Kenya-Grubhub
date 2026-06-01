@@ -55,14 +55,45 @@ export interface PurchaseOrder {
   goodsReceivedIds?: string[];
 }
 
+export interface GoodsReceivedItem {
+  inventoryItemId: string;
+  purchaseOrderItemIndex: number;
+  quantity: number;
+  unit: string;
+  qualityStatus: 'accepted' | 'rejected' | 'partial_reject';
+  rejectedQuantity?: number;
+  rejectionReason?: string;
+  productName?: string;
+  sku?: string;
+}
+
 export interface GoodsReceived {
   id: string;
+  _id?: string;
   poId: string;
+  grNumber?: string;
   receivedDate: string;
+  items: GoodsReceivedItem[];
   quantityReceived: number;
   condition: 'GOOD' | 'DAMAGED' | 'PARTIAL';
-  inspectionStatus: 'PENDING' | 'PASSED' | 'FAILED';
+  inspectionStatus: 'PENDING_INSPECTION' | 'PASSED' | 'FAILED';
+  status: 'pending_inspection' | 'inspected' | 'stock_updated' | 'hold';
   notes?: string;
+  receiptUrl?: string;
+  receiptPublicId?: string;
+  receiptVerified?: boolean;
+  receiptVerifiedBy?: string;
+  receiptVerifiedAt?: string;
+}
+
+export interface PurchaseOrderItem {
+  inventoryItemId: string;
+  productName: string;
+  sku: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalPrice: number;
 }
 
 export interface LowStockAlert {

@@ -19,9 +19,15 @@ export interface IGoodsReceived extends Document {
   receivedBy: mongoose.Types.ObjectId;
   warehouseLocation?: string;
   status: 'pending_inspection' | 'inspected' | 'on_hold' | 'rejected';
+  inspectionStatus: 'PENDING_INSPECTION' | 'PASSED' | 'FAILED';
   inspectionNotes?: string;
   inspectedBy?: mongoose.Types.ObjectId;
   inspectedAt?: Date;
+  receiptUrl?: string;
+  receiptPublicId?: string;
+  receiptVerified: boolean;
+  receiptVerifiedBy?: mongoose.Types.ObjectId;
+  receiptVerifiedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,9 +56,19 @@ const GoodsReceivedSchema = new Schema<IGoodsReceived>(
       enum: ['pending_inspection', 'inspected', 'on_hold', 'rejected'],
       default: 'pending_inspection',
     },
+    inspectionStatus: {
+      type: String,
+      enum: ['PENDING_INSPECTION', 'PASSED', 'FAILED'],
+      default: 'PENDING_INSPECTION'
+    },
     inspectionNotes: { type: String },
     inspectedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     inspectedAt: { type: Date },
+    receiptUrl: { type: String },
+    receiptPublicId: { type: String },
+    receiptVerified: { type: Boolean, default: false },
+    receiptVerifiedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    receiptVerifiedAt: { type: Date },
   },
   { timestamps: true }
 );

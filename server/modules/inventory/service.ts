@@ -191,6 +191,16 @@ export class InventoryService {
         { new: true }
       );
 
+            // Sync stock to Product model so website catalog reflects changes
+      if (item.productId) {
+        try {
+          await Product.findByIdAndUpdate(item.productId, { stock: newStock, available: newStock > 0 });
+          console.log(`Product stock synced: ${item.productId} -> ${newStock}`);
+        } catch (syncErr: any) {
+          console.error(`Failed to sync product stock: ${syncErr?.message}`);
+        }
+      }
+
       // Log stock movement (you might want to create a separate StockMovement model)
       console.log(`Stock ${updateData.operation}: ${item.sku} - ${updateData.quantity} units. Reason: ${updateData.reason || 'No reason provided'}`);
 

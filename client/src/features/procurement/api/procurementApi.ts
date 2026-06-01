@@ -38,6 +38,21 @@ export const procurementApi = {
   getGoodsReceivedById: (id: string) => apiFetch(`${BASE}/goods-received/${id}`).then(res => res.json()),
   receiveGoods: (data: any) =>
     apiFetch(`${BASE}/goods-received`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()),
-  inspectGoods: (id: string, data: any) =>
-    apiFetch(`${BASE}/goods-received/${id}/inspect`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()),
+  getGoodsReceivedByPO: (poId: string) =>
+    apiFetch(`${BASE}/goods-received?purchaseOrderId=${poId}`).then(res => res.json()).then((r: any) => r.data ?? []),
+  inspectGoods: (id: string, data: any, receiptFile?: File) => {
+    if (receiptFile) {
+      const formData = new FormData();
+      formData.append('receipt', receiptFile);
+      formData.append('inspectionNotes', data.inspectionNotes || '');
+      formData.append('status', data.status || 'inspected');
+      return apiFetch(`${BASE}/goods-received/${id}/inspect`, { method: 'POST', body: formData }).then(res => res.json());
+    }
+    return apiFetch(`${BASE}/goods-received/${id}/inspect`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json());
+  },
+  uploadReceipt: (id: string, receiptFile: File) => {
+    const formData = new FormData();
+    formData.append('receipt', receiptFile);
+    return apiFetch(`${BASE}/goods-received/${id}/receipt`, { method: 'POST', body: formData }).then(res => res.json());
+  },
 };

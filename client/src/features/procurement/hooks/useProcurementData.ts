@@ -172,3 +172,36 @@ export const useReceiveGoods = () => {
     },
   });
 };
+
+export const useInspectGoods = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: ({ id, data, receiptFile }: { id: string; data: any; receiptFile?: File }) =>
+      procurementApi.inspectGoods(id, data, receiptFile),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['procurement', 'goods'] });
+      queryClient.invalidateQueries({ queryKey: ['procurement', 'orders'] });
+      toast({ title: 'Goods inspected', description: variables.data.status === 'inspected' ? 'Goods inspected and inventory updated.' : 'Goods placed on hold.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Inspection failed', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useUploadReceipt = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: ({ id, receiptFile }: { id: string; receiptFile: File }) =>
+      procurementApi.uploadReceipt(id, receiptFile),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['procurement', 'goods'] });
+      toast({ title: 'Receipt uploaded', description: 'Receipt has been attached to the goods received record.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
+    },
+  });
+};
